@@ -1,0 +1,16 @@
+av_draw_base.c drawtexcolsmp.c
+av_draw_shadow.c drawtexcolsmshp.c
+av_draw_shadow2_max.c drawtexcolsmshp2.c
+
+av_draw_mip.c drawtexmipsh.c
+av_draw_alpha.c drawtexcolsmpalpha.c
+av_SSR.c drawtexcolsmshplerp_SSR_water.c
+av_draw_sky.c drawskylerp.c
+av_draw_phong.c drawphong.c
+
+av_emissive.c drawemissive.c
+av_add.c drawadd.c
+av_sub.c drawsub.c
+av_border.c drawborder.c
+
+av_fog.c drawfog.c
