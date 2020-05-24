@@ -11,7 +11,7 @@
 #
 # AXI Combat is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -77,13 +77,6 @@ drawSky = makeProgram("drawskylerp.c")
 
 drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
 
-##drawTriS = makeProgram("drawtexcolsmsh2plerpmiptri_max.c")
-##drawCMT0 = makeProgram("drawreflcubemapfresneltexsh.c")
-##drawCMT1 = makeProgram("drawreflcubemapfresneltexsh_cc.c")
-##
-##drawNorm = makeProgram("drawtexnorm.c")
-##drawNormA = makeProgram("drawtexnormalpha.c")
-
 blur1 = makeProgram("Post/blur.c")
 blur2 = makeProgram("Post/blur2.c")
 
@@ -101,10 +94,6 @@ clearframe = makeProgram("clearframe.c")
 gamma = makeProgram("Post/gamma.c")
 
 particles = makeProgram("ps.c")
-##particlestex = makeProgram("pstranstex.c")
-##cloud = makeProgram("cloud.c")
-##cloudsh = makeProgram("cloudshadow.c")
-##cloudshop = makeProgram("cloudshadowopacity.c")
 
 def makeRBuf(nbytes):
     return cl.Buffer(ctx, mf.READ_ONLY, size=nbytes)

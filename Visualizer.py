@@ -11,7 +11,7 @@
 #
 # AXI Combat is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -26,15 +26,25 @@ import threading
 from queue import Empty, Full
 
 import sys, os
+PLATFORM = sys.platform
+
 import traceback
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter, PngImagePlugin
 
 from Menu import CombatMenu
 
-import win32api
-import win32con
-import pywintypes
+if "win" in PLATFORM:
+    import win32api
+    import win32con
+    import pywintypes
+
+if PLATFORM == "darwin":
+    _ARIAL = "Arial.ttf"
+    _ARIALBD = "Arial Bold.ttf"
+elif "win" in PLATFORM:
+    _ARIAL = "arial.ttf"
+    _ARIALBD = "arialbd.ttf"
 
 import pyautogui
 def mouseMover(x, y):
@@ -107,15 +117,21 @@ class ThreeDVisualizer(CombatMenu, Frame):
 
     def startRender(self):
         self.d.bind("<Motion>", self.rotate)
-        
-        self.d.bind("<KeyPress-d>", self.moveR)
-        self.d.bind("<KeyPress-a>", self.moveL)
-        self.d.bind("<KeyPress-w>", self.moveU)
-        self.d.bind("<KeyPress-s>", self.moveD)
-        self.d.bind("<KeyRelease-d>", self.zeroH)
-        self.d.bind("<KeyRelease-a>", self.zeroH)
-        self.d.bind("<KeyRelease-w>", self.zeroV)
-        self.d.bind("<KeyRelease-s>", self.zeroV)
+
+        if PLATFORM == "darwin":
+            self.d.bind("d", self.moveR1)
+            self.d.bind("a", self.moveL1)
+            self.d.bind("w", self.moveU1)
+            self.d.bind("s", self.moveD1)
+        else:
+            self.d.bind("<KeyPress-d>", self.moveR)
+            self.d.bind("<KeyPress-a>", self.moveL)
+            self.d.bind("<KeyPress-w>", self.moveU)
+            self.d.bind("<KeyPress-s>", self.moveD)
+            self.d.bind("<KeyRelease-d>", self.zeroH)
+            self.d.bind("<KeyRelease-a>", self.zeroH)
+            self.d.bind("<KeyRelease-w>", self.zeroV)
+            self.d.bind("<KeyRelease-s>", self.zeroV)
         
         self.d.bind("q", self.tgMouseCap)
         self.d.bind("<F1>", self.tgCtrl)
@@ -193,7 +209,10 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         self.root.config(background="#000")
         self.root.bind("<Escape>", self.escapeMouse)
-        self.root.bind("<F11>", self.tgFullScreen)
+        if PLATFORM == "darwin": # Fn+F11 shows desktop
+            self.root.bind("<F10>", self.tgFullScreen)
+        else:
+            self.root.bind("<F11>", self.tgFullScreen)
 
         self.d = Canvas(self, width=self.W, height=self.H,
                         highlightthickness=0, highlightbackground="black")
@@ -201,6 +220,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.d.config(cursor="none", background="#000")
         
     def getResolutions(self):
+        if "win" not in PLATFORM: return set()
         i = 0
         res = []
         try:
@@ -210,10 +230,22 @@ class ThreeDVisualizer(CombatMenu, Frame):
                 i += 1
         except: pass
         return set(res)
+    
     def tgFullScreen(self, e=None):
         self.fs = not self.fs
         self.root.attributes("-fullscreen", self.fs)
 
+        if PLATFORM == "darwin":
+            if self.fs: # For easier zoom
+                px = (self.root.winfo_screenwidth() - self.W)//2
+                py = (self.root.winfo_screenheight() - self.H)//2
+                self.d.grid(padx=px, pady=py)
+            else:
+                self.d.grid(padx=0, pady=0)
+                self.root.geometry("{}x{}+0+0".format(self.W, self.H))
+                self.root.title("AXI Combat")
+        
+        if "win" not in PLATFORM: return
         if not self.activeFS: return
         
         if self.fs:
@@ -332,6 +364,11 @@ class ThreeDVisualizer(CombatMenu, Frame):
             self.dirs[2] = False
             self.dirs[3] = False
             self.sendKey("ZH")
+            
+    def moveU1(self, e): self.sendKey("u")
+    def moveD1(self, e): self.sendKey("d")
+    def moveR1(self, e): self.sendKey("r")
+    def moveL(1self, e): self.sendKey("l")
 
     def screenshot(self, e=None):
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
@@ -405,18 +442,18 @@ class ThreeDVisualizer(CombatMenu, Frame):
                 except AttributeError: self.endTime = time.time()
                 f = min(2, max(time.time() - self.endTime - 4, 0)) / 2
                 
-                endFont = ImageFont.truetype("arial.ttf", 48)
+                endFont = ImageFont.truetype(_ARIAL, 48)
 
                 self.drawText(fr, end[0], end[1], endFont, (0,0), f)
 
                 if "Quit" in uInfo:
                     qt = uInfo["Quit"]
-                    endFont = ImageFont.truetype("arial.ttf", 24)
+                    endFont = ImageFont.truetype(_ARIAL, 24)
                     self.drawText(fr, qt, (255,240,230,255), endFont, (48,0), f)
 
             if "nameTag" in uInfo:
                 nt = uInfo["nameTag"]
-                nFont = ImageFont.truetype("arialbd.ttf", 16)
+                nFont = ImageFont.truetype(_ARIALBD, 16)
                 self.drawText(fr, nt, (255,240,230,255), nFont, (-20, 0), 1, 1)
 
         if self.drawControls:
@@ -476,7 +513,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         """c => (x, y)"""
         y1, y2, x1, x2 = c[0]-size, c[0]+size, c[1]-size, c[1]+size
         fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity) + fill * opacity
-        self.cFont = ImageFont.truetype("arialbd.ttf", size)
+        self.cFont = ImageFont.truetype(_ARIALBD, size)
         s = self.textSize.textsize(char, font=self.cFont)
         a = Image.new("L", (size*2, size*2), color=(0,))
         d = ImageDraw.Draw(a)
@@ -566,9 +603,9 @@ you probably want to disable Active Fullscreen.\n")
 def runGUI(P, *args): 
     try:
         app = ThreeDVisualizer(P, *args)
-        writeRes(app)
+        if "win" in PLATFORM: writeRes(app)
         app.mainloop()
-        win32api.ChangeDisplaySettings(None, 0)
+        if "win" in PLATFORM: win32api.ChangeDisplaySettings(None, 0)
         time.sleep(0.2)
         app.finish()
     except Exception as e:

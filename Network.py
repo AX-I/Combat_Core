@@ -44,7 +44,7 @@ class TCPServer:
 
         self.isclient = isclient
 
-        self.TO = {"timeout":0.2}
+        self.TO = {"timeout":0.2, "headers":{"User-Agent":"AXICombat/src"}}
         self.maxFPS = 15
         
         if isclient:

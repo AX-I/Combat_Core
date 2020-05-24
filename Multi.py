@@ -11,7 +11,7 @@
 #
 # AXI Combat is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -30,7 +30,9 @@ random.seed(int((time.time() * 1000) % 1000))
 
 from Compute import *
 import multiprocessing as mp
-import os
+import os, sys
+PLATFORM = sys.platform
+
 import json
 
 from Rig import Rig
@@ -1301,6 +1303,9 @@ def run():
     warnings.simplefilter("ignore")
     import urllib3
     urllib3.disable_warnings()
+
+    if PLATFORM == "darwin":
+        os.system("defaults write -g ApplePressAndHoldEnabled -bool false")
     
     while True:
         app = CombatApp()

@@ -26,6 +26,10 @@ try:
 except ModuleNotFoundError:
     from Templates import *
 
+import sys, os
+if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
+else: PATH = "/".join(os.path.dirname(os.path.realpath(__file__)).split("/")[:-1]) + "/"
+
 # template_func, template_setup, template_draw, template_end
 
 def compile_file(fn, fo):
@@ -267,12 +271,12 @@ class AVShader:
 
         
 def compileAll(p="Shaders_src/", q="Shaders/"):
-    with open(p + "Config.txt") as f:
+    with open(PATH + p + "Config.txt") as f:
         for line in f:
             if line == "\n": continue
             if line[0] != "#":
                 n = line.replace("\n","").split(" ")
-                compile_file(p + n[0], q + n[1])
+                compile_file(PATH + p + n[0], PATH + q + n[1])
 
 #if __name__ == "__main__":
 #    compileAll("", "../Shaders/")

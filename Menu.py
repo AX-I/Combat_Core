@@ -11,7 +11,7 @@
 #
 # AXI Combat is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -21,6 +21,13 @@
 from tkinter import *
 
 import os, sys
+
+PLATFORM = sys.platform
+if PLATFORM == "darwin":
+    from tkmacosx import Button
+    import base64, io
+    import _sysconfigdatam_darwin_darwin # for freezing
+
 import requests
 import random
 import json
@@ -95,11 +102,12 @@ else:
 
 SERVER = "127.0.0.1"
 
+_TIMESBD = "Times New Roman Bold.ttf" if PLATFORM == "darwin" else "timesbd.ttf"
 e = ("Times", 18)
 f = ("Times", 15)
 g = ("Times", 12)
 h = ("Courier", 10)
-TO = {"timeout":2}
+TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 
 class CombatMenu(Frame):
     def __init__(self, root=None):
@@ -250,7 +258,7 @@ class CombatMenu(Frame):
                                         justify="center", anchor="n",
                                         fill="#FFF", font=("Times", int(16*self.RS))))
                 else:
-                    font = ImageFont.truetype("timesbd.ttf", int(24*self.RS))
+                    font = ImageFont.truetype(_TIMESBD, int(24*self.RS))
                     ti = self.imgText(c["text"], (255,255,255), font)
                     self.txts.append(ImageTk.PhotoImage(ti))
                     self.cScreen.append(self.d.create_image(self.W2, self.H*3//4, image=self.txts[-1]))
@@ -336,7 +344,8 @@ class CombatMenu(Frame):
 
         st = "A server is now hosting on " + addr[0]
         st += "\nIt should stop when the main window is closed."
-        st += "\nIf in doubt, refer to Task Manager."
+        tm = "Activity Monitor" if PLATFORM == "darwin" else "Task Manager"
+        st += "\nIf in doubt, refer to {}.".format(tm)
         Label(self.servwin, text=st, font=g, padx=8, pady=8).pack()
         
         import NetServer
