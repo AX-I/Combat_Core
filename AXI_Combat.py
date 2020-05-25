@@ -6,6 +6,8 @@
 import multiprocessing as mp
 import OpsConv
 import Multi
+import sys
+import PIL._tkinter_finder # for freezing
 
 if __name__ == "__main__":
     mp.freeze_support()

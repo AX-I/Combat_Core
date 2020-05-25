@@ -102,7 +102,12 @@ else:
 
 SERVER = "127.0.0.1"
 
-_TIMESBD = "Times New Roman Bold.ttf" if PLATFORM == "darwin" else "timesbd.ttf"
+if PLATFORM == "darwin":
+    _TIMESBD = "Times New Roman Bold.ttf"
+elif PLATFORM == "linux":
+    _TIMESBD = "LiberationSerif-Bold.ttf"
+elif "win" in PLATFORM:
+    _TIMESBD = "timesbd.ttf"
 e = ("Times", 18)
 f = ("Times", 15)
 g = ("Times", 12)
@@ -118,7 +123,11 @@ class CombatMenu(Frame):
         self.root = root
         self.root.title("AXI Combat")
         self.root.resizable(width=False, height=False)
-        self.root.iconbitmap(PATH+"lib/AXI.ico")
+        if "win" in PLATFORM:
+            self.root.iconbitmap(PATH+"lib/AXI.ico")
+        else:
+            ic = PhotoImage(data=LOGO)
+            self.root.tk.call('wm', 'iconphoto', self.root._w, ic)
         
         self.loc = ["Desert", "CB Atrium", "Taiga"]
         

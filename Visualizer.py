@@ -42,13 +42,24 @@ if "win" in PLATFORM:
 if PLATFORM == "darwin":
     _ARIAL = "Arial.ttf"
     _ARIALBD = "Arial Bold.ttf"
+elif PLATFORM == "linux":
+    _ARIAL = "FreeSans.ttf"
+    _ARIALBD = "FreeSansBold.ttf"
 elif "win" in PLATFORM:
     _ARIAL = "arial.ttf"
     _ARIALBD = "arialbd.ttf"
 
-import pyautogui
-def mouseMover(x, y):
-    pyautogui.moveTo(x,y)
+if PLATFORM == "linux":
+    from Xlib import X, display
+    import Xlib.threaded
+    xd = display.Display(); xs = xd.screen(); xroot = xs.root
+    def mouseMover(x, y):
+        xroot.warp_pointer(int(x), int(y))
+        xd.sync()
+else:
+    import pyautogui
+    def mouseMover(x, y):
+        pyautogui.moveTo(x,y)
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -68,7 +79,8 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         self.root = root
         self.root.title("AXI Combat")
-        self.root.iconbitmap(PATH+"lib/AXI.ico")
+        if PLATFORM != "linux":
+            self.root.iconbitmap(PATH+"lib/AXI.ico")
         self.downSample = downSample
         self.W = width//downSample
         self.H = height//downSample
