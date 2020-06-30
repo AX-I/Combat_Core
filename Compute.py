@@ -301,8 +301,10 @@ class ThreeDBackend:
         for o in self.vertObjects:
             o.created()
             self.actWedges += o.numWedges
-            self.evtQ.put(int(100 * self.actWedges / self.estWedges))
-
+            try:
+                self.evtQ.put_nowait(int(100 * self.actWedges / self.estWedges))
+            except Full:
+                pass
         self.evtQ.put("Ready")
         
         print("\nComplete")

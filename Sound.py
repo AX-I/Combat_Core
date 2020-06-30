@@ -66,7 +66,7 @@ class SoundManager:
                     self.fadeTime = cmd["FadeTime"]
                 if "Vol" in cmd:
                     if 1 in self.tracks:
-                        self.tracks[1]["vol"] = cmd["Vol"]
+                        self.tracks[1]["vol"] = np.array(cmd["Vol"])
                 if "Cresc" in cmd:
                     self.globalVol *= cmd["Cresc"]
 
@@ -109,7 +109,7 @@ class SoundManager:
         
         self.stream.write(frames.tobytes())
         
-    def playFile(self, f, volume=0.5, loop=False):
+    def playFile(self, f, volume=(0.5, 0.5), loop=False):
         a = wave.open(f, "rb")
         n = a.getnframes()
         r = a.getframerate()
@@ -119,7 +119,7 @@ class SoundManager:
         if w != self.width: raise ValueError("Non-matching width")
         
         track = {"wave":a, "frame":0, "N":n,
-                 "vol":volume, "loop":loop}
+                 "vol":np.array(volume, "float"), "loop":loop}
         
         self.tcount += 1
         self.tracks[self.tcount] = track
@@ -130,10 +130,10 @@ class SoundManager:
 if __name__ == "__main__":
     import queue
     q = queue.Queue(8)
-    q.put({"Play":["D:/AXI_Visualizer/Sound/Env_Desert.wav", 0.7]})
-    q.put({"Play":["D:/AXI_Visualizer/Sound/Pickup.wav", 0.2, True]})
-    q.put({"Play":["D:/AXI_Visualizer/Sound/FireA.wav", 0.2, True]})
-    q.put({"Play":["D:/AXI_Visualizer/Sound/FireD.wav", 0.2, True]})
+    q.put({"Play":["C:/AXI_Visualizer/Sound/Env_Desert.wav", (0.7, 0.7)]})
+    q.put({"Play":["C:/AXI_Visualizer/Sound/Pickup.wav", (0.2, 0.8), True]})
+    q.put({"Play":["C:/AXI_Visualizer/Sound/FireA.wav", (0.4, 0.2), True]})
+    q.put({"Play":["C:/AXI_Visualizer/Sound/FireD.wav", (0.7, 0.2), True]})
     q.put({"Fade":150})
     a = SoundManager(q)
     a.run(2, 22050, 2)

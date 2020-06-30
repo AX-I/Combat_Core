@@ -68,6 +68,7 @@ class CombatApp(ThreeDBackend):
         kwargs = OpsConv.getSettings()
         width, height, fovx = kwargs["W"], kwargs["H"], kwargs["FOV"]
         volm = float(kwargs["Volume"])
+        volm = np.array((volm, volm))
         
         super().__init__(width, height, fovx=fovx,
                          downSample=1)
@@ -92,6 +93,7 @@ class CombatApp(ThreeDBackend):
         self.setWH(width, height)
         
         volm = float(kwargs["Volume"])
+        volm = np.array((volm, volm))
 
         qi = mp.Queue(4)
         qo = mp.Queue(4)
@@ -372,8 +374,12 @@ class CombatApp(ThreeDBackend):
         
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
+        LR = (p - self.pos)
+        LR = (LR / np.linalg.norm(LR)) @ self.vVhorz()
+        left = (LR + 1) / 2
+        right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
-                             self.volm / 3)})
+                             self.volm / 3 * np.array((left, right)))})
         
     def addPlayer(self, o, bo):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=True)
@@ -789,8 +795,13 @@ class CombatApp(ThreeDBackend):
         self.srbs[cb].pos = np.array(a["b1"].offset[:3]) + 0.8*(d*np.array([1,0,1]))
 
         snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
+
+        LR = (a["b1"].offset[:3] - self.pos)
+        LR = (LR / np.linalg.norm(LR)) @ self.vVhorz()
+        left = (LR + 1) / 2
+        right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volm / snd[color][1])})
+                             self.volm / snd[color][1] * np.array((left, right)))})
 
         if sc == self.selchar:
             self.frameFired = color
