@@ -45,6 +45,7 @@ from Network import TCPServer
 import queue
 
 import OpsConv
+import AI
 
 PATH = OpsConv.PATH
 SWITCHABLE = False
@@ -62,7 +63,7 @@ def playSound(si):
     a = SoundManager(si)
     a.run()
 
-class CombatApp(ThreeDBackend):
+class CombatApp(ThreeDBackend, AI.AIManager):
     def __init__(self):
 
         kwargs = OpsConv.getSettings()
@@ -303,6 +304,7 @@ class CombatApp(ThreeDBackend):
         if not self.fCam:
             self.α = -self.players[self.selchar]["cr"] + pi/2
         self.fCam = not self.fCam
+        self.players[self.selchar]["fCam"] = self.fCam
         
     def moveKey(self, key):
         rv = 3
@@ -401,7 +403,7 @@ class CombatApp(ThreeDBackend):
              "ctexn":None, "rig":None, "obj":o,
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
-             "jump":-1, "vertVel":0,
+             "jump":-1, "vertVel":0, "fCam": False,
              "id":self.NPLAYERS}
 
         self.NPLAYERS += 1
@@ -537,6 +539,8 @@ class CombatApp(ThreeDBackend):
                                     rot=(0,0,0), hdrScale=16)
             self.skyBox.created()
 
+            self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
         elif self.stage == 1:
             self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
                                filename=PATH+"../Atrium/AtriumAtlasY.obj",
@@ -547,12 +551,20 @@ class CombatApp(ThreeDBackend):
             self.terrain = VertTerrain0([0,-0.6,0],
                                         PATH+"../Atrium/AtriumNav.png",
                                         scale=0.293, vertScale=20)
+
+            hm = Image.open(PATH+"../Atrium/AtriumNavA.png")
+            hm = np.array(hm)[:,:,0] < 80
+            hs = 0.586
+            ho = np.array([0.3,0,0.3])
+            
 ##            self.addVertObject(VertTerrain, [0,-0.6, 0],
 ##                               heights=PATH+"../Atrium/AtriumNav.png",
 ##                               scale=0.293, vertScale=20,
 ##                               texture=PATH+"../Assets/Grass.png")
 ##            self.terrain = self.vertObjects[-1]
-            
+
+            self.atriumNav = {"map":hm, "scale":0.586, "origin":ho}
+
             self.t2 = Phys.TerrainCollider([0,-0.6,0], self.terrain.size[0],
                                            self.terrain.heights, 0.293)
             self.t2.onHit = lambda x: self.explode(x)
@@ -595,6 +607,8 @@ class CombatApp(ThreeDBackend):
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.1,0.2]})
             
             self.skyTex = np.zeros((1,6,3),"uint16")
+
+            self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
                 
         self.spheres = []
         self.srbs = []
@@ -786,7 +800,7 @@ class CombatApp(ThreeDBackend):
                 cb = i
         if cb is None:
             a["Energy"] += cost[color]
-            return
+            return False
         
         self.srbs[cb].disabled = False
         s = self.bulletSpeed
@@ -805,6 +819,8 @@ class CombatApp(ThreeDBackend):
 
         if sc == self.selchar:
             self.frameFired = color
+
+        return color
         
     def onStart(self):
         self.gameStarted = False
@@ -856,6 +872,17 @@ class CombatApp(ThreeDBackend):
         
         self.w.start()
 
+        if not self.isClient:
+            aiNums = []
+            self.setupAI(aiNums)
+            host = self.remoteServer
+            TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/1.x"}}
+            for x in aiNums:
+                p = {"gd":self.gameId, "pname":"CPU " + str(x), "char":x}
+                try:
+                    requests.post(host + "/SelChar", data=p, **TO)
+                except: pass
+
     def shadowChar(self):
         sc = self.shadowCams[1]
         sc["dir"] = self.directionalLights[0]["dir"]
@@ -878,7 +905,7 @@ class CombatApp(ThreeDBackend):
         for a in self.players:
             dat[a["num"]] = {
                 "r1": np.round(a["b1"].offset, 3).tolist(),
-                "m1": a["moving"],
+                "m1": bool(a["moving"]),
                 "c1": a["cr"],
                 "hc": [c.hc for c in a["pv"].colliders],
                 "ee": a["Energy"],
@@ -1041,6 +1068,8 @@ class CombatApp(ThreeDBackend):
             for x in self.players[plNum]["ctexn"]:
                 rm[x] = False
 
+        self.actPlayers = actPlayers
+        
         for x in self.players[self.selchar]["ctexn"]:
             rm[x] = False
 
@@ -1092,14 +1121,17 @@ class CombatApp(ThreeDBackend):
                 self.lp.append(np.array(self.srbs[i].pos))
         self.dt2 = time.time()
         
-        #self.frameTime = self.dt2 - self.dt1
-        self.frameTime = 0.05
+        self.frameTime = self.dt2 - self.dt1
 
         if self.isClient:
             self.sendPlayer()
         else:
             self.sendState()
         self.recvState()
+
+        if self.frameNum % 2 == 0:
+            if not self.isClient:
+                self.updateAI()
 
         self.frameFired = False
 
@@ -1198,7 +1230,6 @@ class CombatApp(ThreeDBackend):
                 for i in self.pickups:
                     if i["pos"] is None:
                         xy = self.BORDER[0]+5 + nr.rand(2)*(self.stageSize-10)
-                        #xy = np.array((9.3, 18.4))
                         plant = True
                         if self.stage == 1:
                             if self.terrain.getHeight(*xy) > 2:
@@ -1243,9 +1274,12 @@ class CombatApp(ThreeDBackend):
             if a["moving"]:
                 bx = hvel*a["moving"]*cos(a["cr"])
                 by = hvel*a["moving"]*sin(a["cr"])
-                if self.fCam:
-                    bx += 1. * (self.vVhorz() * a["cv"])[0]
-                    by += 1. * (self.vVhorz() * a["cv"])[2]
+                if a["fCam"]:
+                    bx += hvel/3 * cos(a["cr"] + pi/2) * a["cv"]
+                    by += hvel/3 * sin(a["cr"] + pi/2) * a["cv"]
+
+                    d = np.sqrt(bx**2 + by**2) / hvel
+                    bx /= d; by /= d
 
                 bx *= self.frameTime; by *= self.frameTime
                 
@@ -1273,19 +1307,19 @@ class CombatApp(ThreeDBackend):
                 a["rig"].importPose(self.idle, updateRoot=False)
             else:
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
-            a["cr"] += a["cv"] * abs(self.frameTime)
+            if not a["fCam"]:
+                a["cr"] += a["cv"] * abs(self.frameTime)
             a["b1"].rotate([0,a["cr"],0])
             a["movingOld"] = a["moving"]
 
         self.dt1 = time.time()
 
-        #self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
+        self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
-            self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
             
             playerIndex = {int(v):k for k, v in self.activePlayers.items()}
