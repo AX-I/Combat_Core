@@ -1181,8 +1181,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 self.srbs[i].pos[:] = 0.
                 self.srbs[i].v[:] = 0.
                 self.srbs[i].disabled = True
-            self.draw.translate(self.srbs[i].pos - self.lp[i], s.cStart*3, s.cEnd*3,
-                                s.texNum)
+            diff = self.srbs[i].pos - self.lp[i]
+            if np.sum(diff*diff) > 0:
+                self.draw.translate(diff, s.cStart*3, s.cEnd*3, s.texNum)
         
         for i in range(len(self.spheres)):
             self.lp[i] = np.array(self.srbs[i].pos)
@@ -1333,8 +1334,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                             self.uInfo["nameTag"] = str(px)
                         except KeyError: pass
 
-        if self.doSh:
-            self.shadowChar()
+        if self.doSh: self.shadowChar()
         if self.doVl: self.simpleShaderVert()
         for p in self.players:
             if ("isHit" in p) and (self.frameNum - p["isHit"]) < 3:
