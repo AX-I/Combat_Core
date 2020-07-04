@@ -380,7 +380,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
     def moveU1(self, e): self.sendKey("u")
     def moveD1(self, e): self.sendKey("d")
     def moveR1(self, e): self.sendKey("r")
-    def moveL(1self, e): self.sendKey("l")
+    def moveL1(self, e): self.sendKey("l")
 
     def screenshot(self, e=None):
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())

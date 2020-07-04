@@ -342,7 +342,7 @@ class CombatMenu(Frame):
         except:
             try: ip = socket.gethostbyname(socket.gethostname())
             except: pass
-        addr = (ip, 80)
+        addr = (ip, 2980)
 
         try: self.servwin.destroy()
         except (AttributeError, TclError): pass
@@ -351,7 +351,7 @@ class CombatMenu(Frame):
         try: self.servwin.iconbitmap(PATH+"lib/AXI.ico")
         except FileNotFoundError: pass
 
-        st = "A server is now hosting on " + addr[0]
+        st = "A server is now hosting on {}:{}".format(addr[0], addr[1])
         st += "\nIt should stop when the main window is closed."
         tm = "Activity Monitor" if PLATFORM == "darwin" else "Task Manager"
         st += "\nIf in doubt, refer to {}.".format(tm)
