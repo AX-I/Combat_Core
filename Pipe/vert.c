@@ -26,11 +26,12 @@ __kernel void transform(__global float3 *XYZ,
      VN[ix+lStart] = l;
     }
 }
-__kernel void Ttranslate(__global float3 *XYZ, __constant float *O,
-                        const int lStart, const int lEnd) {
+__kernel void Ttranslate(__global float3 *XYZ,
+                         const float ox, const float oy, const float oz,
+                         const int lStart, const int lEnd) {
     int ix = get_global_id(0);
     if (ix < (lEnd-lStart)) {
-     float3 p = XYZ[ix+lStart] + (float3)(O[0], O[1], O[2]);
+     float3 p = XYZ[ix+lStart] + (float3)(ox, oy, oz);
      XYZ[ix+lStart] = p;
     }
 }

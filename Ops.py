@@ -391,11 +391,9 @@ class CLDraw:
     def translate(self, coords, cStart, cEnd, tn):
         if cEnd is None: cEnd = self.gSize[tn]
         oo = coords.astype("float32")
-        o = makeRBuf(oo.nbytes)
-        cl.enqueue_copy(cq, o, oo)
-        vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
+        vs = (cEnd - cStart)//BLOCK_SIZE + 1
         vert.Ttranslate(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], o,
+                       self.XYZ[tn], *oo,
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
