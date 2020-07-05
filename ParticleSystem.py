@@ -136,7 +136,6 @@ class ContinuousParticleSystem(ParticleSystem):
         self.pc = self.Rpc[self.pe]
         self.pv = self.Rpv[self.pe]
 
-        self.Rpcolor = np.full((self.N, 3), self.c1)
         self.started = False
 
     def step(self):
@@ -145,17 +144,11 @@ class ContinuousParticleSystem(ParticleSystem):
         self.Rpc[self.pe] += self.Rpv[self.pe]
         self.Rpv[self.pe] *= (1-self.drag)
         self.Rpv[self.pe] += self.force
-        
-        self.Rpcolor = self.c1 * np.expand_dims(
-            np.clip((self.L-self.pl)/self.L, 0, 1), 1)
-        self.Rpcolor += self.c2 * np.expand_dims(
-            np.clip(self.pl / self.L, 0, 1), 1)
 
         self.ll += 1
 
         self.pc = self.Rpc[self.pe]
         self.pv = self.Rpv[self.pe]
-        self.color = self.Rpcolor[self.pe]
 
         self.pe = (self.pl > 0) & (self.pl < self.L)
 
@@ -166,5 +159,5 @@ class ContinuousParticleSystem(ParticleSystem):
         self.Rpc[self.pl < 0] += newpos - self.pos
         self.pos[:] = newpos
     def reset(self):
-        del self.pc, self.pv, self.color, self.pe, self.pl, self.Rpcolor
+        del self.pc, self.pv, self.pe, self.pl
         self.setup()
