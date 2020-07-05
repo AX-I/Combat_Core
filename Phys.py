@@ -24,21 +24,15 @@ D = 3
 G = 9.8
 
 def eucDist(a, b):
-    c = (a - b) ** 2
-    return np.sqrt(c @ np.transpose(np.ones_like(c)))
-def unit(v):
-    return v / np.linalg.norm(v)
+    c = (a[0] - b[0]) ** 2 + \
+        (a[1] - b[1]) ** 2 + \
+        (a[2] - b[2]) ** 2
+    return math.sqrt(c)
+def eucLen(a):
+    return math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 
-def lineDist(p1, p2, a):
-    cosa = ((a - p1) @ unit(p2 - p1)) / eucDist(a, p1)
-    sina = np.sqrt(1 - cosa ** 2)
-    res = (a - p1) * sina
-    return np.linalg.norm(res)
-
-def planeProject(a, n):
-    return a - (a @ n)
 def planeDist(a, n, p):
-    return np.linalg.norm((a - p) @ n)
+    return abs((a - p) @ n)
 
 class Collider:
     def __init__(self):
@@ -147,7 +141,7 @@ class BulletCollider(CircleCollider):
                 if self.explode: obj.onHit(self.rb.pos)
                 self.disabled = True
                 self.rb.disabled = True
-                self.rb.pos = np.array([0.,0,0])
+                self.rb.pos[:] = 0.
                 self.rb.forces = []
                 self.hc = 0
                 return False
@@ -163,7 +157,7 @@ class BulletCollider(CircleCollider):
                 
                 self.disabled = True
                 self.rb.disabled = True
-                self.rb.pos = np.array([0.,0,0])
+                self.rb.pos[:] = 0.
                 self.rb.forces = []
                 return False
         except AttributeError: pass
@@ -172,9 +166,8 @@ class BulletCollider(CircleCollider):
                 if self.explode: obj.onHit(self.rb.pos)
                 self.disabled = True
                 self.rb.disabled = True
-                self.rb.pos = np.array([0.,0,0])
+                self.rb.pos[:] = 0.
                 self.rb.forces = []
-                #obj.
                 return False
         except AttributeError: pass
         return True
@@ -216,21 +209,21 @@ class TerrainCollider(Collider):
                 for j in range(selpts.shape[1] - 1):
                     if hm <= np.min(selpts[i:i+2,j:j+2,1]):
                         n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
-                        n /= np.linalg.norm(n)
+                        n /= eucLen(n)
                         pd = planeDist(obj.pos, n, selpts[i,j])
                         self.colNorm = n
                         self.colDist = obj.dim - pd
                         return True
                     if hc <= np.max(selpts[i:i+2,j:j+2,1]):
                         n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
-                        n /= np.linalg.norm(n)
+                        n /= eucLen(n)
                         pd = planeDist(obj.pos, n, selpts[i,j])
                         if pd < obj.dim:
                             self.colNorm = n
                             self.colDist = obj.dim - pd
                             return True
                         n = np.cross(selpts[i,j] - selpts[i+1,j+1], selpts[i+1,j+1] - selpts[i+1,j])
-                        n /= np.linalg.norm(n)
+                        n /= eucLen(n)
                         pd = planeDist(obj.pos, n, selpts[i+1,j+1])
                         if pd < obj.dim:
                             self.colNorm = n
@@ -365,12 +358,6 @@ class World:
         c = self.checkColls()
         if retCol:
             return c
-
-    def totalEnergy(self):
-        total = 0
-        for obj in self.objs:
-            total += obj.M * (eucDist(np.zeros_like(obj.v), obj.v) ** 2) / 2
-        return total
 
 if __name__ == "__main__":
     w = World()

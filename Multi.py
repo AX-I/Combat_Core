@@ -156,7 +156,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.pos = numpy.array([35.8,  3.4, 31.3])
         self.camSpeed = 0.2
 
-        self.maxFPS = 33
+        self.maxFPS = 60
 
         self.ambLight = 0.08
 
@@ -377,7 +377,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
         LR = (p - self.pos)
-        LR = (LR / np.linalg.norm(LR)) @ self.vVhorz()
+        LR = (LR / Phys.eucLen(LR)) @ self.vVhorz()
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
@@ -811,7 +811,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
 
         LR = (a["b1"].offset[:3] - self.pos)
-        LR = (LR / np.linalg.norm(LR)) @ self.vVhorz()
+        LR = (LR / Phys.eucLen(LR)) @ self.vVhorz()
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
@@ -1129,7 +1129,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.sendState()
         self.recvState()
 
-        if self.frameNum % 2 == 0:
+        if self.frameNum & 1:
             if not self.isClient:
                 self.updateAI()
 
@@ -1182,7 +1182,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 self.srbs[i].v[:] = 0.
                 self.srbs[i].disabled = True
             diff = self.srbs[i].pos - self.lp[i]
-            if np.sum(diff*diff) > 0:
+            if sum(diff*diff) > 0:
                 self.draw.translate(diff, s.cStart*3, s.cEnd*3, s.texNum)
         
         for i in range(len(self.spheres)):
@@ -1211,7 +1211,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     self.draw.scale(e["pos"], 1 / e["scale"], cs, ce, tn)
                     e["scale"] = 1
                     self.draw.translate(-e["pos"], cs, ce, tn)
-                    e["pos"] = np.array([0,0,0.])
+                    e["pos"][:] = 0.
                     
         self.pointLights = list(self.expLights.values())
 
@@ -1253,7 +1253,6 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                         self.resetPickup()
                         break
         
-        ip = 0
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
             if a["id"] not in actPlayers: continue
@@ -1279,7 +1278,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     bx += hvel/3 * cos(a["cr"] + pi/2) * a["cv"]
                     by += hvel/3 * sin(a["cr"] + pi/2) * a["cv"]
 
-                    d = np.sqrt(bx**2 + by**2) / hvel
+                    d = sqrt(bx**2 + by**2) / hvel
                     bx /= d; by /= d
 
                 bx *= self.frameTime; by *= self.frameTime
@@ -1307,6 +1306,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             elif a["movingOld"]:
                 a["rig"].importPose(self.idle, updateRoot=False)
             else:
+                a["b1"].updateTM()
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
             if not a["fCam"]:
                 a["cr"] += a["cv"] * abs(self.frameTime)
