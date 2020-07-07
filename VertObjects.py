@@ -136,7 +136,6 @@ class VertObject:
             else:
                 ta *= 64
             ta *= self.texMul
-            #numpy.clip(ta, None, 256*256-1, ta)
             self.viewer.vtextures.append(ta.astype("uint16"))
             self.viewer.vtNames[texture] = len(self.viewer.vtextures) - 1
             self.texNum = self.viewer.vtNames[texture]
@@ -194,17 +193,17 @@ class VertObject:
         self.cEnd = self.cStart + self.numWedges
         self.wedgePoints = numpy.array(self.wedgePoints)
         if self.overrideNorms is None:
-            self.vertNorms = numpy.array(self.vertNorms).reshape((-1, 3))
-            self.vertNorms /= numpy.expand_dims(numpy.linalg.norm(self.vertNorms, axis=1), 1)
+            self.vertNorms = np.array(self.vertNorms).reshape((-1, 3))
+            self.vertNorms /= np.expand_dims(np.linalg.norm(self.vertNorms, axis=1), 1)
             self.vertNorms = self.vertNorms.reshape((-1, 3, 3))
         else:
-            self.vertNorms = numpy.repeat(self.overrideNorms,
-                                          self.wedgePoints.shape[0]*3, 0)
+            self.vertNorms = np.repeat(self.overrideNorms,
+                                       self.wedgePoints.shape[0]*3, 0)
             self.vertNorms = self.vertNorms.reshape((-1, 3, 3))
         if self.invertNorms:
             self.vertNorms *= -1
-        self.u = numpy.array(self.u)
-        self.v = numpy.array(self.v)
+        self.u = np.array(self.u)
+        self.v = np.array(self.v)
         if self.texMode == "repeat":
             self.u %= 1
             self.v %= 1
@@ -212,8 +211,8 @@ class VertObject:
             self.u *= 0.999
             self.v *= 0.999
         elif self.texMode == "clamp":
-            numpy.clip(self.u, 0, 1, out=self.u)
-            numpy.clip(self.v, 0, 1, out=self.v)
+            np.clip(self.u, 0, 1, out=self.u)
+            np.clip(self.v, 0, 1, out=self.v)
         self.transform(origin=self.origin, early=True)
         del self.u, self.v
         if self.static:
@@ -236,14 +235,14 @@ class VertObject:
             self.viewer.vertv[tn].extend(self.v)
             if self.animated:
                 if len(self.viewer.vertBones[tn]) > 0:
-                    self.viewer.vertBones[tn] = numpy.concatenate(
+                    self.viewer.vertBones[tn] = np.concatenate(
                         (self.viewer.vertBones[tn],
-                         numpy.array(self.bones) + self.boneOffset), axis=0)
+                         np.array(self.bones) + self.boneOffset), axis=0)
                 else:
-                    self.viewer.vertBones[tn] = numpy.array(self.bones) + self.boneOffset
+                    self.viewer.vertBones[tn] = np.array(self.bones) + self.boneOffset
         else:
             if origin is False:
-                origin = numpy.array((0.,0.,0.))
+                origin = np.array((0.,0.,0.))
             origin += self.coords
             cStart, cEnd = self.cStart*3, self.cEnd*3
             self.viewer.draw.transform(self.oldRM, self.rotMat, origin,
@@ -259,12 +258,7 @@ class VertObject:
         self.numWedges += 1
 
     def appendWedgeSafe(self, coords, norms, uv, r=0):
-        #if (((np.max(coords, axis=0) -
-        #      np.min(coords, axis=0)) > self.maxWedgeDims).any() and (r < 2)):
         if (r < self.subDiv):
-            #print(r, end="")
-            #if r > 5:
-            #    print("test", self.texNum)
             nc, nn, nuv = self.splitFace(coords, norms, uv)
             for f in range(4):
                 self.appendWedgeSafe(nc[f], nn[f], nuv[f], r+1)
