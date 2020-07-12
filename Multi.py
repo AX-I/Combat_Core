@@ -1206,8 +1206,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             diff = self.srbs[i].pos - self.lp[i]
             if sum(diff*diff) > 0:
                 self.draw.translate(diff, s.cStart*3, s.cEnd*3, s.texNum)
-        
-        for i in range(len(self.spheres)):
+            
             self.lp[i] = np.array(self.srbs[i].pos)
 
         for i in range(len(self.exploders)):
