@@ -1079,6 +1079,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
     def qq(self): self.doQuit = True
         
     def frameUpdate(self):
+        if self.VRMode: self.frameUpdateVR()
+        
         rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
         actPlayers = {self.selchar}
         for pn in self.activePlayers:

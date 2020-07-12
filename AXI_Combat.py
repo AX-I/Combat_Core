@@ -13,4 +13,8 @@ if __name__ == "__main__":
     mp.freeze_support()
     mp.set_start_method("spawn")
     OpsConv.genInfo()
-    Multi.run()
+    if OpsConv.getSettings(False)["VR"]:
+        import MultiVR
+        MultiVR.run()
+    else:
+        Multi.run()

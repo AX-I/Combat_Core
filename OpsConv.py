@@ -30,9 +30,7 @@ def genInfo(write=True):
     infotext = """Information about OpenCL devices on your computer.\n
 If you are experiencing any problems or glitches running
 AXI Visualizer, try changing devices. If only one device is
-available try updating its drivers.
-Open "Settings.txt" and change the CL option to 1:0 or whatever
-number is in the square bracket [] of the device you want to use.\n
+available try updating its drivers.\n
 """
 
     pl = cl.get_platforms()
@@ -78,7 +76,8 @@ def getContext():
 def getSettings(write=True):
     settings = {"CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
                 "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1,
-                "Uname":0, "Volume":0.4, "Record":0, "AutoRes":0, "Mouse":20}
+                "Uname":0, "Volume":0.4, "Record":0, "VR":0,
+                "AutoRes":0, "Mouse":20}
     c = 0; newFile = False
     try:
         with open(PATH + "Settings.txt") as sf:

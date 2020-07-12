@@ -36,7 +36,9 @@ from ParticleSystem import ContinuousParticleSystem
 import sys, os
 from PIL import Image, PngImagePlugin
 import json
+
 import pyopencl as cl
+import ctypes
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -73,7 +75,7 @@ class ThreeDBackend:
                  scale=600, fovx=None,
                  downSample=1, record=None):
         
-        pipe = rec = mp.Queue(4)
+        pipe = rec = mp.Queue(2)
         
         self.evtQ = mp.Queue(64)
         self.infQ = mp.Queue(16)
@@ -155,6 +157,8 @@ class ThreeDBackend:
         
         self.maxFPS = 60
 
+        self.VRMode = False
+        
         self.selecting = False
         self.genNewBones = False
 
@@ -278,14 +282,14 @@ class ThreeDBackend:
 
         self.customizeFrontend()
 
+        self.vMat = np.stack((self.viewVec(),self.vVhorz(),self.vVvert()))
+
     def updateRig(self, rig, ct, name, vobj, offset=0):
         bt = rig.b0.getTransform()
         self.draw.setBoneTransform(name, bt)
         for i in ct:
-            if len(self.vertBones[i]) > 0:
-                self.draw.boneTransform(vobj.cStart*3, vobj.cEnd*3, i, name,
-                                        offset)
-                vobj = vobj.nextMtl
+            self.draw.boneTransform(vobj.cStart*3, vobj.cEnd*3, i, name, offset)
+            vobj = vobj.nextMtl
 
     def stepParticles(self):
         for ps in self.particleSystems: ps.step()
@@ -320,22 +324,19 @@ class ThreeDBackend:
         
     def render(self):
         self.vc = self.viewCoords()
-        self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
+        if not self.VRMode:
+            self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
+
         self.draw.setPos(self.vc)
         self.draw.setVM(self.vMat)
         
         self.draw.clearZBuffer()
 
-        #if len(self.shadowCams) == 1:
-        #    s = [0,0]
-        #elif len(self.shadowCams) == 2:
-        #    s = [0,1]
-        #s = [0, "c"]
         s = [0,1]
         self.draw.drawAll(self.matShaders,
                           mask=self.renderMask,
                           shadowIds=s,
-                          useOpacitySM=self.useOpSM)#, useEmissive=[1])
+                          useOpacitySM=self.useOpSM)
         
         cc = []
         for ps in self.particleSystems:
@@ -365,6 +366,16 @@ class ThreeDBackend:
         rgb = np.stack(result[:3], axis=2)
         self.rgb = rgb
         self.zb = result[3]
+
+        if self.VRMode:
+            rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
+            ibuf = ctypes.create_string_buffer(rgba.tobytes())
+
+            b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
+            self.ov.showOverlay(b)
+            b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
+            self.ov.hideOverlay(b2)
+            self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
         
         return [rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]
         
@@ -439,25 +450,6 @@ class ThreeDBackend:
         v = np.array([sin(a2), 0, cos(a2)])
         return -v
 
-    def skyProject(self, xyzn):
-        vn = np.array(xyzn)
-        pn = np.stack((self.vv, self.vVhorz(), self.vVvert())).T
-        dxy = vn @ pn
-
-        d = dxy[:,0]
-        x = dxy[:,1]
-        y = dxy[:,2]
-        s = self.scale
-        dw = self.W2
-        dh = self.H2
-        x2d = x / d * -s + dw
-        y2d = y / d * s + dh
-        #x2d = ne.evaluate("x / d * -s + dw")
-        #y2d = ne.evaluate("y / d * s + dh")
-
-        xy2d = np.stack((x2d, y2d), axis=1)
-        return xy2d
-
     def doEvent(self, action):
         self.α += action[1]
         self.β += action[2]
@@ -492,7 +484,7 @@ class ThreeDBackend:
                 print(".", end="")
         print("\nstarting render")
 
-        self.startTime = time.time()
+        self.startTime = time.perf_counter()
         self.frameNum = 0
         self.totTime = 0
 
@@ -554,12 +546,12 @@ class ThreeDBackend:
                 self.processEvent()
 
             self.frameNum += 1
-            dt = time.time() - self.startTime
-            if dt < (1/self.maxFPS):
-                time.sleep((1/self.maxFPS) - dt)
-            dt = time.time() - self.startTime
+            dt = time.perf_counter() - self.startTime
+##            if dt < (1/self.maxFPS):
+##                time.sleep((1/self.maxFPS) - dt)
+##            dt = time.perf_counter() - self.startTime
             self.totTime += dt
-            self.startTime = time.time()
+            self.startTime = time.perf_counter()
 
         try:
             self.P.put(None, True, 1)
@@ -583,10 +575,6 @@ class ThreeDBackend:
                 self.doEvent(action)
             elif action[0] == "eventk":
                 self.moveKey(action[1])
-            elif action[0] == "eventp":
-                self.pan(action[1])
-            elif action[0] == "select":
-                self.cSelect(*action[1])
             elif action in self.handles:
                 self.handles[action]()
 
