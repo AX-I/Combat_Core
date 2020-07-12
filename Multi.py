@@ -169,6 +169,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         
         self.numBullets = 16
         self.bulletSpeed = 15
+        self.COSTS = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.4}
         
         self.selchar = selChar
 
@@ -334,8 +335,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 
         p["rig"].interpPose(self.poses[p["posen"]], self.poses[p["posen"]+1],
                             p["poset"])
-        self.updateRig(p["rig"], p["ctexn"], p["num"], vobj, offset=p["bOffset"])
-
+        
     def rotateLight(self, rl=None):
         if rl is None: a = self.directionalLights[0]["dir"][1] + 0.05
         else: a = rl
@@ -365,7 +365,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         if eNum is not None: self.expNum = eNum
         
         e = self.exploders[self.expNum]
-        e["pos"] = p
+        e["pos"] = np.array(p)
         e["active"] = True
         e["start"] = time.time()
         self.matShaders[e["obj"].texNum]["add"] = 4
@@ -785,22 +785,21 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                              self.volm / snd[color][1])})
         
     def fire(self, color, sc=None, vh=None):
-        cost = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.4}
         if sc is None:
             sc = self.selchar
         if vh is None:
             vh = self.vv[1]
         a = self.players[sc]
 
-        if a["Energy"] < cost[color]: return
-        a["Energy"] -= cost[color]
+        if a["Energy"] < self.COSTS[color]: return
+        a["Energy"] -= self.COSTS[color]
         
         cb = None
         for i in range(len(self.srbs)):
             if self.srbs[i].disabled and self.spheres[i][0] == color:
                 cb = i
         if cb is None:
-            a["Energy"] += cost[color]
+            a["Energy"] += self.COSTS[color]
             return False
         
         self.srbs[cb].disabled = False
@@ -1153,7 +1152,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             tn = a["id"]
             if self.getHealth(tn) <= 0:
                 if "deathTime" not in a: a["deathTime"] = self.frameNum
-                a["pv"].pos = np.array([0,-10,0.])
+                a["pv"].pos[:] = -10.
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, self.frameNum - a["deathTime"]) / 40
                 for xn in a["ctexn"]:
@@ -1164,7 +1163,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 g.changePos(a["b1"].offset[:3])
                 g.step()
             elif tn not in actPlayers:
-                a["pv"].pos = np.array([0,-10,0.])
+                a["pv"].pos[:] = -10.
             else:
                 a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0])
                 a["Energy"] += 0.05 * self.frameTime
@@ -1204,7 +1203,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             if e["active"]:
                 for a in self.players:
                     if a["id"] not in actPlayers: continue
-                    if np.sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 2):
+                    if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 2):
                         a["pv"].colliders[0].hc += self.expPow / max(3, e["scale"])
                         a["isHit"] = self.frameNum
                 
@@ -1309,18 +1308,19 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     a["b1"].offset[2] += by
                     if a["jump"] <= 0:
                         a["b1"].offset[1] = ih
-                else: pass
                 
-                a["b1"].updateTM()
+                
                 self.stepPose(a, a["obj"], self.frameTime * self.poseDt * a["moving"])
                     
             elif a["movingOld"]:
                 a["rig"].importPose(self.idle, updateRoot=False)
-            else:
-                a["b1"].updateTM()
-                self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
+            
+            a["b1"].updateTM()
+            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
+
             if not a["fCam"]:
-                a["cr"] += a["cv"] * abs(self.frameTime)
+                a["cr"] += a["cv"] * self.frameTime
+            
             a["b1"].rotate([0,a["cr"],0])
             a["movingOld"] = a["moving"]
 
