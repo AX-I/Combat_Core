@@ -1145,7 +1145,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.dt2 = time.perf_counter()
         
         self.frameTime = self.dt2 - self.dt1
-
+        
         if self.isClient:
             self.sendPlayer()
         else:

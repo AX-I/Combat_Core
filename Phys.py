@@ -94,9 +94,9 @@ class CircleCollider(Collider):
     def collisionImpulse(self, obj):
         if obj.t == "Circle":
             if eucDist(obj.pos, self.pos) == 0:
-                cdir = np.array([0,1,0.])
-            else:
-                cdir = (obj.pos - self.pos) / eucDist(obj.pos, self.pos)
+                self.pos[1] += 0.01
+
+            cdir = (obj.pos - self.pos) / eucDist(obj.pos, self.pos)
 
             Vsit = self.rb.v @ cdir
             Voit = obj.rb.v @ cdir
@@ -193,51 +193,44 @@ class TerrainCollider(Collider):
 
     def isCollide(self, obj):
         self.colDist = None
-        if obj.t == "Circle":
-            d1 = np.floor((obj.pos - obj.dim - self.pos) / self.S)
-            d2 = np.ceil((obj.pos + obj.dim - self.pos) / self.S)
-            
-        d1 = d1.astype("int")
-        d2 = d2.astype("int")
+        
+        d1 = np.floor((obj.pos - obj.dim - self.pos) / self.S).astype("int")
+        d2 = np.ceil((obj.pos + obj.dim - self.pos) / self.S).astype("int")
         
         selpts = self.pts[d1[0]:d2[0], d1[2]:d2[2]]
 
-        if obj.t == "Circle":
-            hc = (obj.pos - obj.dim)[1]
-            hm = (obj.pos + obj.dim)[1]
-            for i in range(selpts.shape[0] - 1):
-                for j in range(selpts.shape[1] - 1):
-                    if hm <= np.min(selpts[i:i+2,j:j+2,1]):
-                        n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
-                        n /= eucLen(n)
-                        pd = planeDist(obj.pos, n, selpts[i,j])
+        hc = (obj.pos - obj.dim)[1]
+        hm = (obj.pos + obj.dim)[1]
+        for i in range(selpts.shape[0] - 1):
+            for j in range(selpts.shape[1] - 1):
+                if hm <= np.min(selpts[i:i+2,j:j+2,1]):
+                    n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
+                    n /= eucLen(n)
+                    pd = planeDist(obj.pos, n, selpts[i,j])
+                    self.colNorm = n
+                    self.colDist = obj.dim - pd
+                    return True
+                if hc <= np.max(selpts[i:i+2,j:j+2,1]):
+                    n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
+                    n /= eucLen(n)
+                    pd = planeDist(obj.pos, n, selpts[i,j])
+                    if pd < obj.dim:
                         self.colNorm = n
                         self.colDist = obj.dim - pd
                         return True
-                    if hc <= np.max(selpts[i:i+2,j:j+2,1]):
-                        n = np.cross(selpts[i,j] - selpts[i,j+1], selpts[i,j+1] - selpts[i+1,j+1])
-                        n /= eucLen(n)
-                        pd = planeDist(obj.pos, n, selpts[i,j])
-                        if pd < obj.dim:
-                            self.colNorm = n
-                            self.colDist = obj.dim - pd
-                            return True
-                        n = np.cross(selpts[i,j] - selpts[i+1,j+1], selpts[i+1,j+1] - selpts[i+1,j])
-                        n /= eucLen(n)
-                        pd = planeDist(obj.pos, n, selpts[i+1,j+1])
-                        if pd < obj.dim:
-                            self.colNorm = n
-                            self.colDist = obj.dim - pd
-                            return True
-            return False
-
-        raise NotImplementedError
+                    n = np.cross(selpts[i,j] - selpts[i+1,j+1], selpts[i+1,j+1] - selpts[i+1,j])
+                    n /= eucLen(n)
+                    pd = planeDist(obj.pos, n, selpts[i+1,j+1])
+                    if pd < obj.dim:
+                        self.colNorm = n
+                        self.colDist = obj.dim - pd
+                        return True
+        return False
     
     def collisionImpulse(self, obj):
         pd = self.colDist
         n = self.colNorm
-        #print("Collision", pd, n)
-        #print("vel", obj.rb.v)
+        
         obj.rb.v = (obj.rb.v - (2 * obj.rb.v @ n) * n) * obj.rb.el
         if obj.t == "Circle":
             obj.rb.pos += (pd + 0.001) * n
@@ -289,7 +282,7 @@ class RigidBody:
                 diff = (i["pos"] - self.pos)
                 self.forces.append(diff * i["m"] * self.M / np.sum(diff*diff))
         self.v += np.sum(np.array(self.forces), axis=0) / self.M * dt
-        #self.v *= (1 - self.drag) ** dt
+        
         self.pos += self.v * dt
 
 def elasticCollision(ma, mb, va, vb, ea, eb):
@@ -312,7 +305,6 @@ class World:
     def __init__(self):
         self.objs = []
         self.coLs = []
-        #self.tree = []
         self.attractors = {}
 
     def addRB(self, rb):
@@ -333,31 +325,26 @@ class World:
         pass
 
     def checkColls(self):
-        """return # of collisions"""
         for i in self.coLs:
             i.update()
-        c = 0
+        
         for i in range(len(self.coLs)):
             if self.coLs[i].disabled: continue
             for j in range(i+1, len(self.coLs)):
                 if self.coLs[j].disabled: continue
+                
                 if self.coLs[i].isCollide(self.coLs[j]):
-                    a = True
-                    a = a & self.coLs[i].onCollide(self.coLs[j])
-                    a = a & self.coLs[j].onCollide(self.coLs[i])
-                    c += 1
-                    if a:
+                    if self.coLs[i].onCollide(self.coLs[j]) and \
+                       self.coLs[j].onCollide(self.coLs[i]):
                         self.coLs[i].collisionImpulse(self.coLs[j])
-        return c
 
-    def stepWorld(self, dt=1, retCol=False):
+    def stepWorld(self, dt=1, checkColl=True):
         """return # of collisions"""
         for o in self.objs:
             o.update(dt, attractors=self.attractors)
         
-        c = self.checkColls()
-        if retCol:
-            return c
+        if checkColl:
+            self.checkColls()
 
 if __name__ == "__main__":
     w = World()
