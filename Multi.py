@@ -177,6 +177,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         self.fCam = False
         self.frameFired = False
+        self.frameFiredOld = False
 
         self.activePlayers = {}
         self.lastTimes = {}
@@ -907,7 +908,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         for a in self.players:
             dat[a["num"]] = {
                 "r1": np.round(a["b1"].offset, 3).tolist(),
-                "m1": bool(a["moving"]),
+                "m1": int(a["moving"]),
                 "c1": a["cr"],
                 "hc": [c.hc for c in a["pv"].colliders],
                 "ee": a["Energy"],
@@ -945,6 +946,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             "m1": a["moving"],
             "c1": a["cr"],
             "fire": self.frameFired,
+            "fire2": self.frameFiredOld,
             "vh": float(self.vv[1]),
             "gg": a["gestNum"], "gi": a["gestId"],
             "jp": a["jump"]
@@ -972,6 +974,12 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     except KeyError:
                         print("Username conflict!")
                         return
+
+                    if "Host" in self.lastTimes:
+                        if self.lastTimes["Host"] == int(b["time"]):
+                            continue
+                    self.lastTimes["Host"] = int(b["time"])
+                    
                 else:
                     if a[0] in self.lastTimes:
                         if self.lastTimes[a[0]] == b["time"]:
@@ -993,6 +1001,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     if "ee" in a: sc["Energy"] = a["ee"]
                     if "fire" in a:
                         if a["fire"]: self.fire(a["fire"], int(pn), a["vh"])
+                    if "fire2" in a:
+                        if a["fire2"]:
+                            self.fire(a["fire2"], int(pn), a["vh"])
 
                     if a["gg"] is not None:
                         if self.players[int(pn)]["gestNum"] != a["gg"]:
@@ -1034,7 +1045,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 
             except queue.Empty: pass
             except KeyError:
-                raise#print("Game has already finished!")
+                raise #print("Game has already finished!")
             except: raise
 
     def getHealth(self, pn):
@@ -1143,6 +1154,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             if not self.isClient:
                 self.updateAI()
 
+        self.frameFiredOld = self.frameFired
         self.frameFired = False
 
         if self.stage == 0:
