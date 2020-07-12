@@ -184,9 +184,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.exscale = 10.
         self.expPow = 3
 
-        self.rs = 1
-        self.ao = np.array([0,0,0.])
-
+        self.waitFinished = False
+        
     def waitMenu(self):
         # server, gameId, stage, name, isClient
         wait = True
@@ -377,11 +376,13 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
         LR = (p - self.pos)
-        LR = (LR / Phys.eucLen(LR)) @ self.vVhorz()
+        dist = Phys.eucLen(LR)
+        attn = 6 / (dist + 1)
+        LR = (LR / dist) @ self.vVhorz()
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
-                             self.volm / 3 * np.array((left, right)))})
+                             self.volm / 3 * attn * np.array((left, right)))})
         
     def addPlayer(self, o, bo):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=True)
@@ -811,11 +812,13 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
 
         LR = (a["b1"].offset[:3] - self.pos)
+        dist = Phys.eucLen(LR)
+        attn = 4 / (dist + 1)
         LR = (LR / Phys.eucLen(LR)) @ self.vVhorz()
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volm / snd[color][1] * np.array((left, right)))})
+                             self.volm / snd[color][1] * attn * np.array((left, right)))})
 
         if sc == self.selchar:
             self.frameFired = color
@@ -1049,8 +1052,14 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
 
+        LR = (i["pos"] - self.pos)
+        dist = Phys.eucLen(LR)
+        LR = (LR / dist) @ self.vVhorz()
+        left = (LR + 1) / 2
+        right = -(LR - 1) / 2
+        attn = 4 / (dist + 1)
         self.si.put({"Play":(PATH+"../Sound/Pickup.wav",
-                             self.volm / 3)})
+                             self.volm / 3 * attn * np.array((left, right)))})
     def resetPickup(self):
         i = self.pickups[0]
         cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
@@ -1094,7 +1103,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 except: self.endTime = time.time()
                 if (time.time() - self.endTime) > 16:
                     self.uInfo["Quit"] = "Press R to return to menu"
-                    self.bindKey("r", self.qq)
+                    if not self.waitFinished:
+                        self.bindKey("r", self.qq)
+                        self.waitFinished = True
             if alive == 1:
                 c = self.getHealth(self.selchar)
                 if c > 0:
@@ -1115,11 +1126,11 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         sc = self.selchar
         
         if self.frameNum == 0:
-            self.dt1 = time.time()
+            self.dt1 = time.perf_counter()
             self.lp = []
             for i in range(len(self.spheres)):
                 self.lp.append(np.array(self.srbs[i].pos))
-        self.dt2 = time.time()
+        self.dt2 = time.perf_counter()
         
         self.frameTime = self.dt2 - self.dt1
 
@@ -1313,7 +1324,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             a["b1"].rotate([0,a["cr"],0])
             a["movingOld"] = a["moving"]
 
-        self.dt1 = time.time()
+        self.dt1 = time.perf_counter()
 
         self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
         if self.fCam:
