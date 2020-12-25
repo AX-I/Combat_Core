@@ -26,6 +26,7 @@ trisetupAnim = makeProgram("trisetup_anim.c", "Pipe/")
 drawBase = makeProgram("drawbase.c")
 drawSh = makeProgram("drawsh.c")
 drawSky = makeProgram("drawsky.c")
+drawSub = makeProgram("drawsub.c")
 drawBorder = makeProgram("drawborder.c")
 drawEm = makeProgram("drawemissive.c")
 drawMin = makeProgram("drawmin.c")
@@ -89,15 +90,11 @@ class CLDraw:
         vertices = np.dstack([x, y, z])
         
         self.post_vbo = ctx.buffer(vertices.astype('float32').tobytes())
-
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['width'].write(np.float32(self.W))
         self.post_prog['height'].write(np.float32(self.H))
-##        tex.use(location=texNum)
-##        self.TEX.append(tex)
-
-##        self.DRAW.append(draw)
+        
         self.oldShaders = {}
 
     def setSkyTex(self, r, g, b, size):
@@ -111,22 +108,9 @@ class CLDraw:
         pass
 
     def addBoneWeights(self, tn, bw):
-        pass
-##        bw = bw.astype('float32')
-##        draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=drawSh)
-##        
-##        raw = self.VBO[tn].read()
-##        dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, 8))
-##        dat = np.stack((*[dat[:,i] for i in range(8)], bw.reshape((-1,))), axis=-1)
-##        
-##        vbo = ctx.buffer(dat.astype('float32').tobytes())
-##        vao = ctx.vertex_array(draw, vbo, 'in_vert', 'in_norm', 'in_UV', 'boneNum')
-##        self.VBO[tn] = vbo
-##        self.VAO[tn] = vao
-
-        
-##        b = ctx.buffer(data=bw.astype("uint8"))
-##        self.BN[tn] = b
+        dat = bw.reshape((-1,))        
+        bn = ctx.buffer(dat.astype('float32').tobytes())
+        self.BN[tn] = bn
 
     def initBoneTransforms(self, name, bn):
         s = np.zeros((4,4),dtype="float32")
@@ -138,13 +122,6 @@ class CLDraw:
             self.BO[tn] = np.zeros((32, 3), "float32")
 
         self.BO[tn][bn] = o
-        
-##        self.BO[tn] = ctx.buffer(data=o.astype("float32"))
-##        size = 8*4
-##        raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
-##        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
-##        dat[:,:3] -= np.expand_dims(o, 0)
-##        self.VBO[tn].write(dat, offset=cStart*size)
 
     def setBoneTransform(self, name, bt):
         self.BT[name] = np.zeros((32*4, 4), 'float32')
@@ -226,8 +203,8 @@ class CLDraw:
         
         self.fs.clear(0.0, 0.0, 0.0, 0.0)
         self.fs.use()
-        self.post_prog['tex1'] = 99
-        self.FB.use(location=99)
+        self.post_prog['tex1'] = len(self.DRAW) + 2
+        self.FB.use(location=len(self.DRAW) + 2)
         self.post_vao.render(moderngl.TRIANGLES)
         
         ctx.enable(moderngl.DEPTH_TEST)
@@ -268,7 +245,6 @@ class CLDraw:
         draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawSh)
 
         draw['vscale'].write(np.float32(self.sScale))
-        
         draw['aspect'].write(np.float32(self.H/self.W))
         
         vertices = np.stack((p[:,0], p[:,1], p[:,2],
@@ -328,10 +304,21 @@ class CLDraw:
                 elif 'emissive' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
                     draw['vPow'].write(np.float32(shaders[i]['emissive']))
-                elif 'add' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
-                    draw['vPow'].write(np.float32(shaders[i]['add']))
                     
+                elif 'add' in shaders[i]:
+                    if 'add' in self.oldShaders[i]:
+                        draw = self.DRAW[i]
+                    else:
+                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
+                    draw['vPow'].write(np.float32(shaders[i]['add']))
+                
+                elif 'sub' in shaders[i]:
+                    if 'sub' in self.oldShaders[i]:
+                        draw = self.DRAW[i]
+                    else:
+                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawSub)
+                    draw['emPow'].write(np.float32(shaders[i]['sub']))
+                
                 elif 'border' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawBorder)
                     draw['width'].write(np.float32(self.W))
@@ -344,14 +331,23 @@ class CLDraw:
                 draw['vscale'].write(np.float32(self.sScale))
                 draw['aspect'].write(np.float32(self.H/self.W))
                 draw['tex1'] = i
-                self.DRAW[i] = draw
-                vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
                 
-                #self.oldShaders[i] = dict(shaders[i])
+                self.DRAW[i] = draw
+
+                if i in self.BO:
+                    vao = ctx.vertex_array(draw,
+                        [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
+                         (self.BN[i], '1f /v', 'boneNum')])
+                else:
+                    vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+                
+                self.oldShaders[i] = dict(shaders[i])
 ##                for arg in args:
 ##                    p[arg].write(arg)
 
                 self.VAO[i] = vao
+
+                ctx.finish()
                 
 ##            if shaders[i]['shadow'] == 'R':
 ##                vao = ctx.vertex_array(drawSh, vbo,
@@ -360,25 +356,40 @@ class CLDraw:
 ##                drawSh['LDir'].write(d)
 ##            else:
 ##                vao = self.VAO[i]
-            
+
+
+        ctx.blend_func = moderngl.ONE, moderngl.ZERO
+        ctx.blend_equation = moderngl.FUNC_ADD
+        self.fbo.depth_mask = True
+
+        # Opaque
+        for i in range(len(self.VBO)):
             vao = self.VAO[i]
 
+            trans = {'add', 'border', 'SSR', 'sub'}
+            if all(t not in shaders[i] for t in trans):
+                vao.render(moderngl.TRIANGLES)
+
+        
+        self.fbo.depth_mask = False
+        
+        # Transparent
+        for i in range(len(self.VBO)):
+            vao = self.VAO[i]
+            
             if 'add' in shaders[i] or 'border' in shaders[i]:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
-                self.fbo.depth_mask = False
             elif 'SSR' in shaders[i]:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
-                self.fbo.depth_mask = False
-            else:
-                ctx.blend_func = moderngl.ONE, moderngl.ZERO
+            elif 'sub' in shaders[i]:
+                ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
-                self.fbo.depth_mask = True
 
             vao.render(moderngl.TRIANGLES)
 
-        self.oldShaders = shaders
+##        self.oldShaders = shaders
         self.fbo.depth_mask = True
 
     def clearZBuffer(self):
