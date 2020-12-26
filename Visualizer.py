@@ -106,6 +106,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.xyselect = np.array((0,0))
         self._textImg = Image.new("RGB", (1,1))
         self.textSize = ImageDraw.Draw(self._textImg)
+        self.UItexts = {}
         self.drawUI = True
         self.drawControls = True
         try:
@@ -525,32 +526,43 @@ class ThreeDVisualizer(CombatMenu, Frame):
         """c => (x, y)"""
         y1, y2, x1, x2 = c[0]-size, c[0]+size, c[1]-size, c[1]+size
         fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity) + fill * opacity
-        self.cFont = ImageFont.truetype(_ARIALBD, size)
-        s = self.textSize.textsize(char, font=self.cFont)
-        a = Image.new("L", (size*2, size*2), color=(0,))
-        d = ImageDraw.Draw(a)
-        d.text((size-s[0]/2,size-s[1]/2), char, fill=(255,), font=self.cFont)
-        b = np.array(a, "uint16")
+        
+        if char not in self.UItexts:
+            self.cFont = ImageFont.truetype(_ARIALBD, size)
+            s = self.textSize.textsize(char, font=self.cFont)
+            a = Image.new("L", (size*2, size*2), color=(0,))
+            d = ImageDraw.Draw(a)
+            d.text((size-s[0]/2,size-s[1]/2), char, fill=(255,), font=self.cFont)
+            b = np.array(a, "uint16")
+            self.UItexts[char] = b
+        else:
+            b = self.UItexts[char]
+        
         opacity = np.expand_dims(b, 2) / 255.
         fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity)
 
     def drawText(self, fr, dText, dFill, dFont, coords, fOpacity=1, blur=2, bFill=(0,0,0)):
         """coords => offset from center (y, x)"""
-        pad = 4 + blur * 14
-        
-        s = self.textSize.textsize(dText, font=dFont)
-        a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
-                      color=(*bFill,0))
-        
-        for ix in range(blur):
-            d = ImageDraw.Draw(a)
-            d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont)
-            a = a.filter(ImageFilter.BoxBlur(6))
-        
-        d = ImageDraw.Draw(a)
-        d.text((pad//2,pad//2), dText, fill=dFill, font=dFont)
+        if dText not in self.UItexts:
+            pad = 4 + blur * 14
 
-        b = np.array(a, "uint16")
+            s = self.textSize.textsize(dText, font=dFont)
+            a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
+                          color=(*bFill,0))
+
+            for ix in range(blur):
+                d = ImageDraw.Draw(a)
+                d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont)
+                a = a.filter(ImageFilter.BoxBlur(6))
+
+            d = ImageDraw.Draw(a)
+            d.text((pad//2,pad//2), dText, fill=dFill, font=dFont)
+
+            b = np.array(a, "uint16")
+            self.UItexts[dText] = b
+        else:
+            b = self.UItexts[dText]
+        
         s = b.shape
         opacity = np.expand_dims(b[:,:,3], 2) / 255. * fOpacity
         
