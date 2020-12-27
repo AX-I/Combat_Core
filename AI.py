@@ -5,6 +5,7 @@
 # x ignore jumping for prediction
 # x shoot to deflect incoming projectiles
 # x sidestep to avoid incoming projectiles
+# x async navigation
 # > not shoot explosive if friend is in the way or too close impact
 
 import numpy as np
@@ -122,6 +123,17 @@ def dijkstra(tpos, cpos, nmap):
 
     return dm, prev
 
+def navProcess(q_in, q_out):
+    # q_in has elements (aiNum, args)
+    while True:
+        try:
+            a = q_in.get(True, 0.2)
+            if a is None: break
+            r = dijkstra(*a[1])
+            q_out.put((a[0], r), True, 0.2)
+        except (Full, Empty):
+            pass
+
 class AIAgent:
     def __init__(self, num, name):
         self.AInum = num
@@ -155,6 +167,13 @@ class AIManager:
             self.players[x]["fCam"] = True
 
             self.agents[x] = a
+        
+        self.qI = mp.Queue(12)
+        self.qO = mp.Queue(12)
+        self.navProcess = mp.Process(target=navProcess,
+                                     args=(self.qI, self.qO))
+        self.navProcess.start()
+        self.navResults = {}
         
     def updateAI(self):
         # Could do some aggressiveness scale
@@ -387,7 +406,20 @@ class AIManager:
         if hm[tuple(cpos)] == False:
             agent.behavior["follow"] += 0.1
             
-        p = dijkstra(tpos, cpos, hm)
+        nav = False
+        try:
+            p = self.navResults[pn]
+            nav = self.navResults[pn] is None
+        except KeyError:
+            nav = True
+
+        if nav:
+            try: self.qI.put_nowait((pn, (tpos, cpos, hm)))
+            except Full: pass
+            return
+        
+        self.navResults[pn] = None
+        
         path = []
         s = p[1][tuple(tpos)]
         if (s == -1).all(): s = p[1][(tpos[0]+1, tpos[1])]
