@@ -2,16 +2,15 @@
 # Multiple agents
 
 # Todo:
-# x ignore jumping for prediction
-# x shoot to deflect incoming projectiles
-# x sidestep to avoid incoming projectiles
-# x async navigation
 # > not shoot explosive if friend is in the way or too close impact
 
 import numpy as np
 from math import atan2, pi, sin, cos
 import time
 import random
+
+import multiprocessing as mp
+from queue import Empty, Full
 
 def normalize(v):
     return v / np.linalg.norm(v)
@@ -26,7 +25,7 @@ def sample(distr):
         if (r > s) and (r <= s+x):
             return i
         s += x
-    
+
 def follow(target, current, radius, tolerance, isMoving):
     """target, current as (x,y,z) => move, direction"""
     r = atan2(*(target[2::-2] - current[2::-2]))
@@ -76,6 +75,17 @@ def sightLine(target, current, navMap, clear=False, relax=0):
 
     return visible
 
+def navProcess(q_in, q_out):
+    # q_in has elements (aiNum, args)
+    while True:
+        try:
+            a = q_in.get(True, 0.2)
+            if a is None: break
+            r = dijkstra(*a[1])
+            q_out.put((a[0], r), True, 0.2)
+        except (Full, Empty):
+            pass
+
 def dijkstra(tpos, cpos, nmap):
     """tpos, cpos => (y, x)  |  nmap => np.array(dtype=bool)"""
     nm = np.array(nmap)
@@ -109,30 +119,21 @@ def dijkstra(tpos, cpos, nmap):
             if (td < cd) or (cd == -1):
                 dm[iy, ix-1] = td
                 prev[iy, ix-1] = (iy, ix)
-        
+
         nm[iy, ix] = False
 
         if (nm == False).all(): break
 
         zc = dm[(dm > 0) & nm]
         if zc.shape[0] == 0: break
-        
+
         w = np.where((dm == np.min(zc)) & nm)
-        
+        if w[0].shape[0] == 0:
+            break
+
         iy, ix = w[0][0], w[1][0]
 
     return dm, prev
-
-def navProcess(q_in, q_out):
-    # q_in has elements (aiNum, args)
-    while True:
-        try:
-            a = q_in.get(True, 0.2)
-            if a is None: break
-            r = dijkstra(*a[1])
-            q_out.put((a[0], r), True, 0.2)
-        except (Full, Empty):
-            pass
 
 class AIAgent:
     def __init__(self, num, name):
@@ -152,10 +153,10 @@ class AIAgent:
         self.targPred = np.zeros((4,))
         self.targetInterest = 4
         self.dirCC = 0
-        
+
         self.navPath = None
         self.pathLen = None
-        
+
 class AIManager:
     def setupAI(self, nums):
         self.agents = {}
@@ -167,47 +168,51 @@ class AIManager:
             self.players[x]["fCam"] = True
 
             self.agents[x] = a
-        
-        self.qI = mp.Queue(12)
-        self.qO = mp.Queue(12)
+
+        self.qI = mp.Queue(4)
+        self.qO = mp.Queue(4)
         self.navProcess = mp.Process(target=navProcess,
                                      args=(self.qI, self.qO))
         self.navProcess.start()
         self.navResults = {}
-        
+
     def updateAI(self):
         # Could do some aggressiveness scale
         # which is sum of health, energy, target's health etc
         # and decided by random sample
         # and could be biased in settings
-        
+
         # Behaviors: follow, navigate, retreat, etc
         # Strafe to avoid shots
         playerIndex = {int(v):k for k, v in self.activePlayers.items()}
-        
+
+        while not self.qO.empty():
+            r = self.qO.get_nowait()
+            self.navResults[r[0]] = r[1]
+
         for pn in self.agents:
             agent = self.agents[pn]
             a = self.players[pn]
 
             closestDist = 1000
             closestPlayer = None
-            
+
             closestDistTarget = 1000
             closestTarget = None
-            
+
             for p in self.actPlayers:
                 if (p == pn) or ("deathTime" in self.players[p]): continue
-                
+
                 d = np.sum((a["b1"].offset - self.players[p]["b1"].offset)**2)
 
                 if (d < closestDist):
                     closestPlayer = p
                     closestDist = d
-                            
+
                 if p in playerIndex:
                     if "CPU " in playerIndex[p]: continue
 
-                if (d < closestDist):
+                if (d < closestDistTarget):
                     closestTarget = p
                     closestDistTarget = d
 
@@ -231,15 +236,15 @@ class AIManager:
                 if not "deathTime" in a:
                     agent.behavior["retreat"] = 0.5
                     agent.navTarget = self.players[closestPlayer]
-            
+
             if agent.behavior["retreat"] > 0:
                 if closestDist > 5:
                     agent.behavior["retreat"] = 0
                     agent.navTarget = self.players[closestTarget]
-            
+
             if agent.navTarget is None:
                 agent.navTarget = self.players[closestTarget]
-            
+
             if closestTarget != agent.navTarget["id"]:
                 if "deathTime" in agent.navTarget:
                     agent.targetInterest = 0
@@ -257,7 +262,7 @@ class AIManager:
             a["cv"] = 0
 
             choice = list(agent.behavior)[sample(list(agent.behavior.values()))]
-            
+
             if choice == "follow":
                 self._follow(pn)
             if choice == "navigate":
@@ -267,15 +272,14 @@ class AIManager:
             if choice == "retreat":
                 self._retreat(pn)
             if choice == "none":
-                pass
+                agent.behavior["follow"] += 0.1
 
             # Avoid / deflect incoming projectiles
-            #for r in self.srbs:
             for i in range(len(self.spheres)):
                 if "deathTime" in a: continue
                 rb = self.srbs[i]
                 if rb.disabled: continue
-                
+
                 d = a["b1"].offset[:3] - rb.pos
                 sp = agent.navTarget["b1"].offset[:3] - rb.pos
                 if normalize(d) @ normalize(rb.v) > 0.9:
@@ -325,11 +329,11 @@ class AIManager:
         a["cr"] = fol[1]
         a["moving"] = -1
         a["cv"] = 6 * random.randint(0,1) - 3
-        
+
     def _fire(self, pn):
         agent = self.agents[pn]
         a = self.players[pn]
-        
+
         fire = self.getHealth(pn) < 1
         fire = fire and (a["Energy"] > 0.3)
         fire = fire and ("deathTime" not in agent.navTarget)
@@ -341,7 +345,7 @@ class AIManager:
                          3, 0, a["moving"])[0])
             isHit = ("isHit" in a) and (self.frameNum - a["isHit"]) < 5
             fire = fire and (visible or isHit)
-        
+
         choice = "blank"
         choice2 = "red"
         if self.getHealth(pn) < 0.3:
@@ -350,9 +354,14 @@ class AIManager:
 
         if np.sum((a["b1"].offset - agent.navTarget["b1"].offset)**2) > 16:
             if a["Energy"] > 0.5:
-                choice = "orange"
+                if random.random() < 0.4:
+                    choice = "orange"
+                elif random.random() < 0.2:
+                    choice = "black"
+                else:
+                    choice = "blank"
                 choice2 = "red"
-        
+
         if fire:
             pred = (agent.navTarget["b1"].offset - agent.targPred)
             pred[1] = 0
@@ -365,6 +374,7 @@ class AIManager:
                 self.fire(choice2, pn, vh)
 
     def _follow(self, pn):
+        """Straight line towards target"""
         agent = self.agents[pn]
         a = self.players[pn]
         diff = a["b1"].offset - agent.lastPos
@@ -372,32 +382,45 @@ class AIManager:
         if not sightLine(agent.navTarget["b1"].offset[:3], a["b1"].offset[:3],
                          self.atriumNav):
             agent.lostTrack += 1
+        else:
+            agent.behavior["pathfind"] *= 0.5
+            if agent.behavior["pathfind"] < 0.01:
+                agent.behavior["pathfind"] = 0
+
         if agent.lostTrack > 5:
+            agent.behavior["follow"] = 0.2
             agent.behavior["navigate"] += 0.2
             agent.lostTrack = 0
-        
+
         if a["moving"] and (np.sum(diff) == 0):
             agent.stuck += 1
             if agent.stuck > 3:
                 agent.behavior["navigate"] = 10
                 agent.stuck = 0
-            
+
             self.jump(pn)
 
         if random.random() < 0.1:
             a["cv"] = 4 * random.randint(0, 1) - 2
-        
+
         fol = follow(agent.navTarget["b1"].offset, a["b1"].offset,
                         6, 1, a["moving"])
         a["moving"] = fol[0]
         a["cr"] = fol[1]
 
     def _navigate(self, pn):
+        """Calculate path"""
         agent = self.agents[pn]
         a = self.players[pn]
 
         navMap = self.atriumNav
         hm = navMap["map"]
+
+        if hm is None:
+            agent.behavior['navigate'] = 0
+            agent.behavior['follow'] += 0.1
+            return
+
         tpos = (agent.navTarget["b1"].offset[:3] - navMap["origin"])[::2] / navMap["scale"]
         tpos = np.round(tpos).astype("int")
         cpos = (a["b1"].offset[:3] - navMap["origin"])[::2] / navMap["scale"]
@@ -405,7 +428,7 @@ class AIManager:
 
         if hm[tuple(cpos)] == False:
             agent.behavior["follow"] += 0.1
-            
+
         nav = False
         try:
             p = self.navResults[pn]
@@ -417,16 +440,17 @@ class AIManager:
             try: self.qI.put_nowait((pn, (tpos, cpos, hm)))
             except Full: pass
             return
-        
+
         self.navResults[pn] = None
-        
+
+
         path = []
         s = p[1][tuple(tpos)]
         if (s == -1).all(): s = p[1][(tpos[0]+1, tpos[1])]
         if (s == -1).all(): s = p[1][(tpos[0]-1, tpos[1])]
         if (s == -1).all(): s = p[1][(tpos[0], tpos[1]+1)]
         if (s == -1).all(): s = p[1][(tpos[0], tpos[1]-1)]
-        
+
         while True:
             cy, cx = tuple(s)
             ny, nx = tuple(s)
@@ -438,15 +462,19 @@ class AIManager:
             path.append((ny, nx))
             s = p[1][tuple(s)]
             if (s == -1).all(): break
-        
+
+        self.navDebug = (cpos, tpos, path)
+
         agent.navPath = path[2:]
-        
+
         agent.pathLen = 0
 
         agent.behavior["pathfind"] = 1
         agent.behavior["navigate"] = 0
+        agent.behavior["follow"] = 0
 
     def _pathfind(self, pn):
+        """Follow calculated path"""
         agent = self.agents[pn]
         a = self.players[pn]
         diff = a["b1"].offset - agent.lastPos
@@ -464,22 +492,21 @@ class AIManager:
         if self.frameNum & 7 == 0:
             pathDest = np.array([agent.navPath[0][0], 0, agent.navPath[0][1]])
             pathDest = pathDest * navMap["scale"] + navMap["origin"]
-            if np.sum((pathDest - agent.navTarget["b1"].offset[:3])**2) > 16:
+            diff = pathDest - agent.navTarget["b1"].offset[:3]
+            if np.sum(diff[::2]**2) > 16:
                 # Recalculate path
                 agent.behavior["navigate"] = 10
 
-        #print("Target", pathTarg)
-        #print("Current", a["b1"].offset[:3])
         if np.sum((pathTarg[::2] - a["b1"].offset[:3:2])**2) < 4:
             agent.navPath.pop()
             if len(agent.navPath) == 0:
                 agent.behavior["pathfind"] = 0
                 a["moving"] = False
                 return
-            
+
             pathTarg = np.array([agent.navPath[-1][0], 0, agent.navPath[-1][1]])
             pathTarg = pathTarg * navMap["scale"] + navMap["origin"]
-        
+
         fol = follow(pathTarg, a["b1"].offset[:3],
                      2, 0, a["moving"])
         a["moving"] = fol[0]
@@ -489,15 +516,11 @@ class AIManager:
             if abs(diffDir) > 0:
                 # Counterclockwise
                 agent.dirCC = ((diffDir > 0) and (diffDir < pi)) or (diffDir < -pi)
-            
+
         a["cr"] = fol[1]
-        
-        #a["moving"] *= 0.5
-        
+
         if a["moving"] and (np.sum(diff) == 0):
             agent.stuck += 1
-            #a["cv"] = (self.dirCC * 2 - 1) * 3
-            #print("Stuck", self.stuck)
 
             a["cr"] += (agent.dirCC * 2 - 1) * 0.8
             if agent.stuck > 2:
@@ -509,10 +532,9 @@ class AIManager:
                 agent.behavior["navigate"] = 100
                 agent.behavior["pathfind"] = 0
                 self.stuck = 0
-                #a["cr"] = 0
 
         agent.pathLen += 1
-        
+
         if agent.pathLen > 3:
             if sightLine(agent.navTarget["b1"].offset[:3], a["b1"].offset[:3],
                               self.atriumNav, clear=True):
@@ -528,7 +550,7 @@ if __name__ == "__main__":
     p = dijkstra([51, 48], [27, 12], b)
     dt2 = time.perf_counter()
     print(dt2 - dt1, "secs")
-    
+
     d = p[0]
     i = np.zeros((*b.shape, 3), "uint8")
     i[d==-1] = (128, 0, 0)
