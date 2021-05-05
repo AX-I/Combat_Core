@@ -37,26 +37,48 @@ gCount = 0
 
 class CombatServer(socketserver.ThreadingMixIn,
                    HTTPServer):
-    def __init__(self, *args):
+    def __init__(self, https, *args):
         super().__init__(*args)
         self.users = {}
         self.games = {}
         self.gamePlayers = {}
+
+        if https:
+            self.socket = ssl.wrap_socket(self.socket,
+                                          keyfile="combatlocal.pem",
+                                          certfile="server.pem",
+                                          server_side=True)
 
 def parseArg(s):
     data = {}
     for i in s.split("&"):
         data[i.split("=")[0]] = i.split("=")[1]
     return data
-    
+
 class CombatRequestHandler(BaseHTTPRequestHandler):
+    version_string = lambda x: "AXICombatServer/1.0"
+
+    def send_response(self, code, message=None):
+        self.send_response_only(code, message)
+        self.send_header('Server', self.version_string())
+
     def do_GET(self):
+        if "AXICombat" not in self.headers.get("User-Agent"):
+            self.send_response(200, "Hello!")
+            self.end_headers()
+            return
+
         if "NewGame" in self.path:
             self.newGame()
         elif "List" in self.path:
             self.listGames()
 
     def do_POST(self):
+        if "AXICombat" not in self.headers.get("User-Agent"):
+            self.send_response(200, "Hello!")
+            self.end_headers()
+            return
+
         if "GameDat" in self.path:
             self.updateGame()
         elif "SelChar" in self.path:
@@ -66,74 +88,91 @@ class CombatRequestHandler(BaseHTTPRequestHandler):
 
     def checkUser(self):
         n = int(self.headers.get("Content-Length"))
-        
+
         raw = self.rfile.read(n).decode("utf-8")
         data = parseArg(raw)
         un = data["Uname"].replace("+", " ")
+        try:
+            if un.startswith("CPU"):
+                self.send_response(403, "Username taken")
+                self.end_headers()
+                return
+        except: pass
+
         if un in self.server.users:
             if self.client_address[0] != self.server.users[un]:
                 self.send_response(403, "Username taken")
                 self.end_headers()
         else:
             self.server.users[un] = self.client_address[0]
+
         self.send_response(200, "Hello!")
         self.end_headers()
 
+
     def newGame(self):
         global gRand1, gRand2, gRandX, gCount
-        
+
         data = parseArg(self.path.split("?")[1])
         stage = data["stage"]
         hname = data["hname"]
-        
-        r = gRandX[gCount]
+
+        r = gRandX[gCount % len(gRandX)]
         reqId = gRand1[r // len(gRand2)] + " " + gRand2[r % len(gRand2)]
         gCount += 1
-        
+
         self.server.games[reqId] = {"Stage":stage, "Host":hname, "Time":time.time()}
         self.server.gamePlayers[reqId] = {}
         print("New game:", reqId)
 
         self.send_response(200, "Hello!")
         self.end_headers()
-        
-        s = "New:" + str(reqId)
-        
-        self.wfile.write(bytes(s, "utf-8"))
 
-        gt = list(self.server.games)
-        for g in gt:
-            if (time.time() - self.server.games[g]["Time"]) > 60:
-                print("Deleted:", g)
-                del self.server.games[g]
-                del self.server.gamePlayers[g]
+        s = "New:" + str(reqId)
+
+        self.wfile.write(bytes(s, "utf-8"))
 
     def listGames(self):
         self.send_response(200, "Hello!")
         self.end_headers()
-        
+
+        gt = list(self.server.games)
+        for g in gt:
+            if (time.time() - self.server.games[g]["Time"]) > 60*5:
+                print("Deleted:", g)
+                del self.server.games[g]
+                del self.server.gamePlayers[g]
+
         s = json.dumps(self.server.games)
-        
+
         self.wfile.write(bytes(s, "utf-8"))
 
     def updateChar(self):
         n = int(self.headers.get("Content-Length"))
         raw = self.rfile.read(n).decode("utf-8")
         data = parseArg(raw)
-        
+
+        if not all([x in data for x in ("gd", "pname")]):
+            self.send_response(400, "Missing parameters")
+            self.end_headers()
+            self.wfile.write(b"Missing parameters.")
+            return
+
         gd = data["gd"].replace("+", " ")
 
         if "char" in data:
             if data["char"] in self.server.games[gd]:
                 self.send_response(403, "Taken")
                 self.end_headers()
+                if self.server.games[gd][data["char"]].startswith("CPU "):
+                    self.wfile.write(b"CPU")
                 return
-            
+
             self.server.games[gd][data["char"]] = data["pname"]
-        
+
         self.send_response(200, "Hello!")
         self.end_headers()
-        
+
     def updateGame(self):
         n = int(self.headers.get("Content-Length"))
         raw = self.rfile.read(n).decode("utf-8")
@@ -144,20 +183,24 @@ class CombatRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"Missing parameters.")
             return
-        
+
         gd = data["gd"].replace("+", " ")
 
         cgame = self.server.gamePlayers[gd]
         if data["pname"] not in cgame:
             cgame[data["pname"]] = {"addr":self.client_address[0], "data":""}
-        
+        elif cgame[data["pname"]]["addr"] != self.client_address[0]:
+            self.send_response(200, "Hello!")
+            self.end_headers()
+            return
+
         if "data" in data:
             self.server.games[gd]["Time"] = time.time()
             cgame[data["pname"]]["data"] = data["data"]
-        
+
         self.send_response(200, "Hello!")
         self.end_headers()
-        
+
         out = ""
         if "getAll" in data:
             for i in cgame:
@@ -169,9 +212,9 @@ class CombatRequestHandler(BaseHTTPRequestHandler):
 
         hname = self.server.games[gd]["Host"]
         out = hname + "|" + self.server.gamePlayers[gd][hname]["data"]
-        
+
         self.wfile.write(bytes(out, "utf-8"))
-        
+
 def run(addr=None):
     global httpd
     if addr is None:
@@ -182,7 +225,7 @@ def run(addr=None):
             except: pass
         addr = (ip, 80)
     print("Hosting on", addr)
-    httpd = CombatServer(addr, CombatRequestHandler)
+    httpd = CombatServer(False, addr, CombatRequestHandler)
     httpd.serve_forever()
 
 if __name__ == "__main__":
