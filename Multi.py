@@ -1,6 +1,6 @@
 # ======== ========
-# Copyright (C) 2020 Louis Zhang
-# Copyright (C) 2020 AgentX Industries
+# Copyright (C) 2020-2021 Louis Zhang
+# Copyright (C) 2020-2021 AgentX Industries
 #
 # This file (Multi.py) is part of AXI Combat.
 #
@@ -48,9 +48,10 @@ import OpsConv
 import AI
 
 PATH = OpsConv.PATH
-SWITCHABLE = False
+SWITCHABLE = True
 SHOWALL = False
 GESTLEN = 0.6
+LOADALL = False
 
 def mkServer(pi, po, kwargs):
     a = TCPServer(pi, po, isclient=False, **kwargs)
@@ -66,11 +67,13 @@ def playSound(si):
 class CombatApp(ThreeDBackend, AI.AIManager):
     def __init__(self):
 
+        self.maxFPS = 66
+
         kwargs = OpsConv.getSettings()
         width, height, fovx = kwargs["W"], kwargs["H"], kwargs["FOV"]
         volm = float(kwargs["Volume"])
         volm = np.array((volm, volm))
-        
+
         super().__init__(width, height, fovx=fovx,
                          downSample=1)
 
@@ -81,7 +84,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         self.proceed = True
         try:
-            stage, gameId, server, name, isClient, selChar = self.waitMenu()
+            stage, gameId, server, name, isClient, selChar, aiNums = self.waitMenu()
         except TypeError:
             self.proceed = False
 
@@ -92,9 +95,12 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         kwargs = OpsConv.getSettings()
         width, height = kwargs["W"], kwargs["H"]
         self.setWH(width, height)
-        
+
         volm = float(kwargs["Volume"])
         volm = np.array((volm, volm))
+
+        volmFX = float(kwargs["VolumeFX"])
+        volmFX = np.array((volmFX, volmFX))
 
         qi = mp.Queue(4)
         qo = mp.Queue(4)
@@ -104,13 +110,15 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.stage = stage
         self.uname = name
         self.volm = volm
+        self.volmFX = volmFX
+        self.aiNums = aiNums
 
         p = {"name":name, "host":server, "stage":stage, "gameId":gameId}
         if isClient:
             net = mp.Process(target=mkClient, args=(qi, qo, p), name="Network")
         else:
             net = mp.Process(target=mkServer, args=(qi, qo, p), name="Network")
-        
+
         net.start()
         self.server = net
         self.qi = qi
@@ -123,7 +131,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.doBloom = kwargs["BL"]
         self.doSSR = kwargs["SSR"]
         self.doRTVL = kwargs["RTVL"]
-        
+        self.renderBackend = kwargs["Render"]
+
         ssrLevels = [0, 160, 320, 640]
 
         with open(PATH + "Shaders_src/av_SSR_temp.c") as f:
@@ -136,7 +145,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     g.write(i)
 
         rvlLevels = [0, 8, 16, 64]
-        absLevels = [0.06, 0.06, 0.06]
+        absLevel = 0.06
         with open(PATH + "Shaders_src/av_fog_temp.c") as f:
             with open(PATH + "Shaders_src/av_fog.c", "w") as g:
                 for i in f.readlines():
@@ -146,31 +155,29 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                             i += str(rvlLevels[self.doRTVL]) + "\n"
                         elif "ABSORB" in i:
                             i = " ".join(i.split(" ")[:-1]) + " "
-                            i += str(absLevels[self.stage]) + "f\n"
+                            i += str(absLevel) + "f\n"
                     g.write(i)
 
-        stageNames = ["Desert", "CB Atrium", "Taiga"]
+        stageNames = ["Desert", "CB Atrium", "Taiga", "New Stage"]
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
-        self.α = 4.1; self.β = -0.1
+        self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
         self.camSpeed = 0.2
-
-        self.maxFPS = 60
 
         self.ambLight = 0.08
 
         self.players = []
         self.maxHP = 40
-        
+
         self.hvel = 4
         self.poseDt = 1.5
         self.gestLen = GESTLEN
-        
+
         self.numBullets = 16
         self.bulletSpeed = 15
         self.COSTS = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.4}
-        
+
         self.selchar = selChar
 
         self.uInfo = {}
@@ -184,10 +191,10 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         self.expNum = 0
         self.exscale = 10.
-        self.expPow = 3
+        self.expPow = 2.7
 
-        self.waitFinished = False
-        
+        self.showAINav = False
+
     def waitMenu(self):
         # server, gameId, stage, name, isClient
         wait = True
@@ -202,7 +209,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 elif "Play" in action or "Fade" in action or "Cresc" in action:
                     self.si.put(action)
             except Empty: pass
-        
+
     def customizeFrontend(self):
         self.bindKey("r", self.rotateLight)
         if SWITCHABLE:
@@ -216,22 +223,27 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.bindKey("<space>", self.jump)
         self.bindKey("<Up>", self.z1)
         self.bindKey("<Down>", self.z2)
+
         self.enableDOF(dofR=16, rad=0.04)
 
         self.gestures = []
         p = PATH + "../Poses/"
         for g in ["Armcross.pose", "Bow.pose", "Hi.pose", "Hold.pose"]:
             self.gestures.append(json.load(open(p+g)))
-        
+
         self.bindKey("1", lambda: self.gesture(self.selchar, 0))
         self.bindKey("2", lambda: self.gesture(self.selchar, 1))
         self.bindKey("3", lambda: self.gesture(self.selchar, 2))
         self.bindKey("4", lambda: self.gesture(self.selchar, 3))
 
+        self.bindKey("n", self.tgNav)
+
+    def tgNav(self): self.showAINav = not self.showAINav
+
     def gesture(self, pn, n, gi=None):
         p = self.players[pn]
         if p["gesturing"]: return
-        
+
         p["gesturing"] = True
         p["gestStart"] = time.time()
         if gi is None:
@@ -247,7 +259,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         p = self.players[pn]
         if p["jump"] < 0:
             p["jump"] = self.frameNum
-            p["vertVel"] = 0.4
+            p["vertVel"] = 6.0
 
     def stepGest(self, p, vobj, st=1):
         p["poset"] += p["pstep"] * st
@@ -258,16 +270,16 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             else:
                 if (time.time() - p["gestMid"]) > self.gestLen:
                     p["pstep"] = -3
-        
+
         if p["gestNum"] == 3:
             self.getHandPos(p["id"])
-        
+
         finish = False
         if p["poset"] < 0:
             p["poset"] = 0; finish = True
-        
+
         p["rig"].interpPose(self.idle, self.gestures[p["gestNum"]], p["poset"])
-        self.updateRig(p["rig"], p["ctexn"], p["num"], vobj, offset=p["bOffset"])
+        self.updateRig(p["rig"], p["ctexn"], p["num"], vobj)
 
         if finish: self.gestFinish(p["id"])
 
@@ -281,18 +293,18 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
     def getHandPos(self, pn):
         p = self.players[pn]
-        
+
         b = p["b1"].children[0].children[0]
         while len(b.children) > 0: b = b.children[0]
         pr = np.array(b.TM[3,:3])
-        
+
         b = p["b1"].children[0].children[1]
         while len(b.children) > 0: b = b.children[0]
         pl = np.array(b.TM[3,:3])
-        
+
         i = np.array((1,1,1.)) * min(1, 1.33 * max(0, p["poset"] - 0.25))**2
         self.pointLights.append({"i":i, "pos":(pr + pl) / 2})
-        
+
     def z1(self): self.setFOV(max(45, self.fovX * 0.96))
     def z2(self): self.setFOV(min(120, self.fovX * 1.04166))
 
@@ -300,22 +312,22 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.selchar = (self.selchar + 1) % len(self.players)
     def tgControl1(self):
         self.selchar = (self.selchar - 1) % len(self.players)
-        
+
     def mvCam(self):
         if not self.fCam:
             self.α = -self.players[self.selchar]["cr"] + pi/2
         self.fCam = not self.fCam
         self.players[self.selchar]["fCam"] = self.fCam
-        
+
     def moveKey(self, key):
         rv = 3
-        sc = self.selchar
-        if key == "u": self.players[sc]["moving"] = 1
-        if key == "d": self.players[sc]["moving"] = -1
-        elif key == "r": self.players[sc]["cv"] = -rv
-        elif key == "l": self.players[sc]["cv"] = rv
-        elif key == "ZV": self.players[sc]["moving"] = 0
-        elif key == "ZH": self.players[sc]["cv"] = 0
+        sa = self.players[self.selchar]
+        if key == "u": sa["moving"] = 1
+        elif key == "d": sa["moving"] = -1
+        elif key == "r": sa["cv"] = -rv
+        elif key == "l": sa["cv"] = rv
+        elif key == "ZV": sa["moving"] = 0
+        elif key == "ZH": sa["cv"] = 0
 
     def stepPose(self, p, vobj, st=1):
         p["poset"] += p["pstep"] * st
@@ -333,14 +345,14 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             else:
                 p["posen"] -= 1
                 p["poset"] += 1 - int(p["poset"])
-                
+
         p["rig"].interpPose(self.poses[p["posen"]], self.poses[p["posen"]+1],
                             p["poset"])
-        
+
     def rotateLight(self, rl=None):
         if rl is None: a = self.directionalLights[0]["dir"][1] + 0.05
         else: a = rl
-        
+
         self.directionalLights[0]["dir"][1] = (a % pi)
         self.directionalLights[1]["dir"][1] = (a % pi) + pi
         ti = abs(self.directionalLights[0]["dir"][1])
@@ -360,20 +372,20 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
     def test(self, n):
         self.players[n]["isHit"] = self.frameNum
-        
+
     def explode(self, p, force=False, eNum=None):
         if self.isClient and (not force): return
         if eNum is not None: self.expNum = eNum
-        
+
         e = self.exploders[self.expNum]
         e["pos"] = np.array(p)
         e["active"] = True
         e["start"] = time.time()
         self.matShaders[e["obj"].texNum]["add"] = 4
-        
+
         self.draw.translate(e["pos"], e["obj"].cStart*3, e["obj"].cEnd*3,
                             e["obj"].texNum)
-        
+
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
         LR = (p - self.pos)
@@ -383,9 +395,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
-                             self.volm / 3 * attn * np.array((left, right)))})
-        
-    def addPlayer(self, o, bo):
+                             self.volmFX / 3 * attn * np.array((left, right)))})
+
+    def addPlayer(self, o):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=True)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
         pv.addCollider(Phys.CircleCollider(0.5, (0,0.51,0), rb=pv))
@@ -399,7 +411,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         pv.colliders[1].isHit = lambda x: self.test(x)
         pv.colliders[0].onExplode = lambda x: self.explode(x)
         pv.colliders[1].onExplode = lambda x: self.explode(x)
-        
+
         a = {"posen":0, "poset":0, "pstep":6,
              "moving":False, "movingOld":False, "cr":0, "cv":0,
              "ctexn":None, "rig":None, "obj":o,
@@ -418,18 +430,17 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         a["rig"] = Rig(r, scale=self.rpi[a["num"]][1])
         a["b1"] = a["rig"].b0
         a["allBones"] = a["rig"].allBones
-        a["bOffset"] = bo
 
         a["Energy"] = 1
 
     def createObjects(self):
         self.NPLAYERS = 0
-        
+
         st = time.time()
         print("Loading textures")
 
         self.w = Phys.World()
-        
+
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
@@ -443,83 +454,68 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
                     (mpath + "Vader/Vader5.rig", 1.6, 1.56),
                     ]
-        
+
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
                            animated=True, texMul=1, reflect="1a",
                            scale=1.33, shadow="")
-        self.addPlayer(self.vertObjects[-1], 0)
+        self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Zelda2/Test5b.obj",
                            animated=True,
-                           boneOffset=bo,
                            texMul=2.5,
                            scale=0.33, shadow="R", rot=(0,0,0))
-        self.addPlayer(self.vertObjects[-1], bo)
+        self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"L3/L3.obj",
                            animated=True,
-                           boneOffset=bo,
-                           texMul=1,# mip=1,
+                           texMul=1,
                            scale=0.75, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
-        
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Test3/Test3I.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           scale=0.8, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
-        self.matShaders[self.vertObjects[-1].nextMtl.texNum]["sub"] = 0.6
+        self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Zelda/Ztest4.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           texMul=2,
-                           scale=1, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
+        if LOADALL:
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"Test3/Test3I.obj",
+                               animated=True,
+                               scale=0.8, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
+            self.matShaders[self.vertObjects[-1].nextMtl.texNum]["sub"] = 0.6
 
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"LinkTP/Li.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           texMul=1.5,# mip=1,
-                           scale=0.75, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"Zelda/Ztest4.obj",
+                               animated=True,
+                               texMul=2,
+                               scale=1, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Ahri/Ahri4.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           scale=1.8, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"LinkTP/Li.obj",
+                               animated=True,
+                               texMul=1.5,
+                               scale=0.75, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Stormtrooper/Trooper5.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           scale=1.4, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"Ahri/Ahri4.obj",
+                               animated=True,
+                               scale=1.8, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
 
-        bo = sum([len(x["allBones"]) for x in self.players])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Vader/Vader5.obj",
-                           animated=True,
-                           boneOffset=bo,
-                           scale=1.6, shadow="R")
-        self.addPlayer(self.vertObjects[-1], bo)
-        self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
-        
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"Stormtrooper/Trooper5.obj",
+                               animated=True,
+                               scale=1.4, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
+
+            self.addVertObject(VertModel, [0,0,0],
+                               filename=mpath+"Vader/Vader5.obj",
+                               animated=True,
+                               scale=1.6, shadow="R")
+            self.addPlayer(self.vertObjects[-1])
+            self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
+
         if self.stage == 0:
             self.addVertObject(VertTerrain, [-10, 0, -10],
                             heights=PATH+"../Assets/TerrainA.png",
@@ -537,7 +533,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
             self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.hdr",
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                                     rot=(0,0,0), hdrScale=16)
             self.skyBox.created()
 
@@ -549,7 +545,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                                scale=1.2, mip=2,
                                useShaders={"cull":1},
                                subDiv=1, shadow="CR")
-            
+
             self.terrain = VertTerrain0([0,-0.6,0],
                                         PATH+"../Atrium/AtriumNav.png",
                                         scale=0.293, vertScale=20)
@@ -558,12 +554,6 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             hm = np.array(hm)[:,:,0] < 80
             hs = 0.586
             ho = np.array([0.3,0,0.3])
-            
-##            self.addVertObject(VertTerrain, [0,-0.6, 0],
-##                               heights=PATH+"../Atrium/AtriumNav.png",
-##                               scale=0.293, vertScale=20,
-##                               texture=PATH+"../Assets/Grass.png")
-##            self.terrain = self.vertObjects[-1]
 
             self.atriumNav = {"map":hm, "scale":0.586, "origin":ho}
 
@@ -575,7 +565,10 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[1.8,1.6,1.2]})
             self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.4,0.3,0.2]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.hdr",
+            if self.renderBackend == "GL":
+                self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
+
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                                     rot=(0,0,0), hdrScale=48)
             self.skyBox.created()
 
@@ -607,11 +600,54 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.directionalLights.append({"dir":[pi*1.7, 0.54+pi], "i":[0.1,0.1,0.1]})
             self.directionalLights.append({"dir":[pi*1.7, 0.54], "i":[0.1,0.1,0.1]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.1,0.2]})
-            
+
             self.skyTex = np.zeros((1,6,3),"uint16")
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
-                
+
+
+        elif self.stage == 3:
+            ox, oz = 15, 20
+            mScale = 0.5
+            self.addVertObject(VertModel, [ox, 0, oz], rot=(0,0,0),
+                               filename=PATH+"../Models/NewStage.obj",
+                               scale=mScale, mip=2,
+                               useShaders={"cull":1},
+                               subDiv=1, shadow="CR")
+
+            a = Image.open(PATH+"../Models/NewStageX3.png")
+            navScale = 0.1
+            navScaleV = -20 / navScale * mScale
+            s = -a.size[0] * navScale * mScale
+            navOrigin = [s+ox, 20 * mScale, s+oz]
+
+            self.terrain = VertTerrain0(navOrigin,
+                                        PATH+"../Models/NewStageX3.png",
+                                        scale=navScale, vertScale=navScaleV)
+
+            hm = Image.open(PATH+"../Models/NewStageNav1.png")
+            hm = np.array(hm)
+            hm = 1 - ((hm[:,:,0] == 255) & (hm[:,:,1] == 0))
+            hm = hm.astype('bool')
+
+            hs = 4 * navScale
+            ho = np.array(navOrigin) * np.array([1,0,1]) + np.array([0,0,-0.2])
+
+            self.atriumNav = {"map":hm, "scale":hs, "origin":ho}
+
+            self.t2 = Phys.TerrainCollider(navOrigin, self.terrain.size[0],
+                                           self.terrain.heights, navScale)
+            self.t2.onHit = lambda x: self.explode(x)
+            self.w.addCollider(self.t2)
+
+            self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
+            self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
+                                    rot=(0,0,0), hdrScale=48)
+            self.skyBox.created()
+
+
         self.spheres = []
         self.srbs = []
         for i in range(self.numBullets):
@@ -643,7 +679,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.srbs[-1].disabled = True
             self.w.addRB(self.srbs[-1])
 
-        
+
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
@@ -671,7 +707,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
 
         self.blackHoles = []
-        for i in range(self.numBullets // 6):
+        for i in range(self.numBullets // 5):
             p = [20, 3+i, 15]
             self.addVertObject(VertSphere, p, n=12, scale=0.3,
                                texture=PATH+"../Assets/Black.png",
@@ -687,7 +723,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                                                           blackHole=True))
             self.srbs[-1].disabled = True
             self.srbs[-1].colliders[0].onHit = lambda x: self.explode(x)
-            
+
             self.w.addRB(self.srbs[-1])
 
             ps = ContinuousParticleSystem(np.array([0,0,0.]), (0,pi/2),
@@ -698,7 +734,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                                           size=24 * (self.W/960), opacity=0.4,
                                           color=(0,0,0))
             self.addParticleSystem(ps)
-            
+
             self.blackHoles.append({"rb":self.srbs[-1], "ps":ps})
 
         if self.stage == 0:
@@ -739,8 +775,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                            texture=PATH+"../Assets/Blank2.png",
                            useShaders={"2d":1, "fog":1})
 
-        bd = [(-10, 50), (-10, 50), (-20, 50)]
-        ss = [60, 60, 70]
+        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35)]
+        ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]
 
@@ -754,13 +790,13 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                                    h1=h[i], h2=[0, 20, 0],
                                    texture=PATH+"../Assets/Magenta.png",
                                    useShaders={"border":0.1})
-        
+
         sr = self.shRes
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":24*sr/2048})
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":200*sr/2048})
-        
+
         self.makeObjects(1)
 
         if self.stage == 1:
@@ -774,17 +810,31 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 self.spotLights.extend(a)
 
         print("Done in", time.time() - st, "s")
-        
+
     def postProcess(self):
         if self.doBloom:
             self.draw.blur()
+
+        for i in range(len(self.blackHoles)):
+            b = self.blackHoles[i]
+            if "dstrength" in b and b["dstrength"] > 0:
+                tr = (b["lastPos"] - self.pos) @ self.vMat.T
+                if tr[0] < 0: continue
+                sc = (self.scale * self.H//2) / tr[0]
+                bx = -tr[1] * sc + self.W//2
+                by = tr[2] * sc + self.H//2
+                portal = 0.3 * sc
+                strength = 300 * b["dstrength"] / tr[0]
+                self.draw.distort(bx/self.W, by/self.H, tr[0],
+                                  portal, strength)
+
         self.draw.gamma(1.4)
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volm / snd[color][1])})
-        
+                             self.volmFX / snd[color][1])})
+
     def fire(self, color, sc=None, vh=None):
         if sc is None:
             sc = self.selchar
@@ -794,7 +844,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         if a["Energy"] < self.COSTS[color]: return
         a["Energy"] -= self.COSTS[color]
-        
+
         cb = None
         for i in range(len(self.srbs)):
             if self.srbs[i].disabled and self.spheres[i][0] == color:
@@ -802,9 +852,10 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         if cb is None:
             a["Energy"] += self.COSTS[color]
             return False
-        
+
         self.srbs[cb].disabled = False
         s = self.bulletSpeed
+        if color == "black": s *= 0.66
         d = np.array([cos(a["cr"]), vh, sin(a["cr"])])
         self.srbs[cb].v = d*s
         self.srbs[cb].pos = np.array(a["b1"].offset[:3]) + 0.8*(d*np.array([1,0,1]))
@@ -813,26 +864,26 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         LR = (a["b1"].offset[:3] - self.pos)
         dist = Phys.eucLen(LR)
-        attn = 4 / (dist + 1)
-        LR = (LR / Phys.eucLen(LR)) @ self.vVhorz()
+        LR = (LR / dist) @ self.vVhorz()
         left = (LR + 1) / 2
         right = -(LR - 1) / 2
+        attn = 4 / (dist + 1)
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volm / snd[color][1] * attn * np.array((left, right)))})
+                             self.volmFX / snd[color][1] * attn * np.array((left, right)))})
 
         if sc == self.selchar:
             self.frameFired = color
 
         return color
-        
+
     def onStart(self):
         self.gameStarted = False
-        
+
         if self.isClient:
-            snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav"]
+            snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav", "Plains_Fight.wav"]
             self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm, True)})
             self.gameStarted = True
-        
+
         self.qi.put(True)
         self.cubeMap = CubeMap(self.skyTex, 2, False)
         a = self.cubeMap.texture.reshape((-1, 3))
@@ -844,7 +895,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         walks = ["Walk1.txt", "Walk2.txt", "Walk3.txt", "Walk4.txt"]
         self.poses = [json.load(open(p+f)) for f in walks]
         self.idle = json.load(open(p+"Idle1.pose"))
-        
+
+        space = 2 if self.stage == 3 else 3
+
         for n in range(len(self.players)):
             a = self.players[n]
             ctexn = []
@@ -854,33 +907,32 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 c = c.nextMtl
                 ctexn.append(c.texNum)
             a["ctexn"] = ctexn
-            
+
             self.draw.initBoneTransforms(a["num"], len(a["allBones"]))
 
             for b in range(len(a["allBones"])):
                 for i in a["ctexn"]:
-                    self.draw.initBoneOrigin(a["allBones"][b].origin, b+a["bOffset"], i)
+                    self.draw.initBoneOrigin(a["allBones"][b].origin, b, i)
 
-            a["b1"].offset = np.array((28, 0, 15+3*n, 1.))
+            a["b1"].offset = np.array((28, 0, 15 + space*n, 1.))
             a["b1"].offset[1] = self.terrain.getHeight(a["b1"].offset[0],
                                                        a["b1"].offset[2]) + 1.6
             a["rig"].importPose(self.idle, updateRoot=False)
-            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
-        
+            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+
         self.shadowObjects()
         self.setupShadowCams()
         self.rotateLight()
         self.simpleShaderVert()
         self.shadowChar()
-        
+
         self.w.start()
 
         if not self.isClient:
-            aiNums = []
-            self.setupAI(aiNums)
+            self.setupAI(self.aiNums)
             host = self.remoteServer
             TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/1.x"}}
-            for x in aiNums:
+            for x in self.aiNums:
                 p = {"gd":self.gameId, "pname":"CPU " + str(x), "char":x}
                 try:
                     requests.post(host + "/SelChar", data=p, **TO)
@@ -901,6 +953,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     not self.renderMask[x] and \
                     not ("sub" in self.matShaders[x]) \
                     for x in range(len(self.renderMask))]
+            sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
+            sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
         return sobj
 
     def sendState(self):
@@ -916,23 +970,25 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 "jp": a["jump"],
                 #"hf": a["isHit"]
                 }
+
         sp = [{"pos":np.round(self.srbs[i].pos, 3).tolist(),
                "vel":np.round(self.srbs[i].v, 3).tolist(),
                "dis":self.srbs[i].disabled}
               for i in range(len(self.spheres))]
         act = dict(self.activePlayers)
         act[self.uname] = self.selchar
-        
+
         exp = [{"on":x["active"], "pos":np.round(x["pos"], 3).tolist(),
                 "sc":round(x["scale"], 2)} for x in self.exploders]
 
         pp = self.pickups[0]["pos"]
         if pp is not None: pp = np.round(pp, 2).tolist()
         pick = {"p":pp, "t":self.pickups[0]["t"]}
-        
+
         adat = {"players":dat, "sp":sp, "act":act, "exp":exp, "pu":pick,
                 "time":self.frameNum, "rl":round(self.directionalLights[0]["dir"][1], 2)}
         if self.frameFired: adat["ff"] = self.frameFired
+
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
@@ -951,7 +1007,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             "gg": a["gestNum"], "gi": a["gestId"],
             "jp": a["jump"]
             }
-        
+
         adat = {"players":dat, "time":self.frameNum}
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
@@ -979,12 +1035,12 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                         if self.lastTimes["Host"] == int(b["time"]):
                             continue
                     self.lastTimes["Host"] = int(b["time"])
-                    
+
                 else:
                     if a[0] in self.lastTimes:
-                        if self.lastTimes[a[0]] == b["time"]:
+                        if self.lastTimes[a[0]] == int(b["time"]):
                             continue
-                    
+
                     self.activePlayers[a[0]] = list(k.keys())[0]
                     self.lastTimes[a[0]] = int(b["time"])
 
@@ -1000,7 +1056,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     sc["cr"] = a["c1"]
                     if "ee" in a: sc["Energy"] = a["ee"]
                     if "fire" in a:
-                        if a["fire"]: self.fire(a["fire"], int(pn), a["vh"])
+                        if a["fire"]:
+                            self.fire(a["fire"], int(pn), a["vh"])
                     if "fire2" in a:
                         if a["fire2"]:
                             self.fire(a["fire2"], int(pn), a["vh"])
@@ -1014,7 +1071,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                         if self.players[int(pn)]["jump"] < 0:
                             if a["jp"] != -self.players[int(pn)]["jump"]:
                                 self.jump(int(pn))
-                    
+
                     #if "hf" in a:
                     #    self.players[int(pn)]["isHit"] = a["hf"]
                 if "sp" in b:
@@ -1042,7 +1099,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 if "rl" in b:
                     if self.directionalLights[0]["dir"][1] != b["rl"]:
                         self.rotateLight(b["rl"])
-                
+
             except queue.Empty: pass
             except KeyError:
                 raise #print("Game has already finished!")
@@ -1057,7 +1114,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         if t is not None:
             if i["t"] == t: return
         if t is None: t = self.frameNum
-        
+
         cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
@@ -1069,28 +1126,42 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         right = -(LR - 1) / 2
         attn = 4 / (dist + 1)
         self.si.put({"Play":(PATH+"../Sound/Pickup.wav",
-                             self.volm / 3 * attn * np.array((left, right)))})
+                             self.volmFX / 3 * attn * np.array((left, right)))})
+
     def resetPickup(self):
         i = self.pickups[0]
         cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
         self.draw.translate(-i["pos"], cs, ce, tn)
         i["pos"] = None
-        
+
     def qq(self): self.doQuit = True
-        
+
     def frameUpdate(self):
         if self.VRMode: self.frameUpdateVR()
-        
+
+        vf = 7 if self.VRMode else 1
+
+        if self.frameNum == 0:
+            self.waitFinished = False
+        if self.frameNum == 1:
+            self.rotateLight()
+
+        self.frameStart = time.perf_counter()
+
+        sc = self.selchar
+
         rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
         actPlayers = {self.selchar}
+
         for pn in self.activePlayers:
             plNum = int(self.activePlayers[pn])
             actPlayers.add(plNum)
+
             for x in self.players[plNum]["ctexn"]:
                 rm[x] = False
 
         self.actPlayers = actPlayers
-        
+
         for x in self.players[self.selchar]["ctexn"]:
             rm[x] = False
 
@@ -1099,18 +1170,18 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         endText = [("WIN", (60, 220, 120, 255)),
                    ("LOSE", (220, 60, 80, 255)),
                    ("DRAW", (128, 192, 255, 255))]
-        
+
         if len(actPlayers) > 1:
             if not self.gameStarted:
-                snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav"]
+                snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav", "Plains_Fight.wav"]
                 self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm, True)})
                 self.gameStarted = True
-        
+
             alive = 0
             for pn in actPlayers:
                 alive += self.getHealth(pn) > 0
 
-            if alive < 2:
+            if alive <= 1:
                 try: f = self.endTime
                 except: self.endTime = time.time()
                 if (time.time() - self.endTime) > 16:
@@ -1123,36 +1194,41 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 if c > 0:
                     self.WIN = True
                     self.uInfo["End"] = endText[0]
-                else:        self.uInfo["End"] = endText[1]
+                else: self.uInfo["End"] = endText[1]
             elif alive == 0: self.uInfo["End"] = endText[2]
-        
+
         self.renderMask = rm
         if SHOWALL:
             self.renderMask = [False for x in range(len(self.vtNames))]
             actPlayers = list(range(len(self.players)))
-        
+
+
         hvel = self.hvel
         maxSlope = 1
         maxStep = 0.2
-        
-        sc = self.selchar
-        
+
+
         if self.frameNum == 0:
             self.dt1 = time.perf_counter()
             self.lp = []
             for i in range(len(self.spheres)):
                 self.lp.append(np.array(self.srbs[i].pos))
-        self.dt2 = time.perf_counter()
-        
-        self.frameTime = self.dt2 - self.dt1
-        
-        if self.isClient:
-            self.sendPlayer()
-        else:
-            self.sendState()
-        self.recvState()
 
-        if self.frameNum & 1:
+        self.dt2 = time.perf_counter()
+
+        self.frameTime = self.dt2 - self.dt1
+
+        self.dt1 = time.perf_counter()
+
+        if self.frameNum & vf == 0:
+            if self.isClient:
+                self.sendPlayer()
+            else:
+                self.sendState()
+            self.recvState()
+
+
+        if self.frameNum & vf == 0:
             if not self.isClient:
                 self.updateAI()
 
@@ -1161,29 +1237,37 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         if self.stage == 0:
             self.water.update()
-        
+
+
         for a in self.players:
+            if a["Energy"] > 0.95:
+                if self.getHealth(a["id"]) < 0.95:
+                    a["pv"].colliders[0].hc -= 0.01
+
             tn = a["id"]
             if self.getHealth(tn) <= 0:
-                if "deathTime" not in a: a["deathTime"] = self.frameNum
+                if "deathTime" not in a: a["deathTime"] = time.time()
                 a["pv"].pos[:] = -10.
                 a["Energy"] = 0
-                tr = 0.6 + 0.32 * min(40, self.frameNum - a["deathTime"]) / 40
+                tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
                     self.matShaders[xn]["sub"] = tr
                     if "alpha" in self.matShaders[xn]:
                         del self.matShaders[xn]["alpha"]
                 g = a["ghost"]
-                g.changePos(a["b1"].offset[:3])
-                g.step()
+                if (not self.VRMode) or (self.frameNum & 1):
+                    g.changePos(a["b1"].offset[:3])
+                    g.step()
             elif tn not in actPlayers:
                 a["pv"].pos[:] = -10.
             else:
                 a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0])
                 a["Energy"] += 0.05 * self.frameTime
                 a["Energy"] = min(1, a["Energy"])
-        
-        self.w.stepWorld(self.frameTime)
+
+
+        self.w.stepWorld(self.frameTime, checkColl=(self.frameNum & vf == 0))
+
 
         dmg = sum([a.hc for a in self.players[sc]["pv"].colliders]) / self.maxHP
         self.uInfo["Health"] = max(0, 1-dmg)
@@ -1198,6 +1282,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     self.srbs[i].v[:] = 0.
                     self.srbs[i].disabled = True
 
+
         for i in range(len(self.spheres)):
             s = self.spheres[i][1]
             if (np.isnan(self.srbs[i].pos)).any():
@@ -1208,25 +1293,26 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             diff = self.srbs[i].pos - self.lp[i]
             if sum(diff*diff) > 0:
                 self.draw.translate(diff, s.cStart*3, s.cEnd*3, s.texNum)
-            
+
             self.lp[i] = np.array(self.srbs[i].pos)
+
 
         for i in range(len(self.exploders)):
             e = self.exploders[i]
             if e["active"]:
                 for a in self.players:
                     if a["id"] not in actPlayers: continue
-                    if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 2):
-                        a["pv"].colliders[0].hc += self.expPow / max(3, e["scale"])
+                    if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 4):
+                        a["pv"].colliders[0].hc += self.expPow / max(4, e["scale"]) * (self.frameTime * 20)
                         a["isHit"] = self.frameNum
-                
+
                 frameScale = self.exscale ** (time.time() - e["start"])
 
                 cs, ce, tn = e["obj"].cStart*3, e["obj"].cEnd*3, e["obj"].texNum
                 self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
                 e["scale"] *= frameScale / e["scale"]
                 self.matShaders[tn]["add"] = 2 / e["scale"]
-                
+
                 self.expLights[i] = {"pos": e["pos"], "i":np.array((40,40,10.)) / e["scale"]}
                 if e["scale"] > 30:
                     e["active"] = False
@@ -1235,19 +1321,40 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     e["scale"] = 1
                     self.draw.translate(-e["pos"], cs, ce, tn)
                     e["pos"][:] = 0.
-                    
+
+
         self.pointLights = list(self.expLights.values())
 
         for i in range(len(self.blackHoles)):
             b = self.blackHoles[i]
             if b["rb"].disabled:
                 self.w.delAttractor(i)
-                if b["ps"].started: b["ps"].reset()
+                try:
+                    lf = b["lastFrame"]
+                    if self.frameNum - lf > 20:
+                        if b["ps"].started:
+                            b["ps"].reset()
+                            b["dstrength"] = -1
+                            del b["lastFrame"]
+                    else:
+                        b["ps"].step()
+                        b["dstrength"] = 1 - (self.frameNum - lf) / 20
+                        ls = -5 * b["dstrength"]
+                        self.pointLights.append({"i":(ls,ls,ls),
+                                                 "pos":b["lastPos"]})
+                except KeyError:
+                    if b["ps"].started:
+                        b["lastFrame"] = self.frameNum
+                        self.pointLights.append({"i":(-5,-5,-5),
+                                                 "pos":b["lastPos"]})
             else:
+                b["dstrength"] = 1
+                b["lastPos"] = np.array(b["rb"].pos)
                 self.w.setAttractor(i, np.array(b["rb"].pos), 90)
                 b["ps"].changePos(b["rb"].pos)
                 b["ps"].step()
                 self.pointLights.append({"i":(-5,-5,-5), "pos":b["rb"].pos})
+
 
         if not self.isClient:
             if int(self.dt1) & 31 == 0:
@@ -1275,25 +1382,27 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                         a["Energy"] = min(1, a["Energy"])
                         self.resetPickup()
                         break
-        
+
+
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
             if a["id"] not in actPlayers: continue
             if a["jump"] > 0:
-                a["b1"].offset[1] += a["vertVel"]
-                a["vertVel"] -= self.frameTime * 2
+                dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
+                a["b1"].offset[1] += dx * 1.2
+                a["vertVel"] -= self.frameTime * 9.81
                 ih = self.terrain.getHeight(a["b1"].offset[0], a["b1"].offset[2])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
                     a["jump"] = -a["jump"]
                     a["b1"].offset[1] = ih + a["cheight"]
-                    if abs(a["vertVel"]) > 0.9:
-                        a["pv"].colliders[0].hc += abs(a["vertVel"])
+                    if abs(a["vertVel"]) > 8:
+                        a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
                         a["isHit"] = self.frameNum
-                
+
             if a["gesturing"]:
                 a["moving"] = 0
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
-            
+
             if a["moving"]:
                 bx = hvel*a["moving"]*cos(a["cr"])
                 by = hvel*a["moving"]*sin(a["cr"])
@@ -1301,11 +1410,11 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     bx += hvel/3 * cos(a["cr"] + pi/2) * a["cv"]
                     by += hvel/3 * sin(a["cr"] + pi/2) * a["cv"]
 
-                    d = sqrt(bx**2 + by**2) / hvel
+                    d = sqrt(bx*bx + by*by) / hvel
                     bx /= d; by /= d
 
                 bx *= self.frameTime; by *= self.frameTime
-                
+
                 ih = self.terrain.getHeight(a["b1"].offset[0] + bx,
                                             a["b1"].offset[2] + by) + a["cheight"]
 
@@ -1321,32 +1430,34 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     a["b1"].offset[2] += by
                     if a["jump"] <= 0:
                         a["b1"].offset[1] = ih
-                
-                
-                self.stepPose(a, a["obj"], self.frameTime * self.poseDt * a["moving"])
-                    
+
+                df = 1 + 3*self.VRMode
+                if (not self.VRMode) or (self.frameNum & 3 == 0):
+                    self.stepPose(a, a["obj"], df*self.frameTime * self.poseDt*a["moving"])
+
             elif a["movingOld"]:
                 a["rig"].importPose(self.idle, updateRoot=False)
-            
+
             a["b1"].updateTM()
-            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
+            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
 
             if not a["fCam"]:
                 a["cr"] += a["cv"] * self.frameTime
-            
+
             a["b1"].rotate([0,a["cr"],0])
             a["movingOld"] = a["moving"]
 
-        self.dt1 = time.perf_counter()
 
-        self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
+        if not self.VRMode:
+            self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
-                self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"], offset=a["bOffset"])
-            self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
-            
+                self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+            if not self.VRMode:
+                self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
+
             playerIndex = {int(v):k for k, v in self.activePlayers.items()}
             for a in self.players:
                 if a["id"] not in actPlayers: continue
@@ -1358,16 +1469,44 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                             self.uInfo["nameTag"] = str(px)
                         except KeyError: pass
 
+
         if self.doSh: self.shadowChar()
-        if self.doVl: self.simpleShaderVert()
-        for p in self.players:
-            if ("isHit" in p) and (self.frameNum - p["isHit"]) < 3:
-                for i in p["ctexn"]:
-                    self.draw.highlight([1.,0,0], i)
+
+        if (not self.VRMode) or (self.frameNum & vf == 0):
+            if self.doVl: self.simpleShaderVert()
+
+            for p in self.players:
+                if ("isHit" in p) and (self.frameNum - p["isHit"]) < 8:
+                    for i in p["ctexn"]:
+                        self.draw.highlight([1.,0,0], i)
+
+
+    def debugOverlay(self):
+        if not self.showAINav: return
+        if self.stage in (0, 2): return
+
+        hm = self.atriumNav['map']
+        n = hm.shape[0]
+
+        overlay = np.zeros((n, n, 3))
+        overlay[:,:,0] = 128 * (1-hm)
+
+        try:
+            cpos, tpos, path = self.navDebug
+            overlay[cpos[0], cpos[1]] = (64, 255, 0)
+            overlay[tpos[0], tpos[1]] = (0, 128, 255)
+            for i in path:
+                overlay[i[0], i[1]] = (255, 255, 255)
+        except AttributeError:
+            pass
+
+        self.rgb = np.array(self.rgb)
+        out = 0.7 * overlay + 0.3 * self.rgb[self.H-n:self.H,:n]
+        self.rgb[self.H-n:self.H,:n] = out
 
 def run():
     global app
-    
+
     import warnings
     warnings.simplefilter("ignore")
     import urllib3
@@ -1375,7 +1514,7 @@ def run():
 
     if PLATFORM == "darwin":
         os.system("defaults write -g ApplePressAndHoldEnabled -bool false")
-    
+
     while True:
         app = CombatApp()
         if app.proceed:
@@ -1403,6 +1542,8 @@ def run():
             app.qo.join_thread()
             app.server.terminate()
             app.server.join()
+            try: app.navProcess.terminate()
+            except: pass
             try:
                 with open(PATH+"lib/Stat.txt") as f: pass
             except FileNotFoundError:
