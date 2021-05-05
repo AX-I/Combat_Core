@@ -28,7 +28,7 @@ from Utils import *
 
 import Visualizer as VS
 
-from TexObjects import TexSkyBox, TexSkySphere, TexSkyHemiSphere, Sun
+from TexObjects import TexSkyBox
 from Cubemap import CubeMap
 from VertObjects import VertSphere, VertModel, VertTerrain, VertTerrain0, VertPlane, VertWater
 

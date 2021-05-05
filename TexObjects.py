@@ -26,7 +26,15 @@ import numpy as np
 import numexpr as ne
 from PIL import Image
 from Utils import anglesToCoords
-import cv2
+import json
+import zlib
+
+def imreadHDR(f):
+    with open(f, "rb") as fp:
+        dims = [int(i) for i in str(fp.readline(), "ascii").split(" ")]
+        n = np.frombuffer(zlib.decompress(fp.read()), "float32")
+        m = np.array(n).reshape(dims)
+        return m
 
 class TexSkyBox:
     def __init__(self, v, N, tex, rot=(0,0,0), hdrScale=32):
@@ -39,10 +47,8 @@ class TexSkyBox:
         self.v = []
         self.viewer = v
         
-        if tex.split(".")[-1] == "hdr":
-            i = cv2.imread(tex, cv2.IMREAD_ANYDEPTH)
-            try: i + 1
-            except: raise FileNotFoundError
+        if tex.split(".")[-1] == "ahdr":
+            i = imreadHDR(tex)
             ti = Image.fromarray(np.zeros_like(i, dtype="uint8"))
         else:
             ti = Image.open(tex).convert("RGB")
@@ -57,7 +63,7 @@ class TexSkyBox:
         self.numWedges = 6 * m**2 * 2
         self.N = N + 1
 
-        if tex.split(".")[-1] == "hdr":
+        if tex.split(".")[-1] == "ahdr":
             ti = i #cv2.resize(i, (m, m*6))
             avg = np.average(ti)
             ne.evaluate("ti / avg * 256 * hdrScale", out=ti)
@@ -83,7 +89,7 @@ class TexSkyBox:
         self.viewer.vertv.append([])
         self.viewer.vertBones.append([])
 
-        self.viewer.matShaders[self.texNum] = "sky"
+        self.viewer.matShaders[self.texNum] = {"sky":1}
 
         rr = rot
         rotX = numpy.array([[1, 0, 0],
@@ -155,190 +161,3 @@ class TexSkyBox:
         self.wedgePoints.append(coords)
         self.u.append(uv[:,0])
         self.v.append(uv[:,1])
-
-class TexSkySphere(TexSkyBox):
-    def __init__(self, v, N, tex, rot=(0,0,0)):
-        self.viewer = v
-        self.pts = []
-        self.n = N
-        
-        ti = Image.open(tex).convert("RGBA").rotate(-90)
-        if ti.size[0] != ti.size[1]: print("Not square")
-        ta = numpy.array(ti).astype("float")
-        lum = 0.2626 * ta[:,:,0] + 0.6152 * ta[:,:,1] + 0.1222 * ta[:,:,2]
-        ta[lum > 253] *= 1.1
-        ta = ta*ta*(np.expand_dims(lum, 2)**(1/4)) / (4*6)
-        ta = ta.transpose((1, 0, 2))
-        numpy.clip(ta, None, 256*256-1, ta)
-        self.viewer.skyTex = ta.astype("uint16")
-
-        rr = rot
-        rotX = numpy.array([[1, 0, 0],
-                            [0, cos(rr[0]), -sin(rr[0])],
-                            [0, sin(rr[0]), cos(rr[0])]])
-        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                            [0, 1, 0],
-                            [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                            [sin(rr[2]), cos(rr[2]), 0],
-                            [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
-
-    def created(self):
-        n = self.n
-        self.pts = []
-        
-        for i in range(1, n):
-            a = (i/n - 0.5)*pi
-            p = []
-            for j in range(n):
-                b = j*2*pi/n
-                tc = anglesToCoords([b, a])
-                p.append(tc)
-            self.pts.append(p)
-
-        self.np = numpy.array([0, 1, 0])
-        self.sp = numpy.array([0, -1, 0])
-
-        for k in range(n):
-            uv = numpy.array([(1/n, k/n), (0, k/n), (1/n, (k+1)/n)])
-            wc = numpy.array([self.pts[0][k-1], self.sp, self.pts[0][k]])
-            self.appendWedge(wc, uv)
-            
-        for i in range(n - 3, -1, -1):
-            for j in range(n):
-                uv = numpy.array([((i+1)/n, j/n), ((i+1)/n, (j+1)/n), ((i+2)/n, (j+1)/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i][j], self.pts[i+1][j]])
-
-                self.appendWedge(wc, uv)
-                uv = numpy.array([((i+1)/n, j/n), ((i+2)/n, (j+1)/n), ((i+2)/n, j/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i+1][j], self.pts[i+1][j-1]])
-                self.appendWedge(wc, uv)
-
-        for k in range(n):
-            uv = numpy.array([((n-1)/n, k/n), ((n-1)/n, (k+1)/n), (1, k/n)])
-            wc = numpy.array([self.pts[-1][k-1], self.pts[-1][k], self.np])
-            self.appendWedge(wc, uv)
-            
-        p = np.array(self.viewer.skyPoints)
-        self.viewer.skyPoints = (p.reshape((-1,3)) @ self.rotMat).reshape((-1,3,3))
-
-class TexSkyHemiSphere(TexSkySphere):
-    def __init__(self, v, N, tex, rot=(0,0,0)):
-        super().__init__(v, N, tex, rot)
-
-    def created(self):
-        n = self.n
-        self.pts = []
-        
-        for i in range(n//2, n):
-            a = (i/n - 0.5)*pi
-            p = []
-            for j in range(n):
-                b = j*2*pi/n
-                tc = anglesToCoords([b, a])
-                p.append(tc)
-            self.pts.append(p)
-
-        self.np = numpy.array([0, 1, 0])
-            
-        for i in range(n//2 - 2, -1, -1):
-            for j in range(n):
-                uv = numpy.array([((i+1)/n, j/n), ((i+1)/n, (j+1)/n), ((i+2)/n, (j+1)/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i][j], self.pts[i+1][j]])
-
-                self.appendWedge(wc, uv)
-                uv = numpy.array([((i+1)/n, j/n), ((i+2)/n, (j+1)/n), ((i+2)/n, j/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i+1][j], self.pts[i+1][j-1]])
-                self.appendWedge(wc, uv)
-
-        for k in range(n):
-            uv = numpy.array([((n-1)/n, k/n), ((n-1)/n, (k+1)/n), (1, k/n)])
-            wc = numpy.array([self.pts[-1][k-1], self.pts[-1][k], self.np])
-            self.appendWedge(wc, uv)
-            
-        p = np.array(self.viewer.skyPoints)
-        self.viewer.skyPoints = (p.reshape((-1,3)) @ self.rotMat).reshape((-1,3,3))
-
-    def appendWedge(self, coords, uv):
-        self.viewer.skyPoints.append(coords)
-        avg = numpy.average(coords, axis=0)
-        self.viewer.skyAvgPos.append(avg / numpy.linalg.norm(avg))
-        self.viewer.skyU.append(uv[:,0]*2)
-        self.viewer.skyV.append(uv[:,1]*0.1)
-
-
-class Sun:
-    def __init__(self, v, N, tex, rot, pos, name):
-        self.viewer = v
-        self.pts = []
-        self.n = N
-        self.pos = pos
-        
-        ti = Image.open(tex).convert("RGBA").rotate(-90)
-        if ti.size[0] != ti.size[1]: print("Not square")
-        ta = numpy.array(ti).astype("float")
-        ta = ta*ta
-        ta = ta.transpose((1, 0, 2))
-        numpy.clip(ta, None, 256*256-1, ta)
-        self.viewer.addSkyTex(name, ta.astype("uint16"))
-        self.name = name
-        
-        rr = rot
-        rotX = numpy.array([[1, 0, 0],
-                            [0, cos(rr[0]), -sin(rr[0])],
-                            [0, sin(rr[0]), cos(rr[0])]])
-        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                            [0, 1, 0],
-                            [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                            [sin(rr[2]), cos(rr[2]), 0],
-                            [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
-
-    def created(self):
-        n = self.n
-        self.pts = []
-        
-        for i in range(1, n):
-            a = (i/n - 0.5)*pi
-            p = []
-            for j in range(n):
-                b = j*2*pi/n
-                tc = anglesToCoords([b, a])
-                p.append(tc)
-            self.pts.append(p)
-
-        self.np = numpy.array([0, 1, 0])
-        self.sp = numpy.array([0, -1, 0])
-
-        for k in range(n):
-            uv = numpy.array([(1/n, k/n), (0, k/n), (1/n, (k+1)/n)])
-            wc = numpy.array([self.pts[0][k-1], self.sp, self.pts[0][k]])
-            self.appendWedge(wc, uv)
-            
-        for i in range(n - 3, -1, -1):
-            for j in range(n):
-                uv = numpy.array([((i+1)/n, j/n), ((i+1)/n, (j+1)/n), ((i+2)/n, (j+1)/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i][j], self.pts[i+1][j]])
-
-                self.appendWedge(wc, uv)
-                uv = numpy.array([((i+1)/n, j/n), ((i+2)/n, (j+1)/n), ((i+2)/n, j/n)])
-                wc = numpy.array([self.pts[i][j-1], self.pts[i+1][j], self.pts[i+1][j-1]])
-                self.appendWedge(wc, uv)
-
-        for k in range(n):
-            uv = numpy.array([((n-1)/n, k/n), ((n-1)/n, (k+1)/n), (1, k/n)])
-            wc = numpy.array([self.pts[-1][k-1], self.pts[-1][k], self.np])
-            self.appendWedge(wc, uv)
-            
-        p = np.array(self.viewer.sunPoints) + self.pos
-        self.viewer.sunAvgPos = np.array(self.viewer.sunAvgPos) + self.pos
-        self.viewer.sunPoints = (p.reshape((-1,3)) @ self.rotMat).reshape((-1,3,3))
-
-    def appendWedge(self, coords, uv):
-        self.viewer.sunPoints.append(coords)
-        avg = numpy.average(coords, axis=0)
-        self.viewer.sunAvgPos.append(avg / numpy.linalg.norm(avg))
-        self.viewer.sunU.append(uv[:,0])
-        self.viewer.sunV.append(uv[:,1])
