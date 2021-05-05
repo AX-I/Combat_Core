@@ -27,8 +27,12 @@ except ModuleNotFoundError:
     from Templates import *
 
 import sys, os
-if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
-else: PATH = "/".join(os.path.dirname(os.path.realpath(__file__)).split("/")[:-1]) + "/"
+
+if getattr(sys, "frozen", False):
+    PATH = os.path.dirname(sys.executable) + "/"
+else:
+    filepath = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+    PATH = "/".join(filepath.split("/")[:-1]) + "/"
 
 # template_func, template_setup, template_draw, template_end
 
