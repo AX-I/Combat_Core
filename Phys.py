@@ -19,6 +19,7 @@
 # ======== ========
 
 import numpy as np
+import math
 
 D = 3
 G = 9.8
@@ -101,17 +102,14 @@ class CircleCollider(Collider):
             Vsit = self.rb.v @ cdir
             Voit = obj.rb.v @ cdir
             
-            Vsc = self.rb.v - (self.rb.v @ cdir) * cdir
-            Voc = obj.rb.v - (obj.rb.v @ cdir) * cdir
+            Vsc = self.rb.v - Vsit * cdir
+            Voc = obj.rb.v - Voit * cdir
             
             Vst, Vot = collision(self.rb.M, obj.rb.M, Vsit, Voit,
                                  self.rb.el, obj.rb.el)
             
-            Vsft = cdir * Vst
-            Voft = cdir * Vot
-
-            Vsf = Vsft + Vsc
-            Vof = Voft + Voc
+            Vsf = cdir * Vst + Vsc
+            Vof = cdir * Vot + Voc
             
             self.rb.v = Vsf
             obj.rb.v = Vof
@@ -284,12 +282,6 @@ class RigidBody:
         self.v += np.sum(np.array(self.forces), axis=0) / self.M * dt
         
         self.pos += self.v * dt
-
-def elasticCollision(ma, mb, va, vb, ea, eb):
-    """1-dimensional -> (vaf, vbf)"""
-    vaf = (va*(ma-mb) + 2*mb*vb) / (ma+mb)
-    vbf = (vb*(mb-ma) + 2*ma*va) / (ma+mb)
-    return (vaf, vbf)
 
 def collision(ma, mb, va, vb, ea, eb):
     """1-dimensional -> (vaf, vbf)"""
