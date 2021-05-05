@@ -1,4 +1,4 @@
-﻿# ======== ========
+# ======== ========
 # Copyright (C) 2019, 2020 Louis Zhang
 # Copyright (C) 2019, 2020 AgentX Industries
 #
@@ -38,6 +38,8 @@ if "win" in PLATFORM:
     import win32api
     import win32con
     import pywintypes
+    import win32gui
+    from PIL.ImageWin import Dib, HWND
 
 if PLATFORM == "darwin":
     _ARIAL = "Arial.ttf"
@@ -80,19 +82,17 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.root = root
         self.root.title("AXI Combat")
         if PLATFORM != "linux":
-            self.root.iconbitmap(PATH+"lib/AXI.ico")
+            self.root.iconbitmap(PATH+"lib/Combat.ico")
         self.downSample = downSample
         self.W = width//downSample
         self.H = height//downSample
         self.W2 = self.W//2
         self.H2 = self.H//2
         
-        self.panning = False
         self.rx, self.ry = 0, 0
-        self.threads = []
+        self.threads = set()
         self.captureMouse = True
         self.rotSensitivity = mouseSensitivity / 20000
-        self.panSensitivity = mouseSensitivity / 500
 
         self.empty = 0
         self.full = 0
@@ -163,12 +163,10 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.frameNum = 0
 
         self.recVideo = bool(self.lSet["Record"])
-        if self.recVideo:
-            import cv2
-            fout = PATH + "Test.avi"
-            fc = cv2.VideoWriter_fourcc(*"MJPG")
-            
-            self.VIDOUT = cv2.VideoWriter(fout, fc, 24.0, (self.W, self.H))
+        self.recVideo = False
+
+        if "win" in PLATFORM:
+            self.DC = win32gui.GetDC(0)
 
     def runGame(self, *args):
         self.evtQ.put({"Run":args})
@@ -215,9 +213,6 @@ class ThreeDVisualizer(CombatMenu, Frame):
             self.waitLoop = self.after(20, self.waitLoad)
 
     def createCoreWidgets(self):
-        #self.root.rowconfigure(0, weight=1)
-        #self.root.columnconfigure(1, weight=1)
-        #self.rowconfigure(0, weight=1)
         self.columnconfigure(1, weight=1, uniform="c")
         
         self.root.config(background="#000")
@@ -332,7 +327,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
 
         t = threading.Thread(target=mouseMover, args=(mx, my))
         t.start()
-        self.threads.append(t)
+        self.threads.add(t)
         
     def rotate(self, e):
         if not self.captureMouse:
@@ -341,15 +336,6 @@ class ThreeDVisualizer(CombatMenu, Frame):
         dy = (e.y - self.H2) * self.rotSensitivity
         self.attractMouse()
         self.sendRot(dx, dy)
-
-    def pan(self, e):
-        dx = (e.x - self.rx) * self.panSensitivity
-        dy = (e.y - self.ry) * self.panSensitivity
-        self.rx = e.x
-        self.ry = e.y
-        self.sendPan((dx, dy))
-        self.panning = True
-        self.attractMouse()
 
     def moveU(self, e):
         if not self.dirs[0]:
@@ -388,7 +374,6 @@ class ThreeDVisualizer(CombatMenu, Frame):
         i = PngImagePlugin.PngInfo()
         i.add_text("pos", " ".join([str(round(x, 3)) for x in self.pos]))
         i.add_text("dir", " ".join([str(round(x, 3)) for x in self.vv]))
-        #self.rawCFrame.save("Screenshots/Screenshot " + ts + ".png", pnginfo=i)
         self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".png", pnginfo=i)
 
     def sendKey(self, key):
@@ -414,17 +399,6 @@ class ThreeDVisualizer(CombatMenu, Frame):
         fr = rgb
         
         # Postprocessing goes here
-        
-        #self.rawCFrame = Image.fromarray(fr.astype("uint8"), "RGB")
-        
-        if self.downSample > 1:
-            c = fr
-            for i in range(int(np.log2(self.downSample))):
-                b = c[:-1:2] + c[1::2]
-                b >>= 1
-                c = b[:,:-1:2] + b[:,1::2]
-                c >>= 1
-            fr = c
 
         if self.drawUI:
             fr[self.H//2, self.W//2-4:self.W//2-1] = (255, 0, 255)
@@ -516,8 +490,12 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
 
-        self.cf = ImageTk.PhotoImage(self.cframe)
+        if 'win' in PLATFORM and self.fs:
+            dib = Dib(self.cframe)
+            dib.expose(self.DC)
+            return
 
+        self.cf = ImageTk.PhotoImage(self.cframe)
         self.d.tk.call((".!threedvisualizer.!canvas",
                         "itemconfigure", self.finalRender,
                         "-image", self.cf))
