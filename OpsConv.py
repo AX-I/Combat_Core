@@ -21,16 +21,23 @@
 # Convenience ops
 
 import pyopencl as cl
+import moderngl
 
 import sys, os
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 def genInfo(write=True):
+    if getSettings(False)["Render"] == "GL":
+        return genInfo_GL(write)
+    else:
+        return genInfo_CL(write)
+
+def genInfo_CL(write=True):
     infotext = """Information about OpenCL devices on your computer.\n
 If you are experiencing any problems or glitches running
-AXI Visualizer, try changing devices. If only one device is
-available try updating its drivers.\n
+AXI Combat, try changing render devices in Settings.
+If only one device is available try updating its drivers.\n
 """
 
     pl = cl.get_platforms()
@@ -48,7 +55,20 @@ available try updating its drivers.\n
     b = [[dv.name for dv in p.get_devices()] for p in pl]
     return (a, b)
 
+def genInfo_GL(write=True):
+    ctx = moderngl.create_standalone_context()
+    a = [ctx.info["GL_VENDOR"]]
+    b = [[ctx.info["GL_RENDERER"]]]
+    return (a, b)
+
+
 def getContext():
+    if getSettings(False)["Render"] == "GL":
+        return getContext_GL()
+    else:
+        return getContext_CL()
+
+def getContext_CL():
     import os
     try:
         with open(PATH + "Settings.txt") as f:
@@ -73,10 +93,16 @@ def getContext():
             raise
     return ctx
 
+def getContext_GL():
+    ctx = moderngl.create_standalone_context()
+    return ctx
+
+
 def getSettings(write=True):
-    settings = {"CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
+    settings = {"Render":"GL",
+                "CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
                 "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1,
-                "Uname":0, "Volume":0.4, "Record":0, "VR":0,
+                "Uname":0, "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
                 "AutoRes":0, "Mouse":20}
     c = 0; newFile = False
     try:

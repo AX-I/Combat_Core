@@ -77,6 +77,7 @@ drawSky = makeProgram("drawskylerp.c")
 
 drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
 
+
 blur1 = makeProgram("Post/blur.c")
 blur2 = makeProgram("Post/blur2.c")
 
@@ -113,26 +114,26 @@ class CLDraw:
         i = -np.ones((self.WC, self.HC, TILE_BUF), dtype="int32")
         self.IBUF = cl.Buffer(ctx, mf.READ_WRITE, size=i.nbytes)
         cl.enqueue_copy(cq, self.IBUF, i)
-        
+
         n = np.zeros((self.WC, self.HC), dtype="int32")
         self.NBUF = cl.Buffer(ctx, mf.READ_WRITE, size=n.nbytes)
         cl.enqueue_copy(cq, self.NBUF, n)
 
         rsi = np.ones((size_sky*size_sky*6,), dtype="uint16")
-        
+
         ro = np.ones((h, w), dtype="uint16")
         db = np.full((h, w), 255, dtype="float32")
-        
+
         self.DB = cl.Buffer(ctx, mf.READ_WRITE, size=db.nbytes)
-        
+
         self.RSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
         self.GSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
         self.BSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
-        
+
         self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
         self.GO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
         self.BO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
-        
+
         self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
         self.g2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
         self.b2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
@@ -164,7 +165,7 @@ class CLDraw:
         self.TNB = []
         self.TOA = []
         self.TOB = []
-        
+
         self.TR = []
         self.TG = []
         self.TB = []
@@ -172,7 +173,7 @@ class CLDraw:
         self.texSize = []
 
         self.SHADOWMAP = {}
-        
+
         self.RRR = {}
         self.GRR = {}
         self.BRR = {}
@@ -194,7 +195,7 @@ class CLDraw:
         self.useCompound = []
 
     def setScaleCull(self, s, cx, cy):
-        self.sScale = np.float32(s)
+        self.sScale = np.float32(s * self.H//2)
         self.caX, self.caY = np.float32(cx), np.float32(cy)
 
     def drawPS(self, xyz, color, opacity, size):
@@ -236,7 +237,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.BT[name], tt)
         cl.enqueue_copy(cq, self.oldBT[name], self.oldtt[name])
         self.oldtt[name] = self.invbt(tt)
-        
+
     def boneTransform(self, cStart, cEnd, tn, name, offset=0):
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         skel.transform(cq, (vs, 1), (BLOCK_SIZE, 1),
@@ -257,50 +258,36 @@ class CLDraw:
         sct.highlight(cq, (vs, 1), (BLOCK_SIZE, 1),
                    self.LI[tn], *hc, self.gSize[tn],
                    g_times_l=True)
-        
-    def getBoneWeights(self, tn):
-        b = np.zeros((self.gSize[tn]//3,3), dtype="int8")
-        cl.enqueue_copy(cq, b, self.BN[tn])
-        return b
-    
-    def getVertPoints(self, tn):
-        b = np.zeros((self.gSize[tn]//3,3,4), dtype="float32")
-        cl.enqueue_copy(cq, b, self.XYZ[tn])
-        return b
-    def getVertNorms(self, tn):
-        b = np.zeros((self.gSize[tn]//3,3,4), dtype="float32")
-        cl.enqueue_copy(cq, b, self.VN[tn])
-        return b
 
     def addTexture(self, r, g, b, mip=False):
         rr = r.astype("uint16")
         gg = g.astype("uint16")
         bb = b.astype("uint16")
-        
+
         self.TR.append(makeRBuf(rr.nbytes))
         self.TG.append(makeRBuf(rr.nbytes))
         self.TB.append(makeRBuf(rr.nbytes))
         cl.enqueue_copy(cq, self.TR[-1], rr, is_blocking=False)
         cl.enqueue_copy(cq, self.TG[-1], gg, is_blocking=False)
         cl.enqueue_copy(cq, self.TB[-1], bb, is_blocking=False)
-        
+
         if mip: self.texSize.append(np.int32(np.log2(mip)))
         else: self.texSize.append(np.int32(rr.shape[0]))
         return len(self.TR) - 1
 
-    def addTextureGroup(self, xyz, uv, vn, r, g, b, mip=False):
+    def addTextureGroup(self, xyz, uv, vn, r, g, b, shader=None, mip=False):
         rr = r.astype("uint16")
         gg = g.astype("uint16")
         bb = b.astype("uint16")
-        
+
         p = xyz.astype("float32")
         p = align34(p)
-        
+
         n = vn.astype("float32")
         n = align34(n)
-        
+
         uv = uv.astype("float32")
-        
+
         self.XYZ.append(makeRBuf(p.nbytes))
         self.UV.append(makeRBuf(uv.nbytes))
         self.VN.append(makeRBuf(p.nbytes))
@@ -316,15 +303,15 @@ class CLDraw:
         self.TNB.append(makeRBuf(gs*ib))
         self.TOA.append(makeRBuf(uv.nbytes//6))
         self.TOB.append(makeRBuf(uv.nbytes//6))
-        
+
         self.TR.append(makeRBuf(rr.nbytes))
         self.TG.append(makeRBuf(rr.nbytes))
         self.TB.append(makeRBuf(rr.nbytes))
-        
+
         cl.enqueue_copy(cq, self.XYZ[-1], p, is_blocking=False)
         cl.enqueue_copy(cq, self.UV[-1], uv, is_blocking=False)
         cl.enqueue_copy(cq, self.VN[-1], n, is_blocking=False)
-        
+
         cl.enqueue_copy(cq, self.TR[-1], rr, is_blocking=False)
         cl.enqueue_copy(cq, self.TG[-1], gg, is_blocking=False)
         cl.enqueue_copy(cq, self.TB[-1], bb, is_blocking=False)
@@ -334,7 +321,7 @@ class CLDraw:
             self.texSize.append(np.int32(rr.shape[0]))
         self.gSize.append(np.int32(p.shape[0]))
         self.useCompound.append(False)
-        
+
         return len(self.TR)-1
 
     def copyTo(self, tn, vp, vn, cstart=0):
@@ -357,7 +344,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.BRR[name], b.astype("uint16"), is_blocking=False)
         self.reflTexSize[name] = np.int32(size/2)
         return len(self.reflTexSize) - 1
-    
+
     def setSkyTex(self, r, g, b, size):
         cl.enqueue_copy(cq, self.RSI, r.T.astype("uint16"), is_blocking=False)
         cl.enqueue_copy(cq, self.GSI, g.T.astype("uint16"), is_blocking=False)
@@ -411,7 +398,7 @@ class CLDraw:
     def setupWave(self, origin, wDir, wLen, wAmp, wSpd, numW):
         self.WAVEO = [np.float32(x) for x in origin]
         self.WAVED = [np.float32(x) for x in wDir.reshape((-1,))]
-        
+
         wl = wLen.astype("float32")
         self.WAVELEN = makeRBuf(wl.nbytes)
         cl.enqueue_copy(cq, self.WAVELEN, wl)
@@ -421,7 +408,6 @@ class CLDraw:
         ws = wSpd.astype("float32")
         self.WAVESPD = makeRBuf(ws.nbytes)
         cl.enqueue_copy(cq, self.WAVESPD, ws)
-        #self.WNUM = np.int8(ws.shape[0])
         self.WNUM = [np.int8(numW), np.int8(ws.reshape((-1,)).shape[0] - numW)]
 
     def updateWave(self, pScale, stTime, tn):
@@ -433,7 +419,7 @@ class CLDraw:
                   self.WAVELEN, self.WAVEAMP,
                   self.WAVESPD, *self.WNUM, self.gSize[tn],
                   g_times_l=True)
-        
+
     def vertLight(self, mask, dirI, dirD, pointI=None, pointP=None,
                   spotI=None, spotD=None, spotP=None):
         i = dirI.astype("float32")
@@ -483,7 +469,7 @@ class CLDraw:
             cl.enqueue_copy(cq, self.spotDir, d)
             cl.enqueue_copy(cq, self.spotPos, p)
             self.numSpots = np.int32(spotI.shape[0])
-        
+
         for tn in range(len(self.gSize)):
             if mask[tn]:
                 vs = np.int32(self.gSize[tn]//BLOCK_SIZE + 1)
@@ -499,18 +485,17 @@ class CLDraw:
     def setHostSkyTex(self, tex):
         self.hostSTex = tex.astype("uint16")
         self.stSize = tex.shape[0]
-    
+
     def drawAll(self, shaders,
                 mask=None, shadowIds=[0,1],
                 useOpacitySM=False):
-        
-        availShaders = "alpha shadow mip refl sky ortho cull"
+
+        # Shaders are alpha shadow mip refl sky ortho cull etc.
 
         if mask is None:
             mask = [False] * len(shaders)
         gsn = []
-        
-        #a = time.time()
+
         sm = self.SHADOWMAP[0]
         sm1 = self.SHADOWMAP[1]
 
@@ -643,14 +628,14 @@ class CLDraw:
         newSize = np.zeros((self.LT,), dtype="int32")
         cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
         nsn = newSize // BLOCK_SIZE + 1
-        
+
         #print("Large", newSize)
-        
+
         for tn in range(len(self.gSize)):
             if mask[tn]: continue
             ns = nsn[tn]
             if newSize[tn] > 0:
-                
+
                 #a = time.perf_counter()
                 coarse.draw(cq, (ns, 1), (BLOCK_SIZE, 1),
                             self.TOB[tn],
@@ -756,7 +741,7 @@ class CLDraw:
                              self.texSize[tn],
                              self.W, self.H,
                              g_times_l=True)
-                
+
                 elif "fog" in shaders[tn]:
                     drawFog.draw(cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
                              self.IBUF, self.NBUF,
@@ -799,8 +784,8 @@ class CLDraw:
                              g_times_l=True)
 
                 #print("Fine:", time.perf_counter()-a)
-        
-        
+
+
         for tn in range(len(self.gSize)):
             if mask[tn]: continue
             if (tn in newSizeAfter) and (newSizeAfter[tn] > 0):
@@ -840,12 +825,15 @@ class CLDraw:
 
         #print("Pixel:", time.time()-a)
         #a = time.time()
-        
+
     def clearZBuffer(self):
         s = 4; t = 4
         clearframe.clearFrame(cq, (s, s), (t, t), self.DB,
                            self.W, self.H,
                            np.int32(t), np.int32(s*t), g_times_l=True)
+
+    
+
     def gamma(self, ex):
         s = 4; t = 4
         gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
@@ -866,7 +854,7 @@ class CLDraw:
                     self.W, self.H, np.int32(t), np.int32(s*t),
                     np.float32(np.ceil(self.H/(s*t))), g_times_l=True,
                     wait_for=[e])
-    
+
     def clearShadowMap(self, i):
         sm = self.SHADOWMAP[i]
         s = 4; t = 4
@@ -883,7 +871,7 @@ class CLDraw:
 
         p = np.ones((3,), dtype="float32")
         s["pos"] = cl.Buffer(ctx, mf.READ_ONLY, size=p.nbytes)
-        
+
         s["dim"] = np.int32(size)
         s["dim2"] = np.int32(size/2)
         s["scale"] = np.float32(scale)
@@ -909,7 +897,7 @@ class CLDraw:
         sm["vecnp"] = f
         if ambLight is not None:
             self.ambLight = np.float32(ambLight)
-    
+
     def shadowMap(self, i, whichCast, shaders, bias):
         shBias = np.float32(bias)
         tsn = []
@@ -937,7 +925,7 @@ class CLDraw:
                          self.TIA[tn], self.TNA[tn],
                          self.TOA[tn], self.AL, np.int32(tn),
                          gs, g_times_l=True)
-        
+
         newSize = np.zeros((self.LT,), dtype="int32")
         cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
         nsn = newSize // BLOCK_SIZE + 1
@@ -1002,7 +990,7 @@ class CLDraw:
                          self.TI[tn], self.TN[tn],
                          self.TO[tn], self.AL, np.int32(tn),
                          gs, g_times_l=True)
-        
+
         newSize = np.zeros((self.LT,), dtype="int32")
         cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
         nsn = newSize // BLOCK_SIZE + 1
@@ -1047,10 +1035,10 @@ class CLDraw:
         cl.enqueue_copy(cq, hb, sm["Bo"])
         cl.enqueue_copy(cq, hz, sm["map"])
         cl.enqueue_copy(cq, hn, sm["normbuf"])
-        
+
         out = [np.stack((hr,hg,hb),axis=2), hz, hn]
         return out
-        
+
     def getSHM(self, i):
         sm = self.SHADOWMAP[i]
         s = np.empty((sm["dim"], sm["dim"]), dtype="float32")
@@ -1061,7 +1049,5 @@ class CLDraw:
         cl.enqueue_copy(cq, self.hro, self.RO, is_blocking=False)
         cl.enqueue_copy(cq, self.hgo, self.GO, is_blocking=False)
         cl.enqueue_copy(cq, self.hbo, self.BO, is_blocking=False)
-        cl.enqueue_copy(cq, self.hdb, self.DB)
-        
-        
-        return (self.hro, self.hgo, self.hbo, self.hdb)
+
+        return np.stack((self.hro, self.hgo, self.hbo), axis=2)

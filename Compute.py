@@ -37,7 +37,6 @@ import sys, os
 from PIL import Image, PngImagePlugin
 import json
 
-import pyopencl as cl
 import ctypes
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
@@ -74,18 +73,18 @@ class ThreeDBackend:
     def __init__(self, width, height,
                  scale=600, fovx=None,
                  downSample=1, record=None):
-        
+
         pipe = rec = mp.Queue(2)
-        
+
         self.evtQ = mp.Queue(64)
         self.infQ = mp.Queue(16)
-        
+
         self.P = pipe
         self.recP = rec
         self.handles = {}
         self.full = 0
         self.empty = 0
-        
+
         self.W = width
         self.H = height
         self.downSample = downSample
@@ -110,9 +109,9 @@ class ThreeDBackend:
 
         self.texAlphas = []
         self.vaNames = {}
-        
+
         self.matShaders = {}
-        
+
         self.skyTex = None
         self.skyHemiLight = [0.1,0.2,0.4]
 
@@ -120,7 +119,7 @@ class ThreeDBackend:
 
         self.uInfo = None
         self.recVideo = False
-        
+
         self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
         self.nFrames = 0
         self.tacc = False
@@ -128,7 +127,7 @@ class ThreeDBackend:
         self.dsNum = -1000
 
         self.particleSystems = []
-        
+
         self.W2 = int(self.W/2)
         self.H2 = int(self.H/2)
 
@@ -154,11 +153,11 @@ class ThreeDBackend:
         self.axPoints = np.array([[0,0,0],[1,0,0],[0,1,0],[0,0,1]],
                                  dtype="float")*0.25
         self.baseAxPoints = np.array(self.axPoints)
-        
+
         self.maxFPS = 60
 
         self.VRMode = False
-        
+
         self.selecting = False
         self.genNewBones = False
 
@@ -175,33 +174,24 @@ class ThreeDBackend:
         self.frontend.start()
 
     def enableDOF(self, dofR=24, rad=0.2, di=4):
-        self.bindKey("<F5>", self.dofScreenshot)
-        self.dofRad = rad
-        ps = []
-        for y in range(-dofR, dofR, di):
-            for x in range(int(-sqrt(dofR**2 - y**2)), int(sqrt(dofR**2 - y**2)), di):
-                ps.append((x,y))
-        self.dofPos = np.array(ps) * self.dofRad / dofR
+        pass
+
     def dofScreenshot(self):
-        self.ipos = self.pos
-        self.dofTarget = self.pos + self.vv * self.zb[self.H//2, self.W//2]
-        self.dsNum = self.frameNum
-        self.tacc = True
+        pass
 
     def setFOV(self, fovx, scale=None):
         if fovx is not None:
-            self.scale = self.W2 / np.tan(fovx*pi/360)
+            self.scale = self.W/self.H / np.tan(fovx*pi/360)
         else:
             self.scale = scale
+        self.fovX = np.arctan(self.W2 / (self.scale*self.H/2)) * 360/pi
         self.cullAngle = self.scale / np.sqrt(self.scale**2 + self.W2**2 + self.H2**2) * 0.85
         self.cullAngleX = self.W2 / self.scale + 2
         self.cullAngleY = self.H2 / self.scale + 2
-        self.fovX = np.arctan(self.W2 / self.scale) * 360/pi
-        self.fovY = np.arctan(self.H2 / self.scale) * 360/pi
         try:
             self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
-        except: pass
-    
+        except AttributeError: pass
+
     def setWH(self, w, h):
         self.W = w
         self.H = h
@@ -209,7 +199,7 @@ class ThreeDBackend:
         self.H2 = h//2
         self.setFOV(self.fovX, self.scale)
         self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
-        
+
     def start(self):
         self.createObjects()
 
@@ -218,15 +208,22 @@ class ThreeDBackend:
         self.vertU = [np.array(i) for i in self.vertu]
         self.vertV = [np.array(i) for i in self.vertv]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
-        
+
         del self.vertpoints, self.vertnorms, self.vertu, self.vertv
-        
+
         maxuv = max([i.shape[0] for i in self.vertU])
         Luv = len(self.vertU)
         pmax = max([ps.N for ps in self.particleSystems]) if len(self.particleSystems) > 0 else 1
 
-        import Ops
-        
+
+        import OpsConv
+        GL = OpsConv.getSettings(False)["Render"] == "GL"
+
+        if GL:
+            import Ops_GL as Ops
+        else:
+            import Ops_CL as Ops
+
         self.draw = Ops.CLDraw(self.skyTex.shape[0],
                                Luv, self.W, self.H, pmax)
 
@@ -234,17 +231,17 @@ class ThreeDBackend:
 
         self.skyTex = np.array(self.skyTex)
         self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
-        
+
         self.draw.setSkyTex(self.skyTex[:,:,0],
                             self.skyTex[:,:,1],
                             self.skyTex[:,:,2],
                             self.skyTex.shape[0])
 
         self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
-            
+
         for i in range(len(self.vtextures)):
             tex = self.vtextures[i]
-            if "mip" in self.matShaders[i]:
+            if "mip" in self.matShaders[i] and not GL:
                 t = createMips(tex)
                 self.draw.addTextureGroup(
                     self.vertPoints[i].reshape((-1,3)),
@@ -257,7 +254,8 @@ class ThreeDBackend:
                     self.vertPoints[i].reshape((-1,3)),
                     np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
                     self.vertNorms[i].reshape((-1,3)),
-                    tex[:,:,0], tex[:,:,1], tex[:,:,2])
+                    tex[:,:,0], tex[:,:,1], tex[:,:,2],
+                    self.matShaders[i])
 
         for tex in self.texAlphas:
             self.draw.addTexAlpha(tex)
@@ -268,7 +266,7 @@ class ThreeDBackend:
             self.vertBones = []
             for i in self.vertLight:
                 self.vertBones.append(np.zeros((i.shape[0], 3), dtype="int"))
-        
+
         for i in range(len(self.vertBones)):
             if len(self.vertBones[i]) > 0:
                 self.draw.addBoneWeights(i, self.vertBones[i])
@@ -309,10 +307,11 @@ class ThreeDBackend:
                 self.evtQ.put_nowait(int(100 * self.actWedges / self.estWedges))
             except Full:
                 pass
+
         self.evtQ.put("Ready")
-        
+
         print("\nComplete")
-    
+
     def addVertObject(self, objClass, *args, **kwargs):
         thing = objClass(self, *args, **kwargs)
         self.estWedges += thing.estWedges
@@ -321,15 +320,16 @@ class ThreeDBackend:
     def addParticleSystem(self, ps, isCloud=False):
         ps.setup()
         self.particleSystems.append(ps)
-        
+
     def render(self):
+
         self.vc = self.viewCoords()
         if not self.VRMode:
             self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
 
         self.draw.setPos(self.vc)
         self.draw.setVM(self.vMat)
-        
+
         self.draw.clearZBuffer()
 
         s = [0,1]
@@ -337,7 +337,7 @@ class ThreeDBackend:
                           mask=self.renderMask,
                           shadowIds=s,
                           useOpacitySM=self.useOpSM)
-        
+
         cc = []
         for ps in self.particleSystems:
             if not ps.started: continue
@@ -354,18 +354,13 @@ class ThreeDBackend:
                 self.draw.drawPSTex(ps.pc, ps.color, ps.opacity, ps.size, ps.tex)
             else: self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size)
 
-        if self.tacc:
-            x = self.draw.getFrame()
-            x = np.stack(x[:3], axis=2)
-            self.buffer += x
-            self.nFrames += 1
 
         self.postProcess()
 
         result = self.draw.getFrame()
-        rgb = np.stack(result[:3], axis=2)
-        self.rgb = rgb
-        self.zb = result[3]
+        self.rgb = result
+
+        self.debugOverlay()
 
         if self.VRMode:
             rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
@@ -376,14 +371,16 @@ class ThreeDBackend:
             b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
             self.ov.hideOverlay(b2)
             self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
-        
-        return [rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]
-        
+
+
+        return [self.rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]
+
     def simpleShaderVert(self, mask=None, updateLights=True):
         if mask is None:
             mask = [True] * len(self.vertU)
         dirI = np.array([d["i"] for d in self.directionalLights])
         dirD = np.array([viewVec(*d["dir"]) for d in self.directionalLights])
+
         if updateLights:
             if len(self.pointLights) == 0:
                 pointI = 1
@@ -397,18 +394,18 @@ class ThreeDBackend:
                 spotI = np.array([p["i"] for p in self.spotLights])
             spotD = np.array([p["vec"] for p in self.spotLights])
             spotP = np.array([p["pos"] for p in self.spotLights])
-            
+
             self.draw.vertLight(mask, dirI, dirD, pointI, pointP,
                                 spotI, spotD, spotP)
         else:
             self.draw.vertLight(mask, dirI, dirD)
-           
+
     def shadowObjects(self):
         sobj = np.full((len(self.vertU),), False)
         for o in self.vertObjects:
             if o.castShadow:
                 sobj[o.texNum] = True
-        
+
         self.castObjs = sobj
 
     def setupShadowCams(self):
@@ -425,12 +422,12 @@ class ThreeDBackend:
     def shadowMap(self, i, castObjs=None, bias=0.2):
         if castObjs is None:
             castObjs = self.castObjs
-        
+
         sc = self.shadowCams[i]
-        
+
         self.draw.clearShadowMap(i)
         self.draw.shadowMap(i, castObjs, self.matShaders, bias)
-        
+
     def viewCoords(self):
         return self.pos
 
@@ -453,7 +450,7 @@ class ThreeDBackend:
     def doEvent(self, action):
         self.α += action[1]
         self.β += action[2]
-        
+
     def moveKey(self, key):
         if key == "u":   self.svert = 1
         elif key == "d": self.svert = -1
@@ -461,7 +458,7 @@ class ThreeDBackend:
         elif key == "l": self.shorz = -1
         elif key == "ZV": self.svert = 0
         elif key == "ZH": self.shorz = 0
-            
+
     def pan(self, d):
         dx = d[0]
         dy = d[1]
@@ -489,9 +486,8 @@ class ThreeDBackend:
         self.totTime = 0
 
         self.onStart()
-        
-        while (not self.doQuit):
 
+        while (not self.doQuit):
             self.vv = self.viewVec()
 
             self.speed[:] = self.svert * self.vv
@@ -499,42 +495,9 @@ class ThreeDBackend:
             self.pos += self.camSpeed * self.speed
 
             self.frameUpdate()
-            
-            ps = self.dofPos
-            fn = self.frameNum - self.dsNum
 
-            if fn < len(ps):
-                self.pos = self.ipos + ps[fn][0]*self.vVhorz() + ps[fn][1]*self.vVvert()
-                d = self.dofTarget - self.pos
-                self.α = pi/2-atan2(*(d[2::-2]))
-                self.β = -atan2(d[1], sqrt(d[0]**2 + d[2]**2))
-            elif fn == len(ps):
-                self.tacc = False
-                ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
-                sn = "Screenshots/DOF_Screenshot " + ts + ".png"
-
-                from Ops import cl, cq
-                r = (self.buffer / self.nFrames).astype("uint16")
-                cl.enqueue_copy(cq, self.draw.RO, np.array(r[:,:,0]))
-                cl.enqueue_copy(cq, self.draw.GO, np.array(r[:,:,1]))
-                cl.enqueue_copy(cq, self.draw.BO, np.array(r[:,:,2]))
-
-                self.postProcess()
-                r = np.stack(self.draw.getFrame()[:3], axis=2)
-
-                i = PngImagePlugin.PngInfo()
-                i.add_text("targ", " ".join([str(round(x, 3)) for x in self.dofTarget]))
-                i.add_text("ipos", " ".join([str(round(x, 3)) for x in self.ipos]))
-
-                x = np.clip(r, None, 255)
-                Image.fromarray(x.astype("uint8")).save(sn, pnginfo=i)
-                self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
-                self.nFrames = 0
-                self.pos = self.ipos
-                self.lookAt(self.dofTarget)
-                
             self.vv = self.viewVec()
-            
+
             r = self.render()
             data = ("render", np.array(r, dtype="object"))
             try:
@@ -547,9 +510,9 @@ class ThreeDBackend:
 
             self.frameNum += 1
             dt = time.perf_counter() - self.startTime
-##            if dt < (1/self.maxFPS):
-##                time.sleep((1/self.maxFPS) - dt)
-##            dt = time.perf_counter() - self.startTime
+            if dt < (1/self.maxFPS):
+                time.sleep((1/self.maxFPS) - dt)
+            dt = time.perf_counter() - self.startTime
             self.totTime += dt
             self.startTime = time.perf_counter()
 
@@ -579,7 +542,20 @@ class ThreeDBackend:
                 self.handles[action]()
 
     def finish(self):
-        try: del self.draw
+        try:
+            for x in self.draw.VBO:
+                x.release()
+            for x in self.draw.VAO:
+                x.release()
+            for x in self.draw.TEX:
+                x.release()
+            for x in self.draw.DRAW:
+                x.release()
+            self.draw.FB.release()
+            self.draw.DB.release()
+            self.draw.fs.release()
+            self.draw.fbo.release()
+            del self.draw
         except AttributeError: pass
 
         try:
@@ -589,7 +565,7 @@ class ThreeDBackend:
             while not self.evtQ.empty():
                 self.evtQ.get(True, 0.2)
         except: pass
-        
+
         print("Closing processes", end="")
         self.P.close()
         self.evtQ.close()
