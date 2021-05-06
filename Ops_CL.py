@@ -93,6 +93,7 @@ clearzb = makeProgram("clearzb.c")
 clearframe = makeProgram("clearframe.c")
 
 gamma = makeProgram("Post/gamma.c")
+ssao = makeProgram("Post/ssao.c")
 
 particles = makeProgram("ps.c")
 
@@ -858,6 +859,18 @@ class CLDraw:
                 np.float32(ex),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
+
+    def ssao(self):
+        try: _ = self.RAND
+        except:
+            ra = np.random.rand(64).astype("float32")
+            self.RAND = makeRBuf(ra.nbytes)
+            cl.enqueue_copy(cq, self.RAND, ra)
+        s = 16
+        ssao.ao(cq, (self.H//s, self.W//s), (s, s),
+                self.RO, self.GO, self.BO,
+                self.DB, self.sScale, self.RAND,
+                self.W, self.H, np.int32(s), g_times_l=True)
 
     def blur(self):
         s = 4; t = 4

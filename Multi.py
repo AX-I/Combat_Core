@@ -193,6 +193,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.exscale = 10.
         self.expPow = 2.7
 
+        self.doSSAO = True
         self.showAINav = False
 
     def waitMenu(self):
@@ -236,8 +237,10 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.bindKey("3", lambda: self.gesture(self.selchar, 2))
         self.bindKey("4", lambda: self.gesture(self.selchar, 3))
 
+        self.bindKey("h", self.tgAO)
         self.bindKey("n", self.tgNav)
 
+    def tgAO(self): self.doSSAO = not self.doSSAO
     def tgNav(self): self.showAINav = not self.showAINav
 
     def gesture(self, pn, n, gi=None):
@@ -812,6 +815,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         print("Done in", time.time() - st, "s")
 
     def postProcess(self):
+        if self.doSSAO:
+            self.draw.ssao()
+
         if self.doBloom:
             self.draw.blur()
 
