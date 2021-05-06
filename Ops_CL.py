@@ -134,6 +134,10 @@ class CLDraw:
         self.GO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
         self.BO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
+        self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
+        self.SSGO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
+        self.SSBO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
+
         self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
         self.g2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
         self.b2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
@@ -832,7 +836,21 @@ class CLDraw:
                            self.W, self.H,
                            np.int32(t), np.int32(s*t), g_times_l=True)
 
-    
+    def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
+        try: _ = self.dProg
+        except: self.dProg = makeProgram("Post/distort.c")
+        s = 4; t = 4
+        self.dProg.distort(cq, (s, s), (t, t),
+                self.RO, self.GO, self.BO, self.DB,
+                self.SSRO, self.SSGO, self.SSBO,
+                np.float32(x), np.float32(y), np.float32(z),
+                np.float32(p), np.float32(st),
+                self.W, self.H, np.int32(t), np.int32(s*t),
+                np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
+
+        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        cl.enqueue_copy(cq, self.GO, self.SSGO)
+        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def gamma(self, ex):
         s = 4; t = 4
