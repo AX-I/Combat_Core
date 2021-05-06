@@ -573,11 +573,11 @@ class CLDraw:
         except KeyError: return
         sm = self.SHADOWMAP[1]
         try:
-            draw[i]['SM2'] = 5
-            draw[i]['SPos2'].write(sm['pos'])
-            draw[i]['SV2'].write(sm['vec'])
-            draw[i]['wS2'] = np.int32(sm['dim'])
-            draw[i]['sScale2'].write(sm['scale'])
+            draw['SM2'] = 5
+            draw['SPos2'].write(sm['pos'])
+            draw['SV2'].write(sm['vec'])
+            draw['wS2'] = np.int32(sm['dim'])
+            draw['sScale2'].write(sm['scale'])
         except KeyError: pass
 
     def setPrimaryLight(self, dirI, dirD):
