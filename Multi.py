@@ -196,6 +196,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.dofFoc = 3
         self.doSSAO = True
         self.showAINav = False
+        self.doMB = True
 
     def waitMenu(self):
         # server, gameId, stage, name, isClient
