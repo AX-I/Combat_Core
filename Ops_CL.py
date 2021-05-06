@@ -854,6 +854,23 @@ class CLDraw:
         cl.enqueue_copy(cq, self.GO, self.SSGO)
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
+    def motionBlur(self, oldPos, oldVMat):
+        try: _ = self.mProg
+        except: self.mProg = makeProgram("Post/motion.c")
+        s = 4; t = 4
+        self.mProg.blur(cq, (s, s), (t, t),
+                self.RO, self.GO, self.BO, self.DB,
+                self.SSRO, self.SSGO, self.SSBO,
+                self.VIEWPOS, self.VIEWMAT, self.sScale,
+                np.array([*oldPos, 0]).astype("float32"),
+                *align34(oldVMat).astype("float32"),
+                self.W, self.H, np.int32(t), np.int32(s*t),
+                np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
+        
+        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        cl.enqueue_copy(cq, self.GO, self.SSGO)
+        cl.enqueue_copy(cq, self.BO, self.SSBO)
+
     def gamma(self, ex):
         s = 4; t = 4
         gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,

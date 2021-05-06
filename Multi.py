@@ -242,7 +242,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.bindKey("G", self.foc2)
         self.bindKey("h", self.tgAO)
         self.bindKey("n", self.tgNav)
+        self.bindKey("y", self.tgMB)
 
+    def tgMB(self): self.doMB = not self.doMB
     def tgAO(self): self.doSSAO = not self.doSSAO
     def foc1(self): self.dofFoc *= 1.1
     def foc2(self): self.dofFoc /= 1.1
@@ -823,9 +825,16 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         if self.doSSAO:
             self.draw.ssao()
 
+        if self.frameNum > 1:
+            if self.doMB:
+                self.draw.motionBlur(self.oldVPos, self.oldVMat)
+
         self.draw.dof(self.dofFoc)
         if self.doBloom:
             self.draw.blur()
+
+        self.oldVMat = np.array(self.vMat)
+        self.oldVPos = np.array(self.pos)
 
         for i in range(len(self.blackHoles)):
             b = self.blackHoles[i]
