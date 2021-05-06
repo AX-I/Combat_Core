@@ -36,6 +36,8 @@ drawMin = makeProgram("drawmin.c")
 drawZ = makeProgram("drawZ.c")
 
 gamma = makeProgram("Post/gamma.c")
+bloom1 = makeProgram('Post/bloom1.c')
+bloom2 = makeProgram('Post/bloom2.c')
 
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
@@ -275,14 +277,79 @@ class CLDraw:
         self.POSTDB = ctx.depth_texture((self.W, self.H))
         self.POSTFBO = ctx.framebuffer(self.POSTBUF, self.POSTDB)
 
+        # 1st pass
+        self.POSTBUF1 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
+        self.POSTDB1 = ctx.depth_texture((self.W//2, self.H//2))
+        self.POSTFBO1 = ctx.framebuffer(self.POSTBUF1, self.POSTDB1)
+        # 2nd pass
+        self.POSTBUF2 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
+        self.POSTDB2 = ctx.depth_texture((self.W//2, self.H//2))
+        self.POSTFBO2 = ctx.framebuffer(self.POSTBUF2, self.POSTDB2)
+
         self.blurProg1 = ctx.program(vertex_shader=trisetup2d,
             fragment_shader=makeProgram('Post/bloom1.c'))
         self.blurVao1 = ctx.vertex_array(self.blurProg1, self.post_vbo, 'in_vert')
+
+        self.blurProg2 = ctx.program(vertex_shader=trisetup2d,
+            fragment_shader=makeProgram('Post/bloom2.c'))
+        self.blurVao2 = ctx.vertex_array(self.blurProg2, self.post_vbo, 'in_vert')
+
+        self.blurProg2['width'].write(np.float32(self.W//2))
+        self.blurProg2['height'].write(np.float32(self.H//2))
 
     def blur(self):
         try: _ = self.POSTBUF
         except:
             self.setupBlur()
+
+        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.BLEND)
+
+        # Downsample once
+        self.POSTFBO1.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO1.use()
+
+        self.blurProg1['width'].write(np.float32(self.W//2))
+        self.blurProg1['height'].write(np.float32(self.H//2))
+        self.blurProg1['useLum'].write(np.int32(1))
+        self.blurProg1['tex1'] = 0
+        self.FB.use(location=0)
+
+        self.blurVao1.render(moderngl.TRIANGLES)
+
+        # Vertical blur
+        self.POSTFBO2.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO2.use()
+
+        self.POSTBUF1.use(location=0)
+
+        self.blurProg2['tex1'] = 0
+        self.blurProg2['axis'].write(np.int32(0))
+        self.blurVao2.render(moderngl.TRIANGLES)
+
+        # Horizontal blur
+        self.POSTFBO1.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO1.use()
+
+        self.POSTBUF2.use(location=0)
+
+        self.blurProg2['tex1'] = 0
+        self.blurProg2['axis'].write(np.int32(1))
+        self.blurVao2.render(moderngl.TRIANGLES)
+
+        # Blend with frame
+        self.fbo.use()
+        self.POSTBUF1.use(location=0)
+
+        self.blurProg1['width'].write(np.float32(self.W))
+        self.blurProg1['height'].write(np.float32(self.H))
+        self.blurProg1['useLum'].write(np.int32(0))
+
+        ctx.enable(moderngl.BLEND)
+        ctx.blend_func = moderngl.ONE, moderngl.ONE
+        ctx.blend_equation = moderngl.FUNC_ADD
+
+        self.blurVao1.render(moderngl.TRIANGLES)
 
     def gamma(self, ex):
         ctx.disable(moderngl.DEPTH_TEST)
