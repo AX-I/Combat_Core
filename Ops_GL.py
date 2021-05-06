@@ -226,15 +226,64 @@ class CLDraw:
         pass
 
     def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
-        pass
+        try: _ = self.distProg
+        except:
+            self.dProg = ctx.program(vertex_shader=trisetup2d,
+                fragment_shader=makeProgram('Post/distort.c'))
+            self.dProg['width'].write(np.float32(self.W))
+            self.dProg['height'].write(np.float32(self.H))
+            self.dVao = ctx.vertex_array(self.dProg, self.post_vbo, 'in_vert')
+
+        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.BLEND)
+
+        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO.use()
+
+        self.dProg['x'].write(np.float32(x))
+        self.dProg['y'].write(np.float32(y))
+        self.dProg['z'].write(np.float32(z))
+        self.dProg['portal'].write(np.float32(p))
+        self.dProg['strength'].write(np.float32(st))
+        self.dProg['tex1'] = 0
+        self.dProg['texd'] = 1
+        self.FB.use(location=0)
+        self.DBT.use(location=1)
+
+        self.dVao.render(moderngl.TRIANGLES)
+
+        # Blend with frame
+        self.fbo.use()
+        self.POSTBUF.use(location=0)
+
+        self.blurProg1['width'].write(np.float32(self.W))
+        self.blurProg1['height'].write(np.float32(self.H))
+        self.blurProg1['useLum'].write(np.int32(0))
+
+        self.blurVao1.render(moderngl.TRIANGLES)
+
     def motionBlur(self, oldPos, oldVMat):
         pass
     def ssao(self):
         pass
     def dof(self, d):
         pass
+
+    def setupBlur(self):
+        # Temp
+        self.POSTBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
+        self.POSTDB = ctx.depth_texture((self.W, self.H))
+        self.POSTFBO = ctx.framebuffer(self.POSTBUF, self.POSTDB)
+
+        self.blurProg1 = ctx.program(vertex_shader=trisetup2d,
+            fragment_shader=makeProgram('Post/bloom1.c'))
+        self.blurVao1 = ctx.vertex_array(self.blurProg1, self.post_vbo, 'in_vert')
+
     def blur(self):
-        pass
+        try: _ = self.POSTBUF
+        except:
+            self.setupBlur()
+
     def gamma(self, ex):
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
