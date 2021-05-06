@@ -19,8 +19,6 @@ def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
     return t
 
-vert = makeProgram("vert.c", "PipeGL/")
-
 trisetup = makeProgram("trisetup.c", "PipeGL/")
 trisetupAnim = makeProgram("trisetup_anim.c", "PipeGL/")
 trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
@@ -227,6 +225,10 @@ class CLDraw:
     def drawPS(self, *args):
         pass
 
+    def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
+        pass
+    def motionBlur(self, oldPos, oldVMat):
+        pass
     def ssao(self):
         pass
     def dof(self, d):
