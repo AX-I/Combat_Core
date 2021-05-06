@@ -193,6 +193,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.exscale = 10.
         self.expPow = 2.7
 
+        self.dofFoc = 3
         self.doSSAO = True
         self.showAINav = False
 
@@ -237,10 +238,14 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.bindKey("3", lambda: self.gesture(self.selchar, 2))
         self.bindKey("4", lambda: self.gesture(self.selchar, 3))
 
+        self.bindKey("g", self.foc1)
+        self.bindKey("G", self.foc2)
         self.bindKey("h", self.tgAO)
         self.bindKey("n", self.tgNav)
 
     def tgAO(self): self.doSSAO = not self.doSSAO
+    def foc1(self): self.dofFoc *= 1.1
+    def foc2(self): self.dofFoc /= 1.1
     def tgNav(self): self.showAINav = not self.showAINav
 
     def gesture(self, pn, n, gi=None):
@@ -818,6 +823,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         if self.doSSAO:
             self.draw.ssao()
 
+        self.draw.dof(self.dofFoc)
         if self.doBloom:
             self.draw.blur()
 

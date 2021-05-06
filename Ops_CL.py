@@ -94,6 +94,7 @@ clearframe = makeProgram("clearframe.c")
 
 gamma = makeProgram("Post/gamma.c")
 ssao = makeProgram("Post/ssao.c")
+dof = makeProgram("Post/dof.c")
 
 particles = makeProgram("ps.c")
 
@@ -871,6 +872,17 @@ class CLDraw:
                 self.RO, self.GO, self.BO,
                 self.DB, self.sScale, self.RAND,
                 self.W, self.H, np.int32(s), g_times_l=True)
+
+    def dof(self, focus):
+        s = 16
+        dof.dof(cq, (self.H//s, self.W//s), (s, s),
+                self.RO, self.GO, self.BO,
+                self.SSRO, self.SSGO, self.SSBO,
+                self.DB, np.float32(focus),
+                self.W, self.H, np.int32(s), g_times_l=True)
+        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        cl.enqueue_copy(cq, self.GO, self.SSGO)
+        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def blur(self):
         s = 4; t = 4
