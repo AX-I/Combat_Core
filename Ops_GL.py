@@ -108,6 +108,8 @@ class CLDraw:
 
         self.oldShaders = {}
 
+        self.dofFocus = 3
+
     def setSkyTex(self, r, g, b, size):
         pass
     def setHostSkyTex(self, tex):
@@ -266,10 +268,12 @@ class CLDraw:
 
     def motionBlur(self, oldPos, oldVMat):
         pass
+
     def ssao(self):
         pass
-    def dof(self, d):
-        pass
+
+    def dof(self, focus):
+        self.dofFocus = np.float32(focus)
 
     def setupBlur(self):
         # Temp
@@ -357,6 +361,7 @@ class CLDraw:
 
         self.fs.clear(0.0, 0.0, 0.0, 0.0)
         self.fs.use()
+        self.post_prog['focus'] = self.dofFocus
         self.post_prog['tex1'] = 0
         self.post_prog['exposure'] = ex
         self.FB.use(location=0)
