@@ -21,6 +21,14 @@ out vec2 v_UV;
 in vec3 in_norm;
 out vec3 v_norm;
 
+
+uniform vec3 SLInt[128];
+uniform vec3 SLPos[128];
+uniform vec3 SLDir[128];
+uniform int lenSL;
+out vec3 vertLight;
+
+
 in float boneNum;
 
 uniform int off;
@@ -52,5 +60,16 @@ void main() {
     pos.x *= aspect;
     pos.xy *= vscale;
     gl_Position = vec4(pos, 1.0);
+
+
+    vec3 light = vec3(0);
+	for (int i = 0; i < lenSL; i++) {
+	  vec3 pl = b_vert - SLPos[i];
+	  if ((dot(b_norm, pl) > 0.0) && (dot(SLDir[i], pl) > 0.0)) {
+		light += dot(b_norm, normalize(pl)) * dot(SLDir[i], normalize(pl))
+				 / (1.0 + length(pl)*length(pl)) * SLInt[i];
+	  }
+	}
+    vertLight = light;
 
 }

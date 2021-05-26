@@ -177,16 +177,30 @@ class CLDraw:
         self.DInt[:ld] = dirI
         self.DDir[:ld] = dirD
 
-        if pointI is 1:
-            pointI = np.zeros(3)
-            pointP = np.zeros(3)
 
-        lp = pointI.shape[0]
+        if pointI is 1:
+            pointI = np.zeros((1,3))
+            pointP = np.zeros((1,3))
+        lp = min(16, pointI.shape[0])
 
         self.PInt = np.zeros((16, 3), 'float32')
         self.PPos = np.zeros((16, 3), 'float32')
-        self.PInt[:lp] = pointI
-        self.PPos[:lp] = pointP
+        self.PInt[:lp] = pointI[:lp]
+        self.PPos[:lp] = pointP[:lp]
+
+
+        if spotI is 1:
+            spotI = np.zeros((1,3))
+            spotP = np.zeros((1,3))
+            spotP = np.zeros((1,3))
+        ls = min(128, spotP.shape[0])
+
+        self.SInt = np.zeros((128, 3), 'float32')
+        self.SPos = np.zeros((128, 3), 'float32')
+        self.SDir = np.zeros((128, 3), 'float32')
+        self.SInt[:ls] = spotI[:ls]
+        self.SPos[:ls] = spotP[:ls]
+        self.SDir[:ls] = spotD[:ls]
 
 
         for n in range(len(self.DRAW)):
@@ -198,6 +212,15 @@ class CLDraw:
                 self.DRAW[n]['PPos'].write(self.PPos.tobytes())
                 self.DRAW[n]['lenP'] = lp
                 self.DRAW[n]['highColor'].write(np.zeros(3, 'float32'))
+            except KeyError:
+                pass
+
+        for n in range(len(self.DRAW)):
+            try:
+                self.DRAW[n]['SLInt'].write(self.SInt.tobytes())
+                self.DRAW[n]['SLPos'].write(self.SPos.tobytes())
+                self.DRAW[n]['SLDir'].write(self.SDir.tobytes())
+                self.DRAW[n]['lenSL'] = ls
             except KeyError:
                 pass
 
