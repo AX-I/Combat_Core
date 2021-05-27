@@ -189,10 +189,10 @@ class CLDraw:
         self.PPos[:lp] = pointP[:lp]
 
 
-        if spotI is 1:
+        if spotI is 1 or spotI is None:
             spotI = np.zeros((1,3))
             spotP = np.zeros((1,3))
-            spotP = np.zeros((1,3))
+            spotD = np.zeros((1,3))
         ls = min(128, spotP.shape[0])
 
         self.SInt = np.zeros((128, 3), 'float32')
@@ -490,8 +490,8 @@ class CLDraw:
                 elif 'alpha' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawAlpha)
                     sa = shaders[i]['alpha']
-                    draw['TA'] = sa + 2
-                    self.TA[sa].use(location=sa + 2)
+                    draw['TA'] = 2
+                    self.TA[sa].use(location=2)
 
                 elif 'emissive' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
@@ -557,6 +557,10 @@ class CLDraw:
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
 
+                if 'alpha' in shaders[i]:
+                    sa = shaders[i]['alpha']
+                    self.TA[sa].use(location=2)
+
                 vao.render(moderngl.TRIANGLES)
 
 
@@ -584,7 +588,7 @@ class CLDraw:
 
             vao.render(moderngl.TRIANGLES)
 
-            if 'add' in shaders[i]:
+            if 'add' in shaders[i] or 'sub' in shaders[i]:
                 vao.render(moderngl.LINES)
 
         self.fbo.depth_mask = True
