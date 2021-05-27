@@ -271,9 +271,15 @@ class CombatApp(ThreeDBackend, AI.AIManager):
     def jump(self, pn=None):
         if pn is None: pn = self.selchar
         p = self.players[pn]
-        if p["jump"] < 0:
-            p["jump"] = self.frameNum
-            p["vertVel"] = 6.0
+        if p["jump"] > 0:
+            return
+
+        p["jump"] = self.frameNum
+        p["vertVel"] = 6.0
+
+        LR = self.sndAttn(p['b1'].offset[:3], 5, 1.2)
+        jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
+        self.si.put({"Play":(PATH + jfn, self.volmFX / 3 * LR)})
 
     def stepGest(self, p, vobj, st=1):
         p["poset"] += p["pstep"] * st
@@ -436,7 +442,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "vertVel":0, "fCam": False,
-             "id":self.NPLAYERS}
+             "id":self.NPLAYERS, 'lastStep':0}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1416,6 +1422,11 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
                     a["jump"] = -a["jump"]
                     a["b1"].offset[1] = ih + a["cheight"]
+
+                    LR = self.sndAttn(a['b1'].offset[:3], 6, 1)
+                    self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
+                                         abs(a['vertVel']) / 8 * self.volmFX / 3 * LR)})
+
                     if abs(a["vertVel"]) > 8:
                         a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
                         a["isHit"] = self.frameNum
@@ -1451,6 +1462,16 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     a["b1"].offset[2] += by
                     if a["jump"] <= 0:
                         a["b1"].offset[1] = ih
+
+                        if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
+                            a['lastStep'] = time.time()
+
+                            LR = self.sndAttn(a['b1'].offset[:3], 6, 1.2)
+                            sfn = ['Short_Heavy_0{}.wav', 'StonyPath_0{}.wav']
+                            sfn = sfn[self.stage&1].format(random.randint(1, 6))
+
+                            self.si.put({"Play":(PATH+'../Sound/New/'+sfn,
+                                                 self.volmFX / 2 * LR)})
 
                 df = 1 + 3*self.VRMode
                 if (not self.VRMode) or (self.frameNum & 3 == 0):
