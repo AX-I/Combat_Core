@@ -163,7 +163,6 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
-        self.camSpeed = 0.2
 
         self.ambLight = 0.08
 
@@ -174,9 +173,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.poseDt = 1.5
         self.gestLen = GESTLEN
 
-        self.numBullets = 16
+        self.numBullets = 20
         self.bulletSpeed = 15
-        self.COSTS = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.4}
+        self.COSTS = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.35}
 
         self.selchar = selChar
 
@@ -194,7 +193,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.expPow = 2.7
 
         self.dofFoc = 3
-        self.doSSAO = True
+        self.doSSAO = False
         self.showAINav = False
         self.doMB = True
 
