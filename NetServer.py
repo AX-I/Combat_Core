@@ -223,7 +223,7 @@ def run(addr=None):
         except:
             try: ip = socket.gethostbyname(socket.gethostname())
             except: pass
-        addr = (ip, 80)
+        addr = (ip, 2980)
     print("Hosting on", addr)
     httpd = CombatServer(False, addr, CombatRequestHandler)
     httpd.serve_forever()
