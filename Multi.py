@@ -80,7 +80,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.si = mp.Queue(16)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
-        self.si.put({"Play":(PATH + "../Sound/Env_Plains_1.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
 
         self.proceed = True
         try:
@@ -88,9 +88,11 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         except TypeError:
             self.proceed = False
 
-        self.si.put({"Fade":0})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
 
         if not self.proceed: return
+
+        self.si.put({"Play":(PATH + "../Sound/Noise.wav", volm, True)})
 
         kwargs = OpsConv.getSettings()
         width, height = kwargs["W"], kwargs["H"]
@@ -160,6 +162,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         stageNames = ["Desert", "CB Atrium", "Taiga", "New Stage"]
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
+
+        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav", "H8.wav"]
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -809,6 +813,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         self.makeObjects(1)
 
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav"}}})
+
         if self.stage == 1:
             with open(PATH + "../Atrium/LightsCB.txt") as x:
                 a = json.loads(x.read())
@@ -901,8 +907,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.gameStarted = False
 
         if self.isClient:
-            snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav", "Plains_Fight.wav"]
-            self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm, True)})
+            snd = self.ENVTRACKS
+            self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
             self.gameStarted = True
 
         self.qi.put(True)
@@ -1194,8 +1200,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         if len(actPlayers) > 1:
             if not self.gameStarted:
-                snd = ["Env_Desert.wav", "Env_CB.wav", "Env_Taiga.wav", "Plains_Fight.wav"]
-                self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm, True)})
+                snd = self.ENVTRACKS
+                self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
                 self.gameStarted = True
 
             alive = 0
@@ -1570,7 +1576,7 @@ def run():
             except FileNotFoundError:
                 with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
         print("Closing sound")
-        app.si.put({"Fade":0}, True, 0.1)
+        app.si.put({"Fade":{'Time':0, 'Tracks':{'*'}}}, True, 0.1)
         time.sleep(2.1)
         app.si.put(None, True, 0.1)
         app.finish()

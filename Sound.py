@@ -39,6 +39,7 @@ class SoundManager:
         self.fade = -1
         self.globalVol = 1
         self.fadeTime = 2
+        self.fadeTracks = set()
     
     def run(self, w=2, r=22050, n=2):
         """w = 2 for int16"""
@@ -61,7 +62,8 @@ class SoundManager:
                 if "Play" in cmd:
                     self.playFile(*cmd["Play"])
                 if "Fade" in cmd:
-                    self.fade = self.rcount + cmd["Fade"]
+                    self.fade = self.rcount + cmd["Fade"]['Time']
+                    self.fadeTracks = cmd['Fade']['Tracks']
                 if "FadeTime" in cmd:
                     self.fadeTime = cmd["FadeTime"]
                 if "Vol" in cmd:
@@ -87,7 +89,12 @@ class SoundManager:
             t = self.tracks[i]
             d = t["wave"].readframes(CHUNK)
             s = np.frombuffer(d, "int16").reshape((-1, self.channels))
-            s = s * (t["vol"] * self.globalVol)
+
+            trackVol = self.globalVol
+            if '*' not in self.fadeTracks \
+               and t['filename'] not in self.fadeTracks:
+                trackVol = 1
+            s = s * (t["vol"] * trackVol)
             if s.shape[0] == CHUNK:
                 frames += s.astype("int16")
             else:
@@ -104,7 +111,10 @@ class SoundManager:
             self.globalVol -= (1/self.fadeTime) * CHUNK / self.rate
             if self.globalVol < 0:
                 self.globalVol = 1
-                for i in list(self.tracks.keys()): del self.tracks[i]
+                for i in list(self.tracks.keys()):
+                    if '*' in self.fadeTracks \
+                       or self.tracks[i]['filename'] in self.fadeTracks:
+                        del self.tracks[i]
                 self.fade = -1
         
         self.stream.write(frames.tobytes())
@@ -118,7 +128,7 @@ class SoundManager:
         w = a.getsampwidth()
         if w != self.width: raise ValueError("Non-matching width")
         
-        track = {"wave":a, "frame":0, "N":n,
+        track = {"wave":a, "frame":0, "N":n, 'filename': f,
                  "vol":np.array(volume, "float"), "loop":loop}
         
         self.tcount += 1
