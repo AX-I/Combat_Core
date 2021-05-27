@@ -51,7 +51,7 @@ PATH = OpsConv.PATH
 SWITCHABLE = True
 SHOWALL = False
 GESTLEN = 0.6
-LOADALL = False
+LOADALL = True
 
 def mkServer(pi, po, kwargs):
     a = TCPServer(pi, po, isclient=False, **kwargs)
@@ -77,7 +77,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         super().__init__(width, height, fovx=fovx,
                          downSample=1)
 
-        self.si = mp.Queue(16)
+        self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
         self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
@@ -870,7 +870,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volmFX / snd[color][1])})
+                             self.volmFX / 2 / snd[color][1])})
 
     def fire(self, color, sc=None, vh=None):
         if sc is None:
@@ -899,7 +899,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
 
-        LR = self.sndAttn(a["b1"].offset[:3], 4, 1)
+        LR = self.sndAttn(a["b1"].offset[:3], 2.7, 1)
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
                              self.volmFX / snd[color][1] * LR)})
 

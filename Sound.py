@@ -53,24 +53,30 @@ class SoundManager:
         running = True
         self.rcount = 0
         while running:
-            try: cmd = self.si.get(True, 0.02)
-            except Empty: pass
-            else:
-                if cmd is None:
-                    running = False
-                    break
-                if "Play" in cmd:
-                    self.playFile(*cmd["Play"])
-                if "Fade" in cmd:
-                    self.fade = self.rcount + cmd["Fade"]['Time']
-                    self.fadeTracks = cmd['Fade']['Tracks']
-                if "FadeTime" in cmd:
-                    self.fadeTime = cmd["FadeTime"]
-                if "Vol" in cmd:
-                    if 1 in self.tracks:
-                        self.tracks[1]["vol"] = np.array(cmd["Vol"])
-                if "Cresc" in cmd:
-                    self.globalVol *= cmd["Cresc"]
+            batchDone = False
+            num = 0
+            while not batchDone:
+                try: cmd = self.si.get(True, 0.01)
+                except Empty: batchDone = True
+                else:
+                    if cmd is None:
+                        running = False
+                        break
+                    if "Play" in cmd:
+                        self.playFile(*cmd["Play"])
+                    if "Fade" in cmd:
+                        self.fade = self.rcount + cmd["Fade"]['Time']
+                        self.fadeTracks = cmd['Fade']['Tracks']
+                    if "FadeTime" in cmd:
+                        self.fadeTime = cmd["FadeTime"]
+                    if "Vol" in cmd:
+                        if 1 in self.tracks:
+                            self.tracks[1]["vol"] = np.array(cmd["Vol"])
+                    if "Cresc" in cmd:
+                        self.globalVol *= cmd["Cresc"]
+                num += 1
+                if num > 7:
+                    batchDone = True
 
             self.output()
             self.rcount += 1
