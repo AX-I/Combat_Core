@@ -41,6 +41,7 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D TA;
 
+in vec3 vertLight;
 
 void main() {
 	float tz = 1.0/depth;
@@ -105,6 +106,8 @@ void main() {
 	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
       }
     }
+
+    light += vertLight;
 
     light += highColor;
 

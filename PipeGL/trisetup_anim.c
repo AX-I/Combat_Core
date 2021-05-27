@@ -67,7 +67,7 @@ void main() {
 	  vec3 pl = b_vert - SLPos[i];
 	  if ((dot(b_norm, pl) > 0.0) && (dot(SLDir[i], pl) > 0.0)) {
 		light += dot(b_norm, normalize(pl)) * dot(SLDir[i], normalize(pl))
-				 / (1.0 + length(pl)*length(pl)) * SLInt[i];
+				 / (1.0 + dot(pl, pl)) * SLInt[i];
 	  }
 	}
     vertLight = light;
