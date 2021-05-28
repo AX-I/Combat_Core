@@ -27,7 +27,7 @@ import wave
 import time
 from queue import Empty
 
-CHUNK = 2048
+CHUNK = 1024
 
 class SoundManager:
     def __init__(self, si):
@@ -132,7 +132,10 @@ class SoundManager:
         if r != self.rate: print("Non-matching framerate")
 
         w = a.getsampwidth()
-        if w != self.width: raise ValueError("Non-matching width")
+        if w != self.width: print("Non-matching width")
+
+        c = a.getnchannels()
+        if c != self.channels: print('Non-matching channels')
         
         track = {"wave":a, "frame":0, "N":n, 'filename': f,
                  "vol":np.array(volume, "float"), "loop":loop}
