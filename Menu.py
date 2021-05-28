@@ -509,7 +509,9 @@ class CombatMenu(Frame):
             return
 
         self.title.grid_remove()
+        self.addAI.grid_remove()
         for x in self.stb: x.grid_remove()
+        self.configure(bg='#111')
         self.columnconfigure(0, uniform=0)
         self.columnconfigure(1, uniform=1)
         self.columnconfigure(2, uniform=2)

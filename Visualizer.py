@@ -490,7 +490,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
 
-        if 'win' in PLATFORM and self.fs:
+        if PLATFORM == 'win32' and self.fs:
             dib = Dib(self.cframe)
             dib.expose(self.DC)
             return
