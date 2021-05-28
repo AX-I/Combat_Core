@@ -64,10 +64,10 @@ void main() {
 	float si2 = 1-sr2;
 
 	float shadow = 0;
-	shadow += texture2D(SM, sxy).r < sz ? si1*si2 : 0;
-	shadow += texture2D(SM, s10).r < sz ? sr1*si2 : 0;
-	shadow += texture2D(SM, s01).r < sz ? si1*sr2 : 0;
-	shadow += texture2D(SM, s11).r < sz ? sr1*sr2 : 0;
+	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
+	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
+	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
+	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
 
 
 
@@ -87,10 +87,10 @@ void main() {
 	  si1 = 1-sr1;
 	  si2 = 1-sr2;
 
-	  shadow += texture2D(SM2, sxy).r < sz ? si1*si2 : 0;
-	  shadow += texture2D(SM2, s10).r < sz ? sr1*si2 : 0;
-	  shadow += texture2D(SM2, s01).r < sz ? si1*sr2 : 0;
-	  shadow += texture2D(SM2, s11).r < sz ? sr1*sr2 : 0;
+	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0;
+	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
+	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
+	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
     }
 
 	shadow = clamp(shadow, 0, 1);

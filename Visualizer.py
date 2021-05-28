@@ -34,7 +34,7 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter, PngImagePlugi
 
 from Menu import CombatMenu
 
-if "win" in PLATFORM:
+if PLATFORM == "win32":
     import win32api
     import win32con
     import pywintypes
@@ -47,7 +47,7 @@ if PLATFORM == "darwin":
 elif PLATFORM == "linux":
     _ARIAL = "FreeSans.ttf"
     _ARIALBD = "FreeSansBold.ttf"
-elif "win" in PLATFORM:
+elif PLATFORM == "win32":
     _ARIAL = "arial.ttf"
     _ARIALBD = "arialbd.ttf"
 
@@ -165,7 +165,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.recVideo = bool(self.lSet["Record"])
         self.recVideo = False
 
-        if "win" in PLATFORM:
+        if PLATFORM == "win32":
             self.DC = win32gui.GetDC(0)
 
     def runGame(self, *args):
@@ -228,7 +228,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.d.config(cursor="none", background="#000")
         
     def getResolutions(self):
-        if "win" not in PLATFORM: return set()
+        if PLATFORM != "win32": return set()
         i = 0
         res = []
         try:
@@ -253,7 +253,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
                 self.root.geometry("{}x{}+0+0".format(self.W, self.H))
                 self.root.title("AXI Combat")
         
-        if "win" not in PLATFORM: return
+        if PLATFORM != "win32": return
         if not self.activeFS: return
         
         if self.fs:
@@ -605,9 +605,9 @@ you probably want to disable Active Fullscreen.\n")
 def runGUI(P, *args): 
     try:
         app = ThreeDVisualizer(P, *args)
-        if "win" in PLATFORM: writeRes(app)
+        if PLATFORM == "win32": writeRes(app)
         app.mainloop()
-        if "win" in PLATFORM: win32api.ChangeDisplaySettings(None, 0)
+        if PLATFORM == "win32": win32api.ChangeDisplaySettings(None, 0)
         time.sleep(0.2)
         app.finish()
     except Exception as e:

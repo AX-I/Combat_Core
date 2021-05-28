@@ -1601,4 +1601,5 @@ def run():
         print("avg fps:", fps)
 
 if __name__ == "__main__":
+    mp.set_start_method('spawn')
     run()

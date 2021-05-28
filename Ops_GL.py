@@ -7,12 +7,25 @@ import json
 
 import moderngl
 
-import os
+import sys, os
 
 import OpsConv
 PATH = OpsConv.PATH
 
-ctx = moderngl.create_standalone_context()
+if sys.platform == 'darwin':
+    import pyglet
+    pyglet.options["shadow_window"] = False
+    pyglet.options["debug_gl"] = False
+    cfg = pyglet.gl.Config(
+            major_version=3, minor_version=3,
+            forward_compatible=True,
+            depth_size=24, double_buffer=True)
+    w = pyglet.window.Window(width=8, height=8, caption='GL Window',
+                             visible=False, config=cfg)
+    ctx = moderngl.create_context()
+else:
+    ctx = moderngl.create_standalone_context()
+
 print("Using", ctx.info["GL_RENDERER"])
 
 def makeProgram(f, path="ShadersGL/"):
@@ -24,6 +37,10 @@ trisetupAnim = makeProgram("trisetup_anim.c", "PipeGL/")
 trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
 trisetupOrthoAnim = makeProgram("trisetupOrtho_anim.c", "PipeGL/")
 trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
+
+if sys.platform == 'darwin':
+    trisetup = trisetup.replace('[128]', '[8]')
+    trisetupAnim = trisetupAnim.replace('[128]', '[8]')
 
 drawBase = makeProgram("drawbase.c")
 drawSh = makeProgram("drawsh.c")
@@ -193,11 +210,14 @@ class CLDraw:
             spotI = np.zeros((1,3))
             spotP = np.zeros((1,3))
             spotD = np.zeros((1,3))
-        ls = min(128, spotP.shape[0])
 
-        self.SInt = np.zeros((128, 3), 'float32')
-        self.SPos = np.zeros((128, 3), 'float32')
-        self.SDir = np.zeros((128, 3), 'float32')
+        ssize = 8 if sys.platform == 'darwin' else 128
+
+        ls = min(ssize, spotP.shape[0])
+
+        self.SInt = np.zeros((ssize, 3), 'float32')
+        self.SPos = np.zeros((ssize, 3), 'float32')
+        self.SDir = np.zeros((ssize, 3), 'float32')
         self.SInt[:ls] = spotI[:ls]
         self.SPos[:ls] = spotP[:ls]
         self.SDir[:ls] = spotD[:ls]

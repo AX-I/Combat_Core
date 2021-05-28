@@ -26,7 +26,7 @@ PLATFORM = sys.platform
 if PLATFORM == "darwin":
     from tkmacosx import Button
     import base64, io
-    import _sysconfigdatam_darwin_darwin # for freezing
+    #import _sysconfigdatam_darwin_darwin # for freezing
 
 import requests
 import random

@@ -19,6 +19,6 @@ void main() {
     vec3 light = emPow + (LInt + LDir + norm) * 0.001;
 
     vec3 rgb = texture(tex1, v_UV / depth).rgb * light;
-    if (rgb != 0) rgb = vec3(0);
+    if (rgb != vec3(0)) rgb = vec3(0);
     f_color = vec4(rgb, (1 - emPow));
 }
