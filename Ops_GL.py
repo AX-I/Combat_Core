@@ -51,6 +51,7 @@ drawBorder = makeProgram("drawborder.c")
 drawEm = makeProgram("drawemissive.c")
 drawMin = makeProgram("drawmin.c")
 drawZ = makeProgram("drawZ.c")
+drawZA = makeProgram("drawZalpha.c")
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -273,7 +274,7 @@ class CLDraw:
         pass
 
     def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
-        try: _ = self.distProg
+        try: _ = self.dProg
         except:
             self.dProg = ctx.program(vertex_shader=trisetup2d,
                 fragment_shader=makeProgram('Post/distort.c'))
@@ -615,7 +616,7 @@ class CLDraw:
 
         # Write to readable depth buffer
         self.fboZ.use()
-        self.fboZ.clear(red=1.0, depth=1.0)
+        self.fboZ.clear(red=2048.0, depth=1.0)
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
@@ -632,6 +633,10 @@ class CLDraw:
                     vao = ctx.vertex_array(draw,
                         [(p, '3f4 5x4 /v', 'in_vert'),
                          (self.BN[i], '1f /v', 'boneNum')])
+                elif 'alpha' in shaders[i]:
+                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZA)
+                    draw['TA'] = 2
+                    vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
                 else:
                     draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
                     vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
@@ -645,6 +650,10 @@ class CLDraw:
             self.DRAWZ[i][1]['vscale'].write(self.sScale)
             self.DRAWZ[i][1]['vpos'].write(self.vc.astype("float32"))
             self.DRAWZ[i][1]['vmat'].write(self.vmat.astype("float32"))
+
+            if 'alpha' in shaders[i]:
+                sa = shaders[i]['alpha']
+                self.TA[sa].use(location=2)
 
             self.DRAWZ[i][0].render(moderngl.TRIANGLES)
 
