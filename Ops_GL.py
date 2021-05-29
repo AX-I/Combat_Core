@@ -53,6 +53,8 @@ drawMin = makeProgram("drawmin.c")
 drawZ = makeProgram("drawZ.c")
 drawZA = makeProgram("drawZalpha.c")
 
+drawFog = makeProgram('drawfog.c')
+
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
 bloom2 = makeProgram('Post/bloom2.c')
@@ -430,6 +432,7 @@ class CLDraw:
             draw['vpos'].write(self.vc)
 
     def setVM(self, vM):
+        self.rawVM = vM.astype('float32')
         vmat = np.array([-vM[1], vM[2], vM[0]])
         vmat = np.array(vmat.T, order='C')
         self.vmat = vmat.astype('float32')
@@ -494,13 +497,14 @@ class CLDraw:
         if mask is None:
             mask = [False] * len(shaders)
 
-        self.fbo.use()
 
         for i in range(len(self.VBO)):
             if shaders[i] != self.oldShaders[i]:
 
                 if i in self.BO:
                     ts = trisetupAnim
+                elif '2d' in shaders[i]:
+                    ts = trisetup2d
                 else:
                     ts = trisetup
 
@@ -537,6 +541,11 @@ class CLDraw:
                     draw['width'].write(np.float32(self.W))
                     draw['height'].write(np.float32(self.H))
 
+                elif 'fog' in shaders[i]:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawFog)
+                    draw['width'].write(np.float32(self.W))
+                    draw['height'].write(np.float32(self.H))
+
                 else:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
                     draw['SM'] = 0
@@ -559,61 +568,6 @@ class CLDraw:
 
                 self.VAO[i] = vao
 
-        ctx.blend_func = moderngl.ONE, moderngl.ZERO
-        ctx.blend_equation = moderngl.FUNC_ADD
-        self.fbo.depth_mask = True
-
-        # Opaque
-        for i in range(len(self.VBO)):
-            if mask[i]: continue
-            vao = self.VAO[i]
-
-            if 'cull' in shaders[i]:
-                ctx.enable(moderngl.CULL_FACE)
-            else:
-                ctx.disable(moderngl.CULL_FACE)
-
-            trans = {'add', 'border', 'SSR', 'sub'}
-            if all(t not in shaders[i] for t in trans):
-                self.DRAW[i]['tex1'] = 0
-                self.TEX[i].use(location=0)
-
-                if 'alpha' in shaders[i]:
-                    sa = shaders[i]['alpha']
-                    self.TA[sa].use(location=2)
-
-                vao.render(moderngl.TRIANGLES)
-
-
-        self.fbo.depth_mask = False
-
-        # Transparent
-        for i in range(len(self.VBO)):
-            if mask[i]: continue
-            vao = self.VAO[i]
-
-            if 'add' in shaders[i] or 'border' in shaders[i]:
-                ctx.blend_func = moderngl.ONE, moderngl.ONE
-                ctx.blend_equation = moderngl.FUNC_ADD
-            elif 'SSR' in shaders[i]:
-                ctx.blend_func = moderngl.ONE, moderngl.ONE
-                ctx.blend_equation = moderngl.FUNC_ADD
-            elif 'sub' in shaders[i]:
-                ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
-                ctx.blend_equation = moderngl.FUNC_ADD
-            else:
-                continue
-
-            self.DRAW[i]['tex1'] = 0
-            self.TEX[i].use(location=0)
-
-            vao.render(moderngl.TRIANGLES)
-
-            if 'add' in shaders[i] or 'sub' in shaders[i]:
-                vao.render(moderngl.LINES)
-
-        self.fbo.depth_mask = True
-
         # Write to readable depth buffer
         self.fboZ.use()
         self.fboZ.clear(red=2048.0, depth=1.0)
@@ -622,7 +576,7 @@ class CLDraw:
 
         for i in range(len(self.VBO)):
             if mask[i]: continue
-            trans = {'add', 'border', 'SSR', 'sub'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog'}
             if any(t in shaders[i] for t in trans): continue
 
             try: _ = self.DRAWZ[i]
@@ -658,6 +612,70 @@ class CLDraw:
             self.DRAWZ[i][0].render(moderngl.TRIANGLES)
 
         ctx.enable(moderngl.BLEND)
+
+        self.fbo.use()
+        ctx.blend_func = moderngl.ONE, moderngl.ZERO
+        ctx.blend_equation = moderngl.FUNC_ADD
+        self.fbo.depth_mask = True
+
+        # Opaque
+        for i in range(len(self.VBO)):
+            if mask[i]: continue
+            vao = self.VAO[i]
+
+            if 'cull' in shaders[i]:
+                ctx.enable(moderngl.CULL_FACE)
+            else:
+                ctx.disable(moderngl.CULL_FACE)
+
+            trans = {'add', 'border', 'SSR', 'sub', 'fog'}
+            if all(t not in shaders[i] for t in trans):
+                self.DRAW[i]['tex1'] = 0
+                self.TEX[i].use(location=0)
+
+                if 'alpha' in shaders[i]:
+                    sa = shaders[i]['alpha']
+                    self.TA[sa].use(location=2)
+
+                vao.render(moderngl.TRIANGLES)
+
+
+        self.fbo.depth_mask = False
+
+        # Transparent
+        for i in range(len(self.VBO)):
+            if mask[i]: continue
+            vao = self.VAO[i]
+
+            if 'add' in shaders[i] or 'border' in shaders[i]:
+                ctx.blend_func = moderngl.ONE, moderngl.ONE
+                ctx.blend_equation = moderngl.FUNC_ADD
+            elif 'SSR' in shaders[i]:
+                ctx.blend_func = moderngl.ONE, moderngl.ONE
+                ctx.blend_equation = moderngl.FUNC_ADD
+            elif 'sub' in shaders[i]:
+                ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+                ctx.blend_equation = moderngl.FUNC_ADD
+            elif 'fog' in shaders[i]:
+                ctx.blend_func = moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA
+                ctx.blend_equation = moderngl.FUNC_ADD
+                self.DBT.use(location=1)
+                self.DRAW[i]['SM'] = 4
+                self.DRAW[i]['db'] = 1
+                self.DRAW[i]['vmat'].write(self.rawVM)
+            else:
+                continue
+
+            self.DRAW[i]['tex1'] = 0
+            self.TEX[i].use(location=0)
+
+            vao.render(moderngl.TRIANGLES)
+
+            if 'add' in shaders[i] or 'sub' in shaders[i]:
+                vao.render(moderngl.LINES)
+
+        self.fbo.depth_mask = True
+
 
     def clearZBuffer(self):
         self.fbo.clear(0.0, 0.0, 0.0, 1.0)
