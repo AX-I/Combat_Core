@@ -131,6 +131,8 @@ class CLDraw:
 
         self.dofFocus = 3
 
+        self.setupBlur()
+
     def setSkyTex(self, r, g, b, size):
         pass
     def setHostSkyTex(self, tex):
@@ -276,6 +278,14 @@ class CLDraw:
     def drawPS(self, *args):
         pass
 
+    def blit(self, dest, src, destW, destH):
+        dest.use()
+        src.use(location=0)
+        self.blurProg1['width'].write(np.float32(destW))
+        self.blurProg1['height'].write(np.float32(destH))
+        self.blurProg1['useLum'].write(np.int32(0))
+        self.blurVao1.render(moderngl.TRIANGLES)
+
     def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
         try: _ = self.dProg
         except:
@@ -304,14 +314,7 @@ class CLDraw:
         self.dVao.render(moderngl.TRIANGLES)
 
         # Blend with frame
-        self.fbo.use()
-        self.POSTBUF.use(location=0)
-
-        self.blurProg1['width'].write(np.float32(self.W))
-        self.blurProg1['height'].write(np.float32(self.H))
-        self.blurProg1['useLum'].write(np.int32(0))
-
-        self.blurVao1.render(moderngl.TRIANGLES)
+        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def motionBlur(self, oldPos, oldVMat):
         pass
@@ -349,9 +352,6 @@ class CLDraw:
         self.blurProg2['height'].write(np.float32(self.H//2))
 
     def blur(self):
-        try: _ = self.POSTBUF
-        except:
-            self.setupBlur()
 
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
@@ -653,10 +653,23 @@ class CLDraw:
             if 'add' in shaders[i] or 'border' in shaders[i]:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
+
             elif 'SSR' in shaders[i]:
+                ctx.disable(moderngl.DEPTH_TEST)
+                ctx.disable(moderngl.BLEND)
+                self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+                self.blit(self.POSTFBO, self.FB, self.W, self.H)
+                ctx.enable(moderngl.DEPTH_TEST)
+                ctx.enable(moderngl.BLEND)
+
+                self.fbo.use()
                 ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
+                self.POSTBUF.use(location=3)
+                self.DRAW[i]['currFrame'] = 3
                 self.DRAW[i]['db'] = 1
+                self.DRAW[i]['rawVM'].write(self.rawVM)
+
             elif 'sub' in shaders[i]:
                 ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
