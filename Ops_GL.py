@@ -796,3 +796,7 @@ class CLDraw:
         shape = (int(self.H//self.IRES), int(self.W//self.IRES), 3)
         h = np.frombuffer(self.fs.read(), "uint8").reshape(shape)
         return h
+
+    def getDB(self):
+        shape = (self.H, self.W)
+        return np.frombuffer(self.DBT.read(), 'float32').reshape(shape)

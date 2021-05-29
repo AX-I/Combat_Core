@@ -1111,3 +1111,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.hbo, self.BO, is_blocking=False)
 
         return np.stack((self.hro, self.hgo, self.hbo), axis=2)
+
+    def getDB(self):
+        cl.enqueue_copy(cq, self.hdb, self.DB)
+        return self.hdb
