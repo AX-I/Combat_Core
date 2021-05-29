@@ -54,6 +54,7 @@ drawZ = makeProgram("drawZ.c")
 drawZA = makeProgram("drawZalpha.c")
 
 drawFog = makeProgram('drawfog.c')
+drawSSR = makeProgram('drawwater.c')
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -538,17 +539,19 @@ class CLDraw:
 
                 elif 'border' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawBorder)
-                    draw['width'].write(np.float32(self.W))
-                    draw['height'].write(np.float32(self.H))
 
                 elif 'fog' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawFog)
-                    draw['width'].write(np.float32(self.W))
-                    draw['height'].write(np.float32(self.H))
-
+                elif 'SSR' in shaders[i]:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
                 else:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
                     draw['SM'] = 0
+
+                try:
+                    draw['width'].write(np.float32(self.W))
+                    draw['height'].write(np.float32(self.H))
+                except: pass
 
                 draw['vscale'].write(self.sScale)
                 draw['aspect'].write(np.float32(self.H/self.W))
@@ -651,8 +654,9 @@ class CLDraw:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
             elif 'SSR' in shaders[i]:
-                ctx.blend_func = moderngl.ONE, moderngl.ONE
+                ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
+                self.DRAW[i]['db'] = 1
             elif 'sub' in shaders[i]:
                 ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
