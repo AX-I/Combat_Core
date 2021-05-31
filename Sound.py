@@ -64,16 +64,20 @@ class SoundManager:
                         break
                     if "Play" in cmd:
                         self.playFile(*cmd["Play"])
-                    if "Fade" in cmd:
+                    elif "Fade" in cmd:
                         self.fade = self.rcount + cmd["Fade"]['Time']
                         self.fadeTracks = cmd['Fade']['Tracks']
-                    if "FadeTime" in cmd:
+                    elif "FadeTime" in cmd:
                         self.fadeTime = cmd["FadeTime"]
-                    if "Vol" in cmd:
+                    elif "Vol" in cmd:
                         if 1 in self.tracks:
                             self.tracks[1]["vol"] = np.array(cmd["Vol"])
-                    if "Cresc" in cmd:
+                    elif "Cresc" in cmd:
                         self.globalVol *= cmd["Cresc"]
+                    elif "Loop" in cmd:
+                        for i in self.tracks:
+                            if self.tracks[i]['filename'] == cmd['Loop']['Track']:
+                                self.tracks[i]['loop'] = cmd['Loop']['loop']
                 num += 1
                 if num > 7:
                     batchDone = True

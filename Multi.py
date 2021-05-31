@@ -705,6 +705,12 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
 
 
+        if self.stage == 2:
+            self.addVertObject(VertPlane, [-1,-1,0],
+                           h1=[2,0,0], h2=[0,2,0], n=1,
+                           texture=PATH+"../Assets/Blank2.png",
+                           useShaders={"2d":1, "fog":1})
+
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
@@ -793,11 +799,6 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
 
-        if self.stage == 2:
-            self.addVertObject(VertPlane, [-1,-1,0],
-                           h1=[2,0,0], h2=[0,2,0], n=1,
-                           texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, "fog":1})
 
         bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35)]
         ss = [b[1] - b[0] for b in bd]
@@ -845,6 +846,12 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             if self.doMB:
                 self.draw.motionBlur(self.oldVPos, self.oldVMat)
 
+        db = self.draw.getDB()
+        target = max(0.8, min(6, db[self.H//2, self.W//2]))
+        df = self.dofFoc
+        if (target < self.dofFoc) or (self.frameNum & 1 == 0):
+            self.dofFoc = sqrt(sqrt(df * df * df * target))
+
         self.draw.dof(self.dofFoc)
         if self.doBloom:
             self.draw.blur()
@@ -861,7 +868,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 bx = -tr[1] * sc + self.W//2
                 by = tr[2] * sc + self.H//2
                 portal = 0.3 * sc
-                strength = 300 * b["dstrength"] / tr[0]
+                strength = (self.H / 400) * 300 * b["dstrength"] / tr[0]
                 self.draw.distort(bx/self.W, by/self.H, tr[0],
                                   portal, strength)
 
@@ -1210,7 +1217,11 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
             if alive <= 1:
                 try: f = self.endTime
-                except: self.endTime = time.time()
+                except:
+                    self.endTime = time.time()
+                    snd = self.ENVTRACKS
+                    self.si.put({'Loop':{'Track':PATH+"../Sound/" + snd[self.stage],
+                                         'loop': False}})
                 if (time.time() - self.endTime) > 16:
                     self.uInfo["Quit"] = "Press R to return to menu"
                     if not self.waitFinished:

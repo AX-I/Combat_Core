@@ -194,13 +194,15 @@ class ThreeDVisualizer(CombatMenu, Frame):
 
     def waitLoad(self):
         self.ready = False
-        try:
-            p = self.evtQ.get(True, 0.05)
-            if p == "Ready":
-                self.ready = True
-            else:
-                self.d.itemconfig(self.meter, extent=min(359, p/100 * 360))
-        except Empty: pass
+
+        for _ in range(4):
+            try:
+                p = self.evtQ.get(True, 0.05)
+                if p == "Ready":
+                    self.ready = True
+                else:
+                    self.d.itemconfig(self.meter, extent=min(359, p/100 * 360))
+            except Empty: break
         
         if self.ready:
             self.d.delete(self.mtext)
