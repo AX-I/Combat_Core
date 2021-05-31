@@ -4,6 +4,7 @@ import numpy as np
 import time
 from Utils import viewMat
 import json
+import time
 
 import moderngl
 
@@ -317,10 +318,87 @@ class CLDraw:
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def motionBlur(self, oldPos, oldVMat):
-        pass
+        try: _ = self.moProg
+        except:
+            self.moTime = time.perf_counter()
+            self.moProg = ctx.program(vertex_shader=trisetup2d,
+                fragment_shader=makeProgram('Post/motion.c'))
+            self.moProg['width'].write(np.float32(self.W))
+            self.moProg['height'].write(np.float32(self.H))
+            self.moProg['vscale'].write(self.sScale)
+            self.moVao = ctx.vertex_array(self.moProg, self.post_vbo, 'in_vert')
+
+            self.OLDBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
+            self.OLDDB = ctx.depth_texture((self.W, self.H))
+            self.OLDFBO = ctx.framebuffer(self.OLDBUF, self.OLDDB)
+
+        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.BLEND)
+
+        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO.use()
+
+        exp = time.perf_counter() - self.moTime
+        self.moTime += exp
+        self.moProg['EXPOSURE'].write(np.float32(min(0.8, 1/60 / exp)))
+        self.moProg['vscale'].write(self.sScale)
+        self.moProg['tex1'] = 0
+        self.moProg['texd'] = 1
+        self.OLDBUF.use(location=0)
+        self.DBT.use(location=1)
+
+        self.moProg['Vpos'].write(self.vc)
+        self.moProg['VV'].write(self.rawVM)
+
+        self.moProg['oldPos'].write(oldPos.astype('float32'))
+
+        oldVm = oldVMat.astype('float32')
+        self.moProg['oldVV'].write(oldVm[0])
+        self.moProg['oldVX'].write(oldVm[1])
+        self.moProg['oldVY'].write(oldVm[2])
+
+        self.moVao.render(moderngl.TRIANGLES)
+
+        # Copy to oldbuf
+        self.blit(self.OLDFBO, self.FB, self.W, self.H)
+
+        # Blend with frame
+        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+
+    def setupSSAO(self):
+        self.ssaoProg = ctx.program(vertex_shader=trisetup2d,
+            fragment_shader=makeProgram('Post/ssao.c'))
+        self.ssaoProg['width'].write(np.float32(self.W))
+        self.ssaoProg['height'].write(np.float32(self.H))
+        self.ssaoProg['vscale'].write(np.float32(self.sScale))
+        self.ssaoVao = ctx.vertex_array(self.ssaoProg, self.post_vbo, 'in_vert')
+
+        ra = np.random.rand(64)
+        self.ssaoProg['R'].write(ra.astype('float32'))
 
     def ssao(self):
-        pass
+        try: _ = self.ssaoProg
+        except: self.setupSSAO()
+        try: _ = self.POSTFBO
+        except:
+            print('Wait')
+            return
+
+        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.BLEND)
+
+        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO.use()
+        self.ssaoProg['vscale'].write(np.float32(self.sScale))
+        self.ssaoProg['tex1'] = 0
+        self.ssaoProg['texd'] = 1
+        self.FB.use(location=0)
+        self.DBT.use(location=1)
+
+        self.ssaoVao.render(moderngl.TRIANGLES)
+
+        # Blend with frame
+        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def dof(self, focus):
         self.dofFocus = np.float32(focus)
