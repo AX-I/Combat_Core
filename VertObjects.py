@@ -24,6 +24,7 @@ import numpy as np
 import time
 from Utils import anglesToCoords
 from PIL import Image
+import zlib
 
 def rgbToString(rgb):
     return "#{0:02x}{1:02x}{2:02x}".format(*rgb)
@@ -189,6 +190,7 @@ class VertObject:
 
     def created(self):
         self.create()
+        self.numWedges = len(self.wedgePoints)
         self.cStart = len(self.viewer.vertpoints[self.texNum])
         self.cEnd = self.cStart + self.numWedges
         self.wedgePoints = numpy.array(self.wedgePoints)
@@ -255,7 +257,6 @@ class VertObject:
         self.vertNorms.append(norms)
         self.u.append(uv[:,0])
         self.v.append(uv[:,1])
-        self.numWedges += 1
 
     def appendWedgeSafe(self, coords, norms, uv, r=0):
         if (r < self.subDiv):
@@ -267,7 +268,6 @@ class VertObject:
             self.vertNorms.append(norms)
             self.u.append(uv[:,0])
             self.v.append(uv[:,1])
-            self.numWedges += 1
 
     def splitFace(self, c, n, uv):
         nc = (c + np.roll(c, -1, 0)) / 2
@@ -311,7 +311,7 @@ class VertWater(VertObject):
         self.wSpd = numpy.array(wSpd)
         self.numW = numW
         self.size = size
-        self.estWedges = size*size*2
+        self.estWedges = 1
         self.hasSetup = False
 
     def create(self):
@@ -362,7 +362,6 @@ class VertSphere(VertObject):
         self.estWedges = n * (n-1) * 2
 
     def create(self):
-        self.numWedges = 0
         pos = numpy.array(self.coords)
         n = self.n
         self.pts = []
@@ -424,6 +423,11 @@ class VertModel(VertObject):
         self.subDiv = False
         if "subDiv" in ex:
             self.subDiv = ex["subDiv"]
+
+        if 'cache' in ex:
+            self.cache = ex['cache']
+        else:
+            self.cache = True
 
         if not c:
             with open(filename) as f:
@@ -543,6 +547,9 @@ class VertModel(VertObject):
                 self.numWedges = tmod["nw"]
                 self.bones = tmod["b"]
                 return
+
+        if self.readCache():
+            return
         
         size = self.size
 
@@ -585,7 +592,7 @@ class VertModel(VertObject):
                                 tx = [(0,0),(0,0),(0,0)]
                                 self.hasTex = False
                             n = [self.vns[int(s.split("/")[2]) - 1] for s in t[1:]]
-                            aw(numpy.array(c), -numpy.array(n), numpy.array(tx))
+                            aw(c, n, numpy.array(tx))
                             if self.animated:
                                 self.bones.append([int(s.split("/")[3]) for s in t[1:]])
 ##                        elif len(t) == 5:
@@ -604,9 +611,7 @@ class VertModel(VertObject):
                         # uv is actually vu
                         self.vts.append((float(t[2]), float(t[1])))
                     elif t[0] == "vn":
-                        n = [float(s) for s in t[1:4]]
-                        n[2] = -n[2]
-                        self.vns.append(n)
+                        self.vns.append((-float(t[1]), -float(t[2]), float(t[3])))
                     elif t[0] == "usemtl":
                         if t[1] == self.mtlName:
                             activeMat = True
@@ -630,12 +635,54 @@ class VertModel(VertObject):
 
         if filename not in modelList:
             modelList[filename] = {}
-        elif self.mtlTex not in modelList[filename]:
+        if self.mtlTex not in modelList[filename]:
             tm = {"wp":self.wedgePoints, "vn":self.vertNorms,
                   "u":self.u, "v":self.v, "nw": self.numWedges, "b":self.bones}
             modelList[filename][self.mtlTex] = tm
-        
+
+            if self.cache:
+                self.writeCache()
+
         del self.vns, self.vts
+
+    def writeCache(self):
+        wp = np.array(self.wedgePoints, 'float32')
+        vn = np.array(self.vertNorms, 'float32')
+        u = np.array(self.u, 'float32')
+        v = np.array(self.v, 'float32')
+        if self.bones is None:
+            self.bones = []
+        b = np.array(self.bones, 'int')
+
+        cache = [zlib.compress(x.tobytes()) for x in (wp, vn, u, v, b)]
+        fname = self.mtlTex + '.obj_'
+        print('caching to', fname)
+        with open(fname, 'wb') as fc:
+            for i in range(len(cache)):
+                fc.write(bytes(str(len(cache[i])), 'ascii') + b' ')
+            fc.write(b'\n')
+            for i in range(len(cache)):
+                fc.write(cache[i])
+
+    def readCache(self):
+        fname = self.mtlTex + '.obj_'
+        try:
+            with open(fname, 'rb') as fc:
+                print('reading cache from', fname)
+                sizes = str(fc.readline(), 'ascii').split()
+
+                attrs = [zlib.decompress(fc.read(int(sizes[i])))
+                         for i in range(len(sizes))]
+
+                self.wedgePoints = np.frombuffer(attrs[0], 'float32').reshape((-1, 3, 3))
+                self.vertNorms = np.frombuffer(attrs[1], 'float32').reshape((-1, 3, 3))
+                self.u = np.frombuffer(attrs[2], 'float32').reshape((-1, 3))
+                self.v = np.frombuffer(attrs[3], 'float32').reshape((-1, 3))
+                self.bones = np.frombuffer(attrs[4], 'int').reshape((-1, 3))
+
+                return True
+        except FileNotFoundError:
+            return False
 
     def rotateAll(self, rr):
         if self.nextMtl is not None:
