@@ -621,6 +621,9 @@ class CLDraw:
 
                 elif 'fog' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawFog)
+                    ra = np.random.rand(64) - 0.5
+                    draw['R'].write(ra.astype('float32'))
+                    draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
                 elif 'SSR' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
                 else:

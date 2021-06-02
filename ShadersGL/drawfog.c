@@ -5,9 +5,8 @@
 #define NEAR 0.1
 #define FAR 100.0
 
-#define NSAMPLES 16
+#define NSAMPLES 32
 #define DIST 1.f
-#define LIGHT .036f
 #define ABSORB 0.06f
 #define G 0.5f
 #define GBACK -0.25f
@@ -38,11 +37,23 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D db;
 
+uniform float R[64];
 
 out vec4 f_color;
 
+uniform float rlight;
+
+uint rand_xorshift(uint rng_state) {
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
 
 void main() {
+	float LIGHT = .2f;
+	if (rlight != 0) LIGHT = rlight;
+
     vec2 wh = 1 / vec2(width, height);
     float wF = width;
 	float hF = height;
@@ -60,8 +71,15 @@ void main() {
 	vec3 Vx = vmat[1];
 	vec3 Vy = vmat[2];
 
-	vec3 rayDir = normalize(Vd + (-Vx * (cx - wF/2) + Vy * (cy - hF/2)) / (vscale * hF/2));
-	vec3 pos = vpos + rayDir * (0.5f + 0.25f * float(int(cx) & 1) + 0.125f * float(1-(int(cy) & 1)));
+	uint rng_state = uint(cy * hF + cx);
+	uint rid1 = rand_xorshift(rng_state) & uint(63);
+	rng_state = rand_xorshift(rng_state);
+	uint rid2 = rand_xorshift(rng_state) & uint(63);
+	rng_state = rand_xorshift(rng_state);
+	uint rid3 = rand_xorshift(rng_state) & uint(63);
+
+	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
+	vec3 pos = vpos + rayDir * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 	float light = 0.f;
 	float rn = 0;
