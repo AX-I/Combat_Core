@@ -11,6 +11,8 @@ uniform float vscale;
 uniform float sbias;
 
 in vec3 in_vert;
+in vec2 in_UV;
+out vec2 v_UV;
 
 uniform mat4 RR[32];
 uniform vec3 bOrigin[32];
@@ -27,5 +29,7 @@ void main() {
 
     pos.xy *= vscale;
     gl_Position = vec4(pos, 1.0);
+
+    v_UV = in_UV;
 
 }

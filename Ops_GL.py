@@ -51,6 +51,7 @@ drawSub = makeProgram("drawsub.c")
 drawBorder = makeProgram("drawborder.c")
 drawEm = makeProgram("drawemissive.c")
 drawMin = makeProgram("drawmin.c")
+drawMinAlpha = makeProgram("drawminalpha.c")
 drawZ = makeProgram("drawZ.c")
 drawZA = makeProgram("drawZalpha.c")
 
@@ -791,6 +792,8 @@ class CLDraw:
         except AttributeError:
             self.drawS = ctx.program(vertex_shader=trisetupOrtho,
                                      fragment_shader=drawMin)
+            self.drawSA = ctx.program(vertex_shader=trisetupOrtho,
+                                      fragment_shader=drawMinAlpha)
 
             for n in range(len(self.VBO)):
                 vbo = self.VBO[n]
@@ -809,12 +812,25 @@ class CLDraw:
         for n in range(len(self.VBO)):
             if n in self.BN:
                 if n in self.drawSB: continue
-                self.drawSB[n] = ctx.program(vertex_shader=trisetupOrthoAnim,
-                                             fragment_shader=drawMin)
                 vbo = self.VBO[n]
+                if 'alpha' in self.oldShaders[n]:
+                    dm = drawMinAlpha
+                    vbosetup = (vbo, '3f 3x4 2f4 /v', 'in_vert', 'in_UV')
+                else:
+                    dm = drawMin
+                    vbosetup = (vbo, '3f 5x4 /v', 'in_vert')
+                self.drawSB[n] = ctx.program(vertex_shader=trisetupOrthoAnim,
+                                             fragment_shader=dm)
+
                 vao = ctx.vertex_array(self.drawSB[n],
-                                       [(vbo, '3f 5x4 /v', 'in_vert'),
-                                        (self.BN[n], '1f /v', 'boneNum')])
+                                       [vbosetup, (self.BN[n], '1f /v', 'boneNum')])
+                self.SVA[n].release()
+                self.SVA[n] = vao
+
+            elif 'alpha' in self.oldShaders[n]:
+                vbo = self.VBO[n]
+                vao = ctx.vertex_array(self.drawSA,
+                                       [(vbo, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
                 self.SVA[n].release()
                 self.SVA[n] = vao
 
@@ -829,6 +845,10 @@ class CLDraw:
         self.drawS['vpos'].write(sm['pos'])
         self.drawS['vmat'].write(sm['vec'])
         self.drawS['sbias'] = bias/2
+        self.drawSA['vscale'].write(sm['scale'])
+        self.drawSA['vpos'].write(sm['pos'])
+        self.drawSA['vmat'].write(sm['vec'])
+        self.drawSA['sbias'] = bias/2
         for n in self.drawSB:
             self.drawSB[n]['vscale'].write(sm['scale'])
             self.drawSB[n]['vpos'].write(sm['pos'])
@@ -840,6 +860,11 @@ class CLDraw:
 
         for n in range(len(self.SVA)):
             if n < len(whichCast) and whichCast[n]:
+                if 'alpha' in shaders[n]:
+                    ta = shaders[n]['alpha']
+                    self.drawSA['TA'] = 2
+                    self.TA[ta].use(location=2)
+
                 sva = self.SVA[n]
                 sva.render(moderngl.TRIANGLES)
 
