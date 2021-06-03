@@ -19,7 +19,7 @@
 # ======== ========
 
 from tkinter import *
-from math import sin, cos, sqrt, pi, atan2, asin
+from math import sin, cos, sqrt, pi, atan2, asin, acos
 import numpy
 import numpy.random as nr
 import random
@@ -385,6 +385,58 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                                (targy * (0.2  * scale * sigV),  # vertical
                                 targz * (0.12 * scale * sigH))) # horizontal
 
+    def testLegIK(self, p):
+        """p in self.players"""
+        if self.frameNum < 4: return
+        if p['moving']: return
+
+        try:
+            legRU = p['b1'].children[1]
+        except IndexError: return
+        self.doLegIK(legRU)
+
+        legLU = p['b1'].children[2]
+        self.doLegIK(legLU)
+
+    def doLegIK(self, legU):
+        legD = legU.children[0]
+        foot = legD.children[0]
+
+        pos = legU.TM[3,:3]
+        ih = self.terrain.getHeight(pos[0], pos[2])
+        targY = abs(pos[1] - ih)
+        d1 = abs(legD.offset[1])
+        d2 = abs(foot.offset[1])
+
+        if d1 + d2 < targY or d1 + targY < d2 or d2 + targY < d1:
+            pass # Can't reach!
+        else:
+            U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
+            L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
+
+            # -Z is UP, +Z is DOWN
+            legU.rotate((0, 0, U))
+            legD.rotate((0, 0, L))
+            foot.rotate((0, 0, -U-L))
+
+
+    def setYoffset(self, p):
+        ih = self.terrain.getHeight(*p['b1'].offset[::2])
+        try:
+            legRU = p['b1'].children[1]
+            legLU = p['b1'].children[2]
+        except IndexError:
+            p['b1'].offset[1] = ih + p['cheight']
+            p['legIKoffset'] = 0
+            return
+
+        ihR = self.terrain.getHeight(*legRU.TM[3,:3:2])
+        ihL = self.terrain.getHeight(*legLU.TM[3,:3:2])
+
+        p['b1'].offset[1] = min(ihL, ihR) + p['cheight']
+        p['legIKoffset'] = ih - min(ihL, ihR)
+
+
     def getHandPos(self, pn):
         p = self.players[pn]
 
@@ -516,7 +568,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "vertVel":0, "fCam": False,
-             "id":self.NPLAYERS, 'lastStep':0}
+             "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1511,7 +1563,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 ih = self.terrain.getHeight(a["b1"].offset[0], a["b1"].offset[2])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
                     a["jump"] = -a["jump"]
-                    a["b1"].offset[1] = ih + a["cheight"]
+                    self.setYoffset(a)
 
                     LR = self.sndAttn(a['b1'].offset[:3], 6, 1)
                     self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
@@ -1540,8 +1592,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 ih = self.terrain.getHeight(a["b1"].offset[0] + bx,
                                             a["b1"].offset[2] + by) + a["cheight"]
 
-                slopeOk = (ih - a["b1"].offset[1]) < (hvel*self.frameTime * maxSlope)
-                stepOk = (ih - a["b1"].offset[1]) < maxStep
+                navheight = a["b1"].offset[1] + a['legIKoffset']
+                slopeOk = (ih - navheight) < (hvel*self.frameTime * maxSlope)
+                stepOk = (ih - navheight) < maxStep
                 fx = a["b1"].offset[0] + bx
                 fy = a["b1"].offset[2] + by
                 b1, b2 = self.BORDER
@@ -1551,7 +1604,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                     a["b1"].offset[0] += bx
                     a["b1"].offset[2] += by
                     if a["jump"] <= 0:
-                        a["b1"].offset[1] = ih
+                        self.setYoffset(a)
 
                         if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
                             a['lastStep'] = time.time()
@@ -1573,6 +1626,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             a["b1"].updateTM()
 
             self.testAnim(a)
+            self.testLegIK(a)
+            if not a['moving'] and a['jump'] <= 0:
+                self.setYoffset(a)
 
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
 
