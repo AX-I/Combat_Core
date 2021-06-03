@@ -571,6 +571,11 @@ class CLDraw:
 
         return len(self.TEX)-1
 
+    def setUVOff(self, tn, lo, hi, offset):
+        """tn: texNum    lo, hi, offset: float2(u, v)"""
+        self.DRAW[tn]['uv_lo'].write(np.array(lo, 'float32'))
+        self.DRAW[tn]['uv_hi'].write(np.array(hi, 'float32'))
+        self.DRAW[tn]['uv_offset'].write(np.array(offset, 'float32'))
 
     def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
 

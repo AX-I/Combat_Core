@@ -1,0 +1,10 @@
+# UV offset boundaries for eye tracking
+# NOTE: texture has been rotated 90 deg CLOCKWISE
+# id : (uv_lo, uv_hi, v+ moves L/R, u+ moves U/D)
+
+{
+"1": [[0, 0],         [0.25, 0.25], "R", "U"],
+"2": [[0.5, 0.25],    [0.75, 0.5],  "L", "D"],
+"4": [[0.5, 0],       [1, 0.5],     "R", "U"],
+"5": [[0.125, 0.375], [0.25, 0.5],  "L", "U"]
+}

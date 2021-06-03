@@ -19,7 +19,7 @@
 # ======== ========
 
 from tkinter import *
-from math import sin, cos, sqrt, pi, atan2
+from math import sin, cos, sqrt, pi, atan2, asin
 import numpy
 import numpy.random as nr
 import random
@@ -314,6 +314,76 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         p["pstep"] = 6
         p["gestNum"] = None
         del p["gestMid"]
+
+    def fmtAng(self, a):
+        a = a % (2*pi)
+        if a > pi: a -= 2*pi
+        return a
+
+    def testAnim(self, p):
+        """p in self.players"""
+        if self.frameNum < 4: return
+        if p['moving']: return
+
+        try: _ = self.testTargs
+        except:
+            activeIds = list(self.actPlayers)
+            pm = np.random.permutation(activeIds)
+            targs = [0 for _ in range(self.NPLAYERS)]
+            for t in range(len(pm)):
+                targs[pm[t]] = activeIds[t]
+            self.testTargs = targs
+
+            with open(PATH+'lib/EyeTracking.txt') as fuv:
+                uvInfo = fuv.readlines()
+                uvInfo = json.loads(''.join(uvInfo[3:]))
+                self.eyeUV = {int(n):uvInfo[n] for n in uvInfo}
+
+
+        head = p['b1'].children[0].children[2]
+
+        ang = head.angles % (2*pi)
+        rot = np.array(head.TM[:3,:3])
+        pos = head.TM[3,:3] + np.array([0,0.1,0])
+
+        target = self.players[self.testTargs[p['id']]]
+
+        thead = target['b1'].children[0].children[2]
+        tpos = thead.TM[3,:3] + np.array([0,0.1,0])
+
+        vec = (tpos - pos) @ np.transpose(rot)
+        vec = vec / Phys.eucLen(vec)
+
+
+        rz = atan2(vec[2], vec[0])
+        ry = -asin(vec[1])
+
+        targz = self.fmtAng(rz + ang[1])
+        targy = self.fmtAng(ry + ang[2])
+
+
+        targz = min(0.5, max(-0.5, targz/2))
+        targy = min(0.5, max(-0.5, targy/3))
+        if vec[0] < 0.5:
+            targy *= max(0, 2*vec[0])
+
+        if vec[0] < -0.5:
+            fact = 2*(1+vec[0])
+            targz = targz * fact
+
+##        factor = 2*x**2 if x < 0.5 else 1 - 2*(x-1)**2
+        head.rotate((0, targz, targy))
+
+
+        if p['id'] in self.eyeUV:
+            uvp = self.eyeUV[p['id']]
+            scale = uvp[1][0] - uvp[0][0]
+            sigH = 1 if uvp[2] == 'L' else -1
+            sigV = 1 if uvp[3] == 'U' else -1
+
+            self.draw.setUVOff(p['obj'].texNum, *uvp[:2],
+                               (targy * (0.2  * scale * sigV),  # vertical
+                                targz * (0.12 * scale * sigH))) # horizontal
 
     def getHandPos(self, pn):
         p = self.players[pn]
@@ -1501,6 +1571,9 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 a["rig"].importPose(self.idle, updateRoot=False)
 
             a["b1"].updateTM()
+
+            self.testAnim(a)
+
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
 
             if not a["fCam"]:
