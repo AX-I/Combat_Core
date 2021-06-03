@@ -1185,6 +1185,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         if self.frameNum == 0:
             self.waitFinished = False
+            self.statTime = time.time()
         if self.frameNum == 1:
             self.rotateLight()
 
@@ -1583,6 +1584,18 @@ def run():
             app.start()
             print("Running")
             app.runBackend()
+            if hasattr(app, 'statTime'):
+                games = 1
+                tim = time.time() - app.statTime
+                try:
+                    with open(PATH+"lib/Stat2.txt") as f:
+                        games += int(f.readline().split(': ')[1])
+                        tim += float(f.readline().split(': ')[1])
+                except: pass
+                with open(PATH+"lib/Stat2.txt", "w") as f:
+                    text = 'Games Played: {}\nTime Spent (secs): {}'
+                    f.write(text.format(games, round(tim, 2)))
+
             if hasattr(app, "WIN"):
                 state = 0
                 try:
