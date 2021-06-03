@@ -51,7 +51,7 @@ PATH = OpsConv.PATH
 SWITCHABLE = True
 SHOWALL = False
 GESTLEN = 0.6
-LOADALL = True
+LOADALL = False
 
 def mkServer(pi, po, kwargs):
     a = TCPServer(pi, po, isclient=False, **kwargs)
@@ -87,6 +87,10 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             stage, gameId, server, name, isClient, selChar, aiNums = self.waitMenu()
         except TypeError:
             self.proceed = False
+
+        if max(selChar, *aiNums) > 2:
+            global LOADALL
+            LOADALL = True
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
 
@@ -564,11 +568,15 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
         elif self.stage == 1:
+            hasNewAtrium = os.path.exists(PATH+"../Atrium/Atrium8.obj")
+            atriumName = '8.obj' if hasNewAtrium else 'Y.obj'
+
             self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
-                               filename=PATH+"../Atrium/AtriumAtlasY.obj",
+                               filename=PATH+"../Atrium/Atrium" + atriumName,
                                scale=1.2, mip=2,
                                useShaders={"cull":1},
-                               subDiv=1, shadow="CR")
+                               subDiv=1, shadow="CR",
+                               blender=hasNewAtrium)
 
             self.terrain = VertTerrain0([0,-0.6,0],
                                         PATH+"../Atrium/AtriumNav.png",
@@ -589,7 +597,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[1.8,1.6,1.2]})
             self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.4,0.3,0.2]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-            if self.renderBackend == "GL":
+            if (self.renderBackend == "GL") and (PLATFORM == 'darwin'):
                 self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
 
             self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
@@ -709,7 +717,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
                            texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, "fog":1})
+                           useShaders={"2d":1, "fog":0.3})
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
@@ -1266,7 +1274,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             self.recvState()
 
 
-        if self.frameNum & vf == 0:
+        if self.frameNum & vf == 1:
             if not self.isClient:
                 self.updateAI()
 

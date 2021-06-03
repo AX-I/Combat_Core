@@ -266,8 +266,12 @@ class VertObject:
         else:
             self.wedgePoints.append(coords)
             self.vertNorms.append(norms)
-            self.u.append(uv[:,0])
-            self.v.append(uv[:,1])
+            try:
+                self.u.append(uv[:,0])
+                self.v.append(uv[:,1])
+            except TypeError:
+                self.u.append((uv[0][0], uv[1][0], uv[2][0]))
+                self.u.append((uv[0][1], uv[1][1], uv[2][1]))
 
     def splitFace(self, c, n, uv):
         nc = (c + np.roll(c, -1, 0)) / 2
@@ -531,6 +535,11 @@ class VertModel(VertObject):
             if "plant" in self.mtlTex or "as12" in self.mtlTex:
                 del self.viewer.matShaders[self.texNum]["cull"]
         except: pass
+        try:
+            if 'Glass' in self.mtlTex:
+                del self.viewer.matShaders[self.texNum]["cull"]
+                self.viewer.matShaders[self.texNum]['SSR'] = 1
+        except: pass
     
     def create(self):        
         filename = self.filename
@@ -548,8 +557,9 @@ class VertModel(VertObject):
                 self.bones = tmod["b"]
                 return
 
-        if self.readCache():
-            return
+        if self.cache:
+            if self.readCache():
+                return
         
         size = self.size
 
@@ -656,7 +666,6 @@ class VertModel(VertObject):
 
         cache = [zlib.compress(x.tobytes()) for x in (wp, vn, u, v, b)]
         fname = self.mtlTex + '.obj_'
-        print('caching to', fname)
         with open(fname, 'wb') as fc:
             for i in range(len(cache)):
                 fc.write(bytes(str(len(cache[i])), 'ascii') + b' ')
@@ -668,7 +677,6 @@ class VertModel(VertObject):
         fname = self.mtlTex + '.obj_'
         try:
             with open(fname, 'rb') as fc:
-                print('reading cache from', fname)
                 sizes = str(fc.readline(), 'ascii').split()
 
                 attrs = [zlib.decompress(fc.read(int(sizes[i])))
