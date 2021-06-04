@@ -57,6 +57,7 @@ drawZA = makeProgram("drawZalpha.c")
 
 drawFog = makeProgram('drawfog.c')
 drawSSR = makeProgram('drawwater.c')
+drawGlass = makeProgram('drawglass.c')
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -630,7 +631,10 @@ class CLDraw:
                     draw['R'].write(ra.astype('float32'))
                     draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
                 elif 'SSR' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
+                    if shaders[i]['SSR'] == '0':
+                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
+                    elif shaders[i]['SSR'] == 1:
+                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
                 else:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
                     draw['SM'] = 0
