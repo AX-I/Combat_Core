@@ -403,13 +403,16 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         foot = legD.children[0]
 
         pos = legU.TM[3,:3]
-        ih = self.terrain.getHeight(pos[0], pos[2])
+        ih = self.terrain.getHeight(pos[0], pos[2]) + 0.114 # Account for foot
         targY = abs(pos[1] - ih)
         d1 = abs(legD.offset[1])
         d2 = abs(foot.offset[1])
 
+        # Possible float precision issues
         if d1 + d2 < targY or d1 + targY < d2 or d2 + targY < d1:
-            pass # Can't reach!
+            legU.rotate((0, 0, 0))
+            legD.rotate((0, 0, 0))
+            foot.rotate((0, 0, 0))
         else:
             U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
             L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
@@ -417,22 +420,26 @@ class CombatApp(ThreeDBackend, AI.AIManager):
             # -Z is UP, +Z is DOWN
             legU.rotate((0, 0, U))
             legD.rotate((0, 0, L))
-            foot.rotate((0, 0, -U-L))
+            foot.rotate((0, 0, max(-pi/6, -U-L)))
 
 
     def setYoffset(self, p):
         ih = self.terrain.getHeight(*p['b1'].offset[::2])
+
+        p['b1'].offset[1] = ih + p['cheight']
+        p['legIKoffset'] = 0
+
+        if p['moving']: return
+
         try:
             legRU = p['b1'].children[1]
             legLU = p['b1'].children[2]
-        except IndexError:
-            p['b1'].offset[1] = ih + p['cheight']
-            p['legIKoffset'] = 0
-            return
+        except IndexError: return
 
         ihR = self.terrain.getHeight(*legRU.TM[3,:3:2])
         ihL = self.terrain.getHeight(*legLU.TM[3,:3:2])
 
+        if abs(ihL - ihR) > 0.8: return
         p['b1'].offset[1] = min(ihL, ihR) + p['cheight']
         p['legIKoffset'] = ih - min(ihL, ihR)
 
@@ -1641,6 +1648,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
         if not self.VRMode:
             self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
+            self.pos[1] += self.players[sc]['legIKoffset']
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
@@ -1648,6 +1656,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
             if not self.VRMode:
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
+                self.pos[1] -= a['legIKoffset']
 
             playerIndex = {int(v):k for k, v in self.activePlayers.items()}
             for a in self.players:
