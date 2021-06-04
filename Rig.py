@@ -151,7 +151,7 @@ class Bone:
     def rotate(self, rr=None):
         if rr is None: rr = self.angles
         else: self.angles = rr
-        self.angles = np.array(self.angles)
+        self.angles = np.array(self.angles, 'float32')
         rotX = np.array([[1, 0, 0],
                          [0, cos(rr[0]), -sin(rr[0])],
                          [0, sin(rr[0]), cos(rr[0])]])

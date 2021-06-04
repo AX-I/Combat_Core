@@ -46,6 +46,7 @@ import queue
 
 import OpsConv
 import AI
+import Anim
 
 PATH = OpsConv.PATH
 SWITCHABLE = True
@@ -64,7 +65,7 @@ def playSound(si):
     a = SoundManager(si)
     a.run()
 
-class CombatApp(ThreeDBackend, AI.AIManager):
+class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def __init__(self):
 
         self.maxFPS = 66
@@ -88,7 +89,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         except TypeError:
             self.proceed = False
 
-        if max(selChar, *aiNums) > 2:
+        if max(selChar, *aiNums, -1) > 2:
             global LOADALL
             LOADALL = True
 
@@ -1068,8 +1069,8 @@ class CombatApp(ThreeDBackend, AI.AIManager):
         self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
-        walks = ["Walk1.txt", "Walk2.txt", "Walk3.txt", "Walk4.txt"]
-        self.poses = [json.load(open(p+f)) for f in walks]
+        self.poses = Anim.loadAnim(p+'WalkCycle5.ava', timeScale=0.9)
+        self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
 
         space = 2 if self.stage == 3 else 3
@@ -1625,7 +1626,7 @@ class CombatApp(ThreeDBackend, AI.AIManager):
 
                 df = 1 + 3*self.VRMode
                 if (not self.VRMode) or (self.frameNum & 3 == 0):
-                    self.stepPose(a, a["obj"], df*self.frameTime * self.poseDt*a["moving"])
+                    self.stepPoseLoop(a, a["obj"], df*self.frameTime * self.poseDt*a["moving"])
 
             elif a["movingOld"]:
                 a["rig"].importPose(self.idle, updateRoot=False)
