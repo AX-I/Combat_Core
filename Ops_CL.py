@@ -492,6 +492,9 @@ class CLDraw:
         self.hostSTex = tex.astype("uint16")
         self.stSize = tex.shape[0]
 
+    def setUVOff(self, tn, lo, hi, offset):
+        pass
+
     def drawAll(self, shaders,
                 mask=None, shadowIds=[0,1],
                 useOpacitySM=False):

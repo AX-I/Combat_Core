@@ -882,11 +882,11 @@ class VertTerrain(VertObject):
     def getHeight(self, x, z):
         """World coords x,z -> world coord y"""
         landCoord = (numpy.array([x, 0, z]) - self.coords) / self.scale
-        texr1 = landCoord[0] % (self.size[0]+1)
+        texr1 = max(0, min(landCoord[0], self.size[0]))
         tex1 = int(texr1)
         texr1 -= tex1
         texi1 = 1-texr1
-        texr2 = landCoord[2] % (self.size[1]+1)
+        texr2 = max(0, min(landCoord[2], self.size[1]))
         tex2 = int(texr2)
         texr2 -= tex2
         texi2 = 1-texr2

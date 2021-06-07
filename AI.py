@@ -445,7 +445,9 @@ class AIManager:
 
 
         path = []
-        s = p[1][tuple(tpos)]
+        try:
+            s = p[1][tuple(tpos)]
+        except IndexError: return
         if (s == -1).all(): s = p[1][(tpos[0]+1, tpos[1])]
         if (s == -1).all(): s = p[1][(tpos[0]-1, tpos[1])]
         if (s == -1).all(): s = p[1][(tpos[0], tpos[1]+1)]
