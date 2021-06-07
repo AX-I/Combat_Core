@@ -372,9 +372,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             fact = 2*(1+vec[0])
             targz = targz * fact
 
-##        factor = 2*x**2 if x < 0.5 else 1 - 2*(x-1)**2
         head.rotate((0, targz, targy))
-
 
         if p['id'] in self.eyeUV:
             uvp = self.eyeUV[p['id']]
@@ -425,9 +423,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
     def setYoffset(self, p):
-        ih = self.terrain.getHeight(*p['b1'].offset[::2])
+        ih = self.terrain.getHeight(*(p['b1'].offset[::2] - p['animOffset'][::2]))
 
-        p['b1'].offset[1] = ih + p['cheight']
+        p['b1'].offset[1] = ih + p['cheight'] + p['animOffset'][1]
         p['legIKoffset'] = 0
 
         if p['moving']: return
@@ -441,8 +439,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         ihL = self.terrain.getHeight(*legLU.TM[3,:3:2])
 
         if abs(ihL - ihR) > 0.8: return
-        p['b1'].offset[1] = min(ihL, ihR) + p['cheight']
-        p['legIKoffset'] = ih - min(ihL, ihR)
+        p['b1'].offset[1] = min(ih, ihL, ihR) + p['cheight']
+        p['legIKoffset'] = ih - min(ih, ihL, ihR)
 
 
     def getHandPos(self, pn):
@@ -576,7 +574,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "vertVel":0, "fCam": False,
-             "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0}
+             "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
+             'animOffset':np.zeros(3)}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -699,7 +698,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         elif self.stage == 1:
             hasNewAtrium = os.path.exists(PATH+"../Atrium/Atrium8.obj")
-            atriumName = '8.obj' if hasNewAtrium else 'Y.obj'
+            atriumName = '8.obj' if hasNewAtrium else 'AtlasY.obj'
 
             self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
                                filename=PATH+"../Atrium/Atrium" + atriumName,
@@ -962,7 +961,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.makeObjects(1)
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav"}}})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav",
+                                                 PATH + '../Sound/Plains3v4.wav'}}})
 
         if self.stage == 1:
             with open(PATH + "../Atrium/LightsCB.txt") as x:
@@ -1069,7 +1069,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
-        self.poses = Anim.loadAnim(p+'WalkCycle5.ava', timeScale=0.9)
+        self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
 
@@ -1382,7 +1382,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         hvel = self.hvel
         maxSlope = 1
-        maxStep = 0.2
+        maxStep = 0.4
 
 
         if self.frameNum == 0:
@@ -1568,7 +1568,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
                 a["b1"].offset[1] += dx * 1.2
                 a["vertVel"] -= self.frameTime * 9.81
-                ih = self.terrain.getHeight(a["b1"].offset[0], a["b1"].offset[2])
+                ih = self.terrain.getHeight(*(a["b1"].offset[::2] - a['animOffset'][::2]))
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
@@ -1597,8 +1597,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
                 bx *= self.frameTime; by *= self.frameTime
 
-                ih = self.terrain.getHeight(a["b1"].offset[0] + bx,
-                                            a["b1"].offset[2] + by) + a["cheight"]
+                ax, ay = a["b1"].offset[::2] - a['animOffset'][::2]
+                ih = self.terrain.getHeight(ax + bx, ay + by) + a["cheight"]
 
                 navheight = a["b1"].offset[1] + a['legIKoffset']
                 slopeOk = (ih - navheight) < (hvel*self.frameTime * maxSlope)
@@ -1611,6 +1611,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if (slopeOk or stepOk) and borderOk:
                     a["b1"].offset[0] += bx
                     a["b1"].offset[2] += by
+                    if a["jump"] <= 0:
+                        if (navheight - ih) > maxStep:
+                            a['jump'] = self.frameNum
+                            a['vertVel'] = 0.0
                     if a["jump"] <= 0:
                         self.setYoffset(a)
 
@@ -1650,6 +1654,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if not self.VRMode:
             self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos[1] += self.players[sc]['legIKoffset']
+            self.pos -= self.players[sc]['animOffset']
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
