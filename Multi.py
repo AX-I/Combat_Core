@@ -89,13 +89,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except TypeError:
             self.proceed = False
 
-        if max(selChar, *aiNums, -1) > 2:
-            global LOADALL
-            LOADALL = True
-
         self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
 
         if not self.proceed: return
+
+        if max(selChar, *aiNums, -1) > 2:
+            global LOADALL
+            LOADALL = True
 
         self.si.put({"Play":(PATH + "../Sound/Noise.wav", volm, True)})
 
@@ -202,6 +202,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.expPow = 2.7
 
         self.dofFoc = 3
+        self.gamma = 1.4
+        self.tonemap = 'gamma'
         self.doSSAO = False
         self.showAINav = False
         self.doMB = True
@@ -252,11 +254,24 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("h", self.tgAO)
         self.bindKey("n", self.tgNav)
         self.bindKey("y", self.tgMB)
+        self.bindKey('t', self.tgTM1)
+        self.bindKey('T', self.tgTM2)
+
+    def tgTM1(self):
+        tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
+        self.tonemap = tm[tm.index(self.tonemap) + 1 - len(tm)]
+    def tgTM2(self):
+        tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
+        self.tonemap = tm[tm.index(self.tonemap) - 1]
 
     def tgMB(self): self.doMB = not self.doMB
     def tgAO(self): self.doSSAO = not self.doSSAO
-    def foc1(self): self.dofFoc *= 1.1
-    def foc2(self): self.dofFoc /= 1.1
+    def foc1(self):
+        self.gamma *= 1.1 #self.dofFoc *= 1.1
+        print(self.gamma)
+    def foc2(self):
+        self.gamma /= 1.1 #self.dofFoc /= 1.1
+        print(self.gamma)
     def tgNav(self): self.showAINav = not self.showAINav
 
     def gesture(self, pn, n, gi=None):
@@ -1010,7 +1025,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.distort(bx/self.W, by/self.H, tr[0],
                                   portal, strength)
 
-        self.draw.gamma(1.4)
+        self.draw.gamma(self.gamma, self.tonemap)
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
@@ -1655,6 +1670,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos[1] += self.players[sc]['legIKoffset']
             self.pos -= self.players[sc]['animOffset']
+
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])

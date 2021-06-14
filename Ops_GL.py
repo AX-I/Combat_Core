@@ -381,10 +381,6 @@ class CLDraw:
     def ssao(self):
         try: _ = self.ssaoProg
         except: self.setupSSAO()
-        try: _ = self.POSTFBO
-        except:
-            print('Wait')
-            return
 
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
@@ -482,7 +478,9 @@ class CLDraw:
 
         self.blurVao1.render(moderngl.TRIANGLES)
 
-    def gamma(self, ex):
+    def gamma(self, ex, tonemap='gamma'):
+        tm = {'gamma':0, 'reinhard':1, 'reinhard2':2, 'aces':3}
+
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
@@ -491,6 +489,7 @@ class CLDraw:
         self.post_prog['focus'] = self.dofFocus
         self.post_prog['tex1'] = 0
         self.post_prog['exposure'] = ex
+        self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.FB.use(location=0)
 
         self.post_prog['db'] = 1
