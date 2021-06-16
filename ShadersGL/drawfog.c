@@ -72,8 +72,10 @@ void main() {
 	vec3 Vy = vmat[2];
 
 	uint rng_state = uint(cy * hF + cx);
+	rng_state += uint(59 * (cy * hF + cx) + 83 * cx);
 	uint rid1 = rand_xorshift(rng_state) & uint(63);
 	rng_state = rand_xorshift(rng_state);
+	rng_state += uint(17 * (cy * hF + cx) + 31 * cx);
 	uint rid2 = rand_xorshift(rng_state) & uint(63);
 	rng_state = rand_xorshift(rng_state);
 	uint rid3 = rand_xorshift(rng_state) & uint(63);
@@ -113,7 +115,7 @@ void main() {
 	transmit = exp(- ABSORB * maxZ);
 
 	// Blend mode src.alpha
-	f_color = vec4(light * LInt, (1.0 - transmit));
+	f_color = vec4(max(0., light) * LInt, (1.0 - transmit));
 
 
 

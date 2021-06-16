@@ -43,6 +43,14 @@ void main() {
 	float dx = texture(texd, (tc + vec2(1, 0))*wh).r;
 	float dy = texture(texd, (tc + vec2(0, 1))*wh).r;
 
+	// Use the other side if closer object is in the way
+	if (abs(dx - d) > 1.f) {
+		dx = 2*d - texture(texd, (tc + vec2(-1, 0))*wh).r;
+	}
+	if (abs(dy - d) > 1.f) {
+		dy = 2*d - texture(texd, (tc + vec2(0, -1))*wh).r;
+	}
+
 	int rx = 1;
 	int ry = 1;
 
@@ -50,6 +58,10 @@ void main() {
 	vec3 px = dx * vec3((cx+0.5f+rx-wF/2)/sScale, -(cy+0.5f-hF/2)/sScale, 1);
 	vec3 py = dy * vec3((cx+0.5f-wF/2)/sScale, -(cy+0.5f+ry-hF/2)/sScale, 1);
 	vec3 norm = rx*ry*normalize(cross(pos-px, pos-py));
+
+    // Bias to prevent grayness
+	int sig_x = norm.x > 0 ? 1 : -1;
+	int sig_y = norm.y > 0 ? -1 : 1;
 
 	for (int i = 0; i < nsamples; i++) {
 		uint rid1 = rand_xorshift(rng_state) & uint(63);
@@ -79,7 +91,7 @@ void main() {
 
 		if ((sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF)) {
 
-			float sampd = texture(texd, vec2(int(sx)+0.5f, int(sy)+0.5f)*wh).r;
+			float sampd = texture(texd, vec2(int(sx) + 0.5*sig_x, int(sy) + 0.5*sig_y)*wh).r;
 
 			float disct = clamp(2.f - (d-sampd), 0.f, 1.f);
 		    ao += disct * ((sampd < sz - bias) ? 1.f : 0.f);
