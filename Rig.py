@@ -73,7 +73,7 @@ class Rig:
         if "children" not in p0 or "children" not in p1:
             return {"angle":ang}
         p = []
-        for i in range(len(p0["children"])):
+        for i in range(min(len(p0["children"]), len(p1['children']))):
             p.append(self.interpTree(p0["children"][i], p1["children"][i], t, r=1))
         return {"angle":ang, "children":p}
         

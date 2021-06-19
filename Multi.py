@@ -331,10 +331,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p["gestNum"] = None
         del p["gestMid"]
 
-    def fmtAng(self, a):
-        a = a % (2*pi)
-        if a > pi: a -= 2*pi
-        return a
 
     def testAnim(self, p):
         """p in self.players"""
@@ -399,7 +395,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                (targy * (0.2  * scale * sigV),  # vertical
                                 targz * (0.12 * scale * sigH))) # horizontal
 
-    def testLegIK(self, p):
+    def testLegIK(self, p, interp=None):
         """p in self.players"""
         if self.frameNum < 4: return
         if p['moving']: return
@@ -407,12 +403,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try:
             legRU = p['b1'].children[1]
         except IndexError: return
-        self.doLegIK(legRU)
+        self.doLegIK(legRU, interp)
 
         legLU = p['b1'].children[2]
-        self.doLegIK(legLU)
+        self.doLegIK(legLU, interp)
 
-    def doLegIK(self, legU):
+    def doLegIK(self, legU, interp=None):
         legD = legU.children[0]
         foot = legD.children[0]
 
@@ -424,17 +420,28 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         # Possible float precision issues
         if d1 + d2 < targY or d1 + targY < d2 or d2 + targY < d1:
-            legU.rotate((0, 0, 0))
-            legD.rotate((0, 0, 0))
-            foot.rotate((0, 0, 0))
+            U = 0
+            L = 0
         else:
             U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
             L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
 
-            # -Z is UP, +Z is DOWN
+        # -Z is UP, +Z is DOWN
+        if interp is None:
             legU.rotate((0, 0, U))
             legD.rotate((0, 0, L))
             foot.rotate((0, 0, max(-pi/6, -U-L)))
+            return
+
+        pose = {'angle':(0,0,U), 'children':[
+                {'angle':(0,0,L), 'children':[
+                 {'angle':((0, 0, max(-pi/6, -U-L)))}
+                ]}
+               ]}
+
+        temp = legU.exportPose()
+        i = self.players[0]['rig'].interpTree(temp, pose, interp)
+        legU.importPose(i)
 
 
     def setYoffset(self, p):
@@ -590,7 +597,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "vertVel":0, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
-             'animOffset':np.zeros(3)}
+             'animOffset':np.zeros(3), 'animTrans':-100}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1106,6 +1113,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 for i in a["ctexn"]:
                     self.draw.initBoneOrigin(a["allBones"][b].origin, b, i)
 
+            a['b1'].lastOffset = np.array((0,0,0), 'float32')
+
             a["b1"].offset = np.array((28, 0, 15 + space*n, 1.))
             a["b1"].offset[1] = self.terrain.getHeight(a["b1"].offset[0],
                                                        a["b1"].offset[2]) + 1.6
@@ -1335,6 +1344,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.rotateLight()
 
         self.frameStart = time.perf_counter()
+
+        CURRTIME = time.time()
 
         sc = self.selchar
 
@@ -1601,6 +1612,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
 
             if a["moving"]:
+                transKF = 2 if a['moving'] > 0 else 4
+                if not a['movingOld']:
+                    a['animTrans'] = CURRTIME
+                    a['poset'] = self.keyFrames[transKF][0]
+
                 bx = hvel*a["moving"]*cos(a["cr"])
                 by = hvel*a["moving"]*sin(a["cr"])
                 if a["fCam"]:
@@ -1611,6 +1627,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     bx /= d; by /= d
 
                 bx *= self.frameTime; by *= self.frameTime
+
+                if CURRTIME - a['animTrans'] < 0.2:
+                    fact = (CURRTIME - a['animTrans']) / 0.2
+                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                    bx *= fact; by *= fact
 
                 ax, ay = a["b1"].offset[::2] - a['animOffset'][::2]
                 ih = self.terrain.getHeight(ax + bx, ay + by) + a["cheight"]
@@ -1644,16 +1665,43 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                  self.volmFX / 2 * LR)})
 
                 df = 1 + 3*self.VRMode
-                if (not self.VRMode) or (self.frameNum & 3 == 0):
-                    self.stepPoseLoop(a, a["obj"], df*self.frameTime * self.poseDt*a["moving"])
+
+                if CURRTIME - a['animTrans'] < 0.2:
+                    fact = (CURRTIME - a['animTrans']) / 0.2
+                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                    a["rig"].interpPose(self.idle, self.keyFrames[transKF][1], fact)
+
+                    off = np.array([0,0,0.]) * (1-fact)
+                    off += (self.keyFrames[transKF][2] @ a['b1'].rotMat) * fact
+                    a['b1'].offset[:3] += off - a['b1'].lastOffset
+                    a['b1'].lastOffset = off
+                    a['animOffset'] = off
+                else:
+                    self.stepPoseLoop(a, a["obj"], self.keyFrames,
+                                      df*self.frameTime * self.poseDt*a["moving"])
 
             elif a["movingOld"]:
-                a["rig"].importPose(self.idle, updateRoot=False)
+                a['animTrans'] = CURRTIME
+                a['tempPose'] = a['rig'].b0.exportPose()
+            else:
+                if CURRTIME - a['animTrans'] < 0.2:
+                    fact = (CURRTIME - a['animTrans']) / 0.2
+                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                    a['rig'].interpPose(a['tempPose'], self.idle, fact)
+                elif a['animTrans'] > 0:
+                    a['rig'].importPose(self.idle, updateRoot=False)
+                    a['animTrans'] = -100
+
 
             a["b1"].updateTM()
 
             self.testAnim(a)
-            self.testLegIK(a)
+
+            if CURRTIME - a['animTrans'] < 0.2:
+                self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.2)
+            else:
+                self.testLegIK(a)
+
             if not a['moving'] and a['jump'] <= 0:
                 self.setYoffset(a)
 

@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from math import pi
 
 def loadAnim(fn, timeScale=1):
     keyFrames = []
@@ -47,41 +48,45 @@ def cubicInterpLoop(kf, k, p):
 
 
 class AnimManager:
-    def stepPoseLoop(self, p, vobj, st=1):
+
+    def fmtAng(self, a):
+        a = a % (2*pi)
+        if a > pi: a -= 2*pi
+        return a
+
+    def stepPoseLoop(self, p, vobj, keyFrames, st=1):
         p['poset'] += p['pstep'] * st
-        if p['poset'] > self.keyFrames[-1][0]:
-            p['poset'] -= self.keyFrames[-1][0] - self.keyFrames[0][0]
-        if p['poset'] < self.keyFrames[0][0]:
-            p['poset'] += self.keyFrames[-1][0] - self.keyFrames[0][0]
+        if p['poset'] > keyFrames[-1][0]:
+            p['poset'] -= keyFrames[-1][0] - keyFrames[0][0]
+        if p['poset'] < keyFrames[0][0]:
+            p['poset'] += keyFrames[-1][0] - keyFrames[0][0]
 
         if len(self.keyFrames) < 2: return
         k = None
-        for i in range(len(self.keyFrames)):
-            if p['poset'] < self.keyFrames[i][0]:
-                k = max(0, min(len(self.keyFrames)-2, i-1))
-                r = p['poset'] - self.keyFrames[k][0]
-                r /= self.keyFrames[k+1][0] - self.keyFrames[k][0]
+        for i in range(len(keyFrames)):
+            if p['poset'] < keyFrames[i][0]:
+                k = max(0, min(len(keyFrames)-2, i-1))
+                r = p['poset'] - keyFrames[k][0]
+                r /= keyFrames[k+1][0] - keyFrames[k][0]
                 break
         if k is not None:
             sign = 1 if st > 0 else -1
 
-            try: _ = p['b1'].lastOffset
-            except: p['b1'].lastOffset = np.array((0,0,0), 'float32')
-
             # Linear interp
-            # off = (self.keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
-            # off += (self.keyFrames[k+1][2] @ p['b1'].rotMat) * r
+            # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
+            # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
 
             if p['jump'] < 0:
-                off = cubicInterpLoop(self.keyFrames, k, p)
+                off = cubicInterpLoop(keyFrames, k, p)
+                if st < 0: off[0] *= -0.6
 
                 p['b1'].offset[:3] += off - p['b1'].lastOffset
                 p['b1'].lastOffset = off
                 p['animOffset'] = off
 
             ang = p['b1'].angles
-            ang += np.array(self.keyFrames[k][1]['angle'], 'float32') * (1-r) * sign
-            ang += np.array(self.keyFrames[k+1][1]['angle'], 'float32') * r * sign
+            ang += np.array(keyFrames[k][1]['angle'], 'float32') * (1-r) * sign
+            ang += np.array(keyFrames[k+1][1]['angle'], 'float32') * r * sign
             p['b1'].rotate(ang)
 
-            p["rig"].interpPose(self.keyFrames[k][1], self.keyFrames[k+1][1], r)
+            p["rig"].interpPose(keyFrames[k][1], keyFrames[k+1][1], r)
