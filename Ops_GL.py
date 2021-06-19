@@ -39,6 +39,8 @@ trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
 trisetupOrthoAnim = makeProgram("trisetupOrtho_anim.c", "PipeGL/")
 trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 
+trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
+
 if sys.platform == 'darwin':
     trisetup = trisetup.replace('[128]', '[8]')
     trisetupAnim = trisetupAnim.replace('[128]', '[8]')
@@ -273,10 +275,43 @@ class CLDraw:
             self.DRAW[tn]['highColor'].write(np.array(color, 'float32'))
         except KeyError: pass
 
-    def setupWave(self, *args, **kwargs):
-        pass
-    def updateWave(self, *args):
-        pass
+    def setupWave(self, origin, wDir, wLen, wAmp, wSpd, numW):
+        self.WAVEO = np.array(origin, 'float32').tobytes()
+        self.WAVED = np.array(wDir.reshape((2,-1)), 'float32')
+
+        self.WAVELEN = np.array(wLen, 'float32').tobytes()
+        self.WAVEAMP = np.array(wAmp, 'float32').tobytes()
+        self.WAVESPD = np.array(wSpd, 'float32').tobytes()
+        self.WNUM = (np.int32(numW), np.int32(wSpd.reshape((-1,)).shape[0] - numW))
+
+    def updateWave(self, pScale, stTime, tn):
+        d = self.DRAW[tn]
+        try:
+            d['pScale'].write(np.float32(pScale))
+            d['pTime'].write(np.float32(time.time() - stTime))
+        except KeyError:
+            draw = ctx.program(vertex_shader=trisetupWave,
+                               fragment_shader=drawSSR)
+            try:
+                draw['width'].write(np.float32(self.W))
+                draw['height'].write(np.float32(self.H))
+            except: pass
+
+            draw['vscale'].write(self.sScale)
+            draw['aspect'].write(np.float32(self.H/self.W))
+            self.DRAW[tn] = draw
+            self.writeShArgs(tn)
+            self.VAO[tn] = ctx.vertex_array(draw, self.VBO[tn],
+                                            'in_vert', 'in_norm', 'in_UV')
+            draw['origin'].write(self.WAVEO)
+            draw['wDir1'].write(self.WAVED[0].tobytes())
+            draw['wDir2'].write(self.WAVED[1].tobytes())
+            draw['wLen'].write(self.WAVELEN)
+            draw['wAmp'].write(self.WAVEAMP)
+            draw['wSpd'].write(self.WAVESPD)
+            draw['lenW'].write(self.WNUM[0])
+            draw['lenW2'].write(self.WNUM[1])
+
 
     def drawPS(self, *args):
         pass
@@ -552,7 +587,7 @@ class CLDraw:
         tex = ctx.texture(rr.shape[::-1], 3, np.stack((rr,gg,bb), axis=-1),
                           dtype='f2')
 
-        if mip is not None:
+        if mip is not None or 'mip' in shader:
             tex.build_mipmaps()
 
         tex.use(location=texNum)
