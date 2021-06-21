@@ -287,6 +287,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p["gestNum"] = n
         p["poset"] = 0
         p["pstep"] = 3
+        p['tempPose'] = p['rig'].b0.exportPose()
 
     def jump(self, pn=None):
         if pn is None: pn = self.selchar
@@ -318,7 +319,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if p["poset"] < 0:
             p["poset"] = 0; finish = True
 
-        p["rig"].interpPose(self.idle, self.gestures[p["gestNum"]], p["poset"])
+        initPose = self.idle if p['pstep'] < 0 else p['tempPose']
+        p["rig"].interpPose(initPose, self.gestures[p["gestNum"]], p["poset"])
         self.updateRig(p["rig"], p["ctexn"], p["num"], vobj)
 
         if finish: self.gestFinish(p["id"])
@@ -712,8 +714,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
             self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
-                                    rot=(0,0,0), hdrScale=16)
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
+                                    rot=(0,-pi/3,0), hdrScale=12)
             self.skyBox.created()
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
@@ -745,11 +747,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.t2.onHit = lambda x: self.explode(x)
             self.w.addCollider(self.t2)
 
-            self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[1.8,1.6,1.2]})
-            self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.4,0.3,0.2]})
-            self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-            if (self.renderBackend == "GL") and (PLATFORM == 'darwin'):
-                self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
+            self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[2.0,1.77,1.33]})
+            self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.3,0.2,0.15]})
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.075,0.15,0.3]})
+
+            # Local lights are getting out of hand
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.35,0.35,0.35]})
 
             self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                                     rot=(0,0,0), hdrScale=48)
@@ -868,7 +871,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
                            texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, "fog":0.3})
+                           useShaders={"2d":1, "fog":1.4})
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
@@ -928,11 +931,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if self.stage == 0:
             self.addVertObject(VertWater, [-1, 2, -10], size=240,
-                           scale=0.22, pScale=0.06,
+                           scale=0.22, pScale=0.04,
                  wDir=[(0.4,-0.17), (0.4, 0.2)],
                  wLen=[(10, 4, 3), (7, 5, 2)],
                  wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
-                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.5, numW=3,
+                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
                            texture=PATH+"../Assets/Blue.png",
                            useShaders={"SSR":"0"})
             self.water = self.vertObjects[-1]
@@ -990,7 +993,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             with open(PATH + "../Atrium/LightsCB.txt") as x:
                 a = json.loads(x.read())
                 for x in a:
-                    x["i"] = (2.5,2.5,2.5)
+                    x["i"] = (1.5,1.5,1.5)
                     x["pos"] = np.array(x["pos"], "float32") * 1.2 + \
                                np.array([13.32,0,20.4])
                     x["vec"] = -np.array(x["vec"], "float32")
@@ -1683,7 +1686,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             elif a["movingOld"]:
                 a['animTrans'] = CURRTIME
                 a['tempPose'] = a['rig'].b0.exportPose()
-            else:
+
+            elif not a['gesturing']:
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
