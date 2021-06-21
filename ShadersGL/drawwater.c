@@ -1,5 +1,5 @@
 // Screen Space Reflection
-// For AXI Combat
+// Refraction test
 
 #version 330
 
@@ -58,11 +58,6 @@ void main() {
 
 	float fr = 1 - max(0.f, dot(normalize(pos - vp), norm)) * maxattn;
     fr *= fr; fr *= fr; fr *= fr; fr *= fr; fr *= fr; fr *= fr;
-
-    float scatter = exp(ABSORB * (tz - texture(db, tc*wh).r));
-    // is actually transmittance
-
-    vec3 tsr = (1-scatter) * texture(tex1, v_UV / depth).rgb;
 
 
 
@@ -127,13 +122,45 @@ void main() {
     vec3 refltest = vec3(0.04, 0.08, 0.12);
 
 
+
+
+    float refractDist = texture(db, tc*wh).r - tz;
+    vec3 refractDir = normalize(a + 0.5 * nd * norm) * refractDist * (sScale/800);
+
+	rpz = dot(a + refractDir, SVd);
+    rp = vec2(dot(a + refractDir, SVx) * -sScale / rpz + wF/2,
+              dot(a + refractDir, SVy) * sScale / rpz + hF/2);
+
+    if (rp.y >= hF - 2) {
+		rp = tc;
+	}
+
+	vec2 refractCoord = clamp(rp, vec2(0), vec2(wF-1, hF-1));
+
+	if (texture(db, refractCoord*wh).r - tz < -0.1) refractCoord = tc;
+
+    vec3 refracted = texture(currFrame, refractCoord*wh).rgb;
+
+
+    float scatter = exp(ABSORB * min(0.f, tz - texture(db, refractCoord*wh).r));
+	// is actually transmittance
+
+    vec3 tsr = (1-scatter) * texture(tex1, v_UV / depth).rgb;
+
+
 	if (hit == 1) {
 		ssr_out = texture(currFrame, ssr_loc*wh).rgb;
 		vec3 finalRefl = fade * ssr_out + (1-fade) * refltest;
-		f_color = vec4((1-fr) * tsr + fr * finalRefl, (1-fr) * scatter);
+		f_color = vec4((1-fr) * tsr + fr * finalRefl + (1-fr) * scatter * refracted, 0.0);
     } else {
-		f_color = vec4((1-fr) * tsr + fr * refltest, (1-fr) * scatter);
+		if (refl.y > 0) {
+			f_color = vec4((1-fr) * tsr + fr * refltest + (1-fr) * scatter * refracted, 0.0);
+		}
+		else {
+			// Underwater
+			f_color = vec4(texture(tex1, v_UV / depth).rgb * 0.5, 0.5);
+		}
 	}
 
-	// Blend mode ONE SRC_ALPHA
+	// Blend mode Src ONE Dest SRC_ALPHA
 }
