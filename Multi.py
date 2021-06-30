@@ -208,6 +208,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.showAINav = False
         self.doMB = True
 
+        self.camAvg = False
+
     def waitMenu(self):
         # server, gameId, stage, name, isClient
         wait = True
@@ -248,6 +250,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("2", lambda: self.gesture(self.selchar, 1))
         self.bindKey("3", lambda: self.gesture(self.selchar, 2))
         self.bindKey("4", lambda: self.gesture(self.selchar, 3))
+        self.bindKey("5", lambda: self.gesture(self.selchar, 4))
 
         self.bindKey("g", self.foc1)
         self.bindKey("G", self.foc2)
@@ -256,6 +259,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("y", self.tgMB)
         self.bindKey('t', self.tgTM1)
         self.bindKey('T', self.tgTM2)
+        self.bindKey('<F5>', self.tgCamAvg)
+
+    def tgCamAvg(self):
+        self.camAvg = not self.camAvg
 
     def tgTM1(self):
         tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
@@ -1098,6 +1105,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
 
+        self.idleTest = Anim.loadAnim(p+'Idletest.ava')
+        self.gestures.append(self.idleTest[0][1])
+
         space = 2 if self.stage == 3 else 3
 
         for n in range(len(self.players)):
@@ -1335,6 +1345,24 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def qq(self): self.doQuit = True
 
+    def frameProfile(self, i):
+        try: _ = self.ftime
+        except:
+            self.ftime = {}
+            self.ftx = {}
+        if i not in self.ftime:
+            self.ftime[i] = 0
+            self.ftx[len(self.ftime)-1] = i
+        self.ftime[i] += time.time() - self.frameStart
+    def printProfile(self):
+        for i in range(len(self.ftx)):
+            x = self.ftx[i]
+            if x == '.': continue
+            offset = 0 if i == 0 else self.ftime[self.ftx[i-1]]
+            print(round((self.ftime[x] - offset) / self.frameNum, 5), x)
+
+        print('Total', round((self.ftime[x] - self.ftime['.']) / self.frameNum, 5))
+
     def frameUpdate(self):
         if self.VRMode: self.frameUpdateVR()
 
@@ -1347,6 +1375,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.rotateLight()
 
         self.frameStart = time.perf_counter()
+        self.frameProfile('.')
 
         CURRTIME = time.time()
 
@@ -1438,6 +1467,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if not self.isClient:
                 self.updateAI()
 
+        self.frameProfile('AI')
+
         self.frameFiredOld = self.frameFired
         self.frameFired = False
 
@@ -1471,9 +1502,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a["Energy"] += 0.05 * self.frameTime
                 a["Energy"] = min(1, a["Energy"])
 
+        self.frameProfile('Ghost/Energy')
 
         self.w.stepWorld(self.frameTime, checkColl=(self.frameNum & vf == 0))
 
+        self.frameProfile('Physics')
 
         dmg = sum([a.hc for a in self.players[sc]["pv"].colliders]) / self.maxHP
         self.uInfo["Health"] = max(0, 1-dmg)
@@ -1502,6 +1535,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             self.lp[i] = np.array(self.srbs[i].pos)
 
+        self.frameProfile('Translate')
 
         for i in range(len(self.exploders)):
             e = self.exploders[i]
@@ -1561,6 +1595,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 b["ps"].step()
                 self.pointLights.append({"i":(-5,-5,-5), "pos":b["rb"].pos})
 
+        self.frameProfile('BlackHoles')
 
         if not self.isClient:
             if int(self.dt1) & 31 == 0:
@@ -1717,11 +1752,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["b1"].rotate([0,a["cr"],0])
             a["movingOld"] = a["moving"]
 
+        self.frameProfile('PlayerMove')
 
         if not self.VRMode:
             self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos[1] += self.players[sc]['legIKoffset']
             self.pos -= self.players[sc]['animOffset']
+
+        if self.camAvg:
+            self.pos = np.average([p['b1'].offset[:3] for p in self.players
+                                   if p['id'] in self.actPlayers], axis=0)
+            self.pos += self.players[sc]['cheight'] * 0.66
+
 
         if self.fCam:
             a = self.players[sc]
@@ -1753,6 +1795,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if ("isHit" in p) and (self.frameNum - p["isHit"]) < 8:
                     for i in p["ctexn"]:
                         self.draw.highlight([1.,0,0], i)
+
+        self.frameProfile('Postprocess')
 
 
     def debugOverlay(self):
@@ -1796,6 +1840,7 @@ def run():
             app.start()
             print("Running")
             app.runBackend()
+            app.printProfile()
             if hasattr(app, 'statTime'):
                 games = 1
                 tim = time.time() - app.statTime

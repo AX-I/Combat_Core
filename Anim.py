@@ -72,11 +72,11 @@ class AnimManager:
         if k is not None:
             sign = 1 if st > 0 else -1
 
-            # Linear interp
-            # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
-            # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
-
             if p['jump'] < 0:
+                # Linear interp
+                # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
+                # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
+
                 off = cubicInterpLoop(keyFrames, k, p)
                 if st < 0: off[0] *= -0.6
 

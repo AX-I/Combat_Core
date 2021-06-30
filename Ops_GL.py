@@ -41,9 +41,9 @@ trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 
 trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
 
-if sys.platform == 'darwin':
-    trisetup = trisetup.replace('[128]', '[8]')
-    trisetupAnim = trisetupAnim.replace('[128]', '[8]')
+if True: #if sys.platform == 'darwin':
+    trisetup = trisetup.replace('[128]', '[4]')
+    trisetupAnim = trisetupAnim.replace('[128]', '[4]')
 
 drawBase = makeProgram("drawbase.c")
 drawSh = makeProgram("drawsh.c")
@@ -222,7 +222,7 @@ class CLDraw:
             spotP = np.zeros((1,3))
             spotD = np.zeros((1,3))
 
-        ssize = 8 if sys.platform == 'darwin' else 128
+        ssize = 4 # if sys.platform == 'darwin' else 128
 
         ls = min(ssize, spotP.shape[0])
 
