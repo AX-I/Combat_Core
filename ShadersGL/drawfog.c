@@ -3,11 +3,10 @@
 #version 330
 
 #define NEAR 0.1
-#define FAR 100.0
+#define FAR 200.0
 
 #define NSAMPLES 32
 #define DIST 1.f
-#define ABSORB 0.06f
 #define G 0.5f
 #define GBACK -0.25f
 
@@ -41,7 +40,9 @@ uniform float R[64];
 
 out vec4 f_color;
 
+uniform float rabsorb;
 uniform float rlight;
+uniform float rdist;
 
 uint rand_xorshift(uint rng_state) {
     rng_state ^= (rng_state << 13);
@@ -53,6 +54,9 @@ uint rand_xorshift(uint rng_state) {
 void main() {
 	float LIGHT = .2f;
 	if (rlight != 0) LIGHT = rlight;
+
+	float ABSORB = 0.06f;
+	if (rabsorb != 0) ABSORB = rabsorb;
 
     vec2 wh = 1 / vec2(width, height);
     float wF = width;
@@ -66,6 +70,8 @@ void main() {
     float maxZ = 0 + v_norm.x + v_UV.x + texture(tex1, tc*wh).r;
     maxZ += aspect + vpos.x;
     if (maxZ != d) maxZ = d;
+
+    if (rdist != 0) maxZ = min(maxZ, rdist);
 
 	vec3 Vd = vmat[0];
 	vec3 Vx = vmat[1];

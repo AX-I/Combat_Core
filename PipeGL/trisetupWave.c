@@ -69,7 +69,7 @@ void main() {
     }
 	w_norm = normalize(w_norm);
 
-	w_vert = w_vert * pScale + origin;
+	w_vert = w_vert * pScale + origin + vec3(0, in_vert.y, 0);
 
 
 

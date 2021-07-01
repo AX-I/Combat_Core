@@ -200,8 +200,8 @@ class CLDraw:
                   spotI=None, spotD=None, spotP=None):
 
         ld = dirI.shape[0]
-        self.DInt = np.zeros((4, 3), 'float32')
-        self.DDir = np.zeros((4, 3), 'float32')
+        self.DInt = np.zeros((8, 3), 'float32')
+        self.DDir = np.zeros((8, 3), 'float32')
         self.DInt[:ld] = dirI
         self.DDir[:ld] = dirD
 
@@ -664,6 +664,10 @@ class CLDraw:
                     ra = np.random.rand(64) - 0.5
                     draw['R'].write(ra.astype('float32'))
                     draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
+                    if 'fogAbsorb' in shaders[i]:
+                        draw['rabsorb'].write(np.float32(shaders[i]['fogAbsorb']))
+                    if 'fogDist' in shaders[i]:
+                        draw['rdist'].write(np.float32(shaders[i]['fogDist']))
                 elif 'SSR' in shaders[i]:
                     if shaders[i]['SSR'] == '0':
                         draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)

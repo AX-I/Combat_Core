@@ -1,7 +1,7 @@
 #version 330
 
 #define NEAR 0.1
-#define FAR 100.0
+#define FAR 200.0
 
 #define SBIAS -0.04
 
@@ -24,8 +24,8 @@ uniform sampler2D SM2;
 uniform int wS2;
 
 
-uniform vec3 DInt[4];
-uniform vec3 DDir[4];
+uniform vec3 DInt[8];
+uniform vec3 DDir[8];
 uniform int lenD;
 
 uniform vec3 PInt[16];

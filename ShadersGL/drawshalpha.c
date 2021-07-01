@@ -1,7 +1,7 @@
 #version 330
 
 #define NEAR 0.1
-#define FAR 100.0
+#define FAR 200.0
 
 #define SBIAS 0.0
 
@@ -22,8 +22,8 @@ uniform float sScale2;
 uniform sampler2D SM2;
 uniform int wS2;
 
-uniform vec3 DInt[4];
-uniform vec3 DDir[4];
+uniform vec3 DInt[8];
+uniform vec3 DDir[8];
 uniform int lenD;
 
 uniform vec3 PInt[16];
@@ -94,7 +94,8 @@ void main() {
 
 	vec3 norm = normalize(v_norm * tz);
 
-	vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
+	//vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
+	vec3 light = 0.6 * abs(dot(norm, LDir)) * (1-shadow) * LInt;
 
 	for (int i = 1; i < lenD; i++) {
 	    light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];

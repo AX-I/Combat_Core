@@ -3,7 +3,7 @@
 #version 330
 
 #define NEAR 0.1
-#define FAR 100.0
+#define FAR 200.0
 
 uniform mat3 vmat;
 uniform vec3 vpos;
