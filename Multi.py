@@ -48,6 +48,8 @@ import OpsConv
 import AI
 import Anim
 
+from VertObjects import VertWater0
+
 PATH = OpsConv.PATH
 SWITCHABLE = True
 SHOWALL = False
@@ -165,10 +167,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             i += str(absLevel) + "f\n"
                     g.write(i)
 
-        stageNames = ["Desert", "CB Atrium", "Taiga", "New Stage"]
+        stageNames = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest"]
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
-        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav", "H8.wav"]
+        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav", "H8.wav", "Forest0a.wav"]
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -209,6 +211,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doMB = True
 
         self.camAvg = False
+        self.envPointLights = []
 
     def waitMenu(self):
         # server, gameId, stage, name, isClient
@@ -840,6 +843,56 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                     rot=(0,0,0), hdrScale=48)
             self.skyBox.created()
 
+        elif self.stage == 4:
+            tsize = 320
+            tscale = 100 / tsize
+            coords = [10 + tsize*tscale/2, -3.4, 20 + tsize*tscale/2]
+            self.terrain = VertTerrain0(coords, "C:/Aa/Blender/Temple/Height.png",
+                                        rot=(0,pi,0),
+                                        scale=tscale, vertScale=22,
+                                        vertPow=2.2, vertMax=0.6)
+
+            self.t2 = Phys.TerrainCollider(coords, self.terrain.size[0],
+                                           self.terrain.heights, 0.5)
+            self.t2.onHit = lambda x: self.explode(x)
+            self.w.addCollider(self.t2)
+
+            self.addVertObject(VertModel, [10, 0, 20], rot=(0,-pi/2,0),
+                               filename="C:/Aa/Blender/Temple/Temple.obj",
+                               shadow="CR",
+                               blender=True)
+
+            for f in self.vtNames:
+                if 'Fog' in f:
+                    self.matShaders[self.vtNames[f]]['fog'] = 0.01
+                    self.matShaders[self.vtNames[f]]['fogAbsorb'] = 0.01
+                    self.matShaders[self.vtNames[f]]['2d'] = 1
+                    self.vertObjects[self.vtNames[f]].castShadow = False
+                if 'Water' in f:
+                    self.matShaders[self.vtNames[f]]['SSR'] = '0'
+                    self.vertObjects[self.vtNames[f]].castShadow = False
+                    self.water = VertWater0(
+                        (0,0,0), self, pScale=0.04,
+                        wDir=[(0.4,-0.17), (0.4, 0.2)],
+                        wLen=[(10, 4, 3), (7, 5, 2)],
+                        wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
+                        wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
+                    self.water.texNum = self.vtNames[f]
+
+            self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
+            # First bounce
+            self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.24,0.25,0.2]})
+            # Second bounce
+            self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[0.1,0.09,0.08]})
+            # Sky
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.1,0.2]})
+            self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.5]})
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/lilienstein_2k.ahdr",
+                                    rot=(0,0,0), hdrScale=14)
+            self.skyBox.created()
+
+            self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
 
         self.spheres = []
         self.srbs = []
@@ -874,11 +927,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
 
-        if self.stage == 2:
+        if self.stage == 2 or self.stage == 4:
+            fog = 1.4 if self.stage == 2 else 0.02
+            fabs = 0.06 if self.stage == 2 else 0.002
+            fdist = 0 if self.stage == 2 else 40
+
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
                            texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, "fog":1.4})
+                           useShaders={"2d":1, "fog":fog, 'fogAbsorb':fabs,
+                                       'fogDist':fdist})
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
@@ -969,7 +1027,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    "scale":1, "obj":self.vertObjects[-1]})
 
 
-        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35)]
+        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35), (-30, 60)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]
@@ -986,8 +1044,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    useShaders={"border":0.1})
 
         sr = self.shRes
+        fact = 0.5 if self.stage == 4 else 1
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
-                                "size":sr, "scale":24*sr/2048})
+                                "size":sr, "scale":24*sr/2048 * fact})
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":200*sr/2048})
 
@@ -1094,7 +1153,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.gameStarted = True
 
         self.qi.put(True)
-        self.cubeMap = CubeMap(self.skyTex, 2, False)
+        if self.stage == 4:
+            self.cubeMap = CubeMap(self.skyTex, None, False)
+        else:
+            self.cubeMap = CubeMap(self.skyTex, 2, False)
         a = self.cubeMap.texture.reshape((-1, 3))
         self.draw.setReflTex("1a", a[:,0], a[:,1], a[:,2], self.cubeMap.m)
         self.draw.setReflTex("0", a[:,0], a[:,1], a[:,2], self.cubeMap.m)
@@ -1472,7 +1534,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameFiredOld = self.frameFired
         self.frameFired = False
 
-        if self.stage == 0:
+        if self.stage == 0 or self.stage == 4:
             self.water.update()
 
 
@@ -1563,7 +1625,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     e["pos"][:] = 0.
 
 
-        self.pointLights = list(self.expLights.values())
+        self.pointLights = self.envPointLights + list(self.expLights.values())
 
         for i in range(len(self.blackHoles)):
             b = self.blackHoles[i]

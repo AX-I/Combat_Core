@@ -128,7 +128,7 @@ class CombatMenu(Frame):
         else:
             pass
 
-        self.loc = ["Desert", "CB Atrium", "Taiga", "New Stage"]
+        self.loc = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest"]
 
     def startMenu(self):
         self.grid(sticky=N+E+S+W)
@@ -536,14 +536,15 @@ class CombatMenu(Frame):
             return
 
         if not self.removeMain(): return
-        sl = ["Desert", "Atrium", "Taiga", "New Stage"]
+        sl = ["Desert", "Atrium", "Taiga", "New Stage", "Forest"]
 
         self.title["text"] = "Select location"
 
         self.stb = []
         self.stp = []
         cmds = [lambda: self.goStart(0), lambda: self.goStart(1),
-                lambda: self.goStart(2), lambda: self.goStart(3)]
+                lambda: self.goStart(2), lambda: self.goStart(3),
+                lambda: self.goStart(4)]
         for i in range(len(self.loc)):
             self.stb.append(Button(self, text=self.loc[i], fg="#008", bg="#bdf",
                                    command=cmds[i], font=f))
@@ -554,7 +555,7 @@ class CombatMenu(Frame):
 
         self.back = Button(self, text="Back",
                            command=lambda: self.goBack(0), font=g)
-        self.back.grid(row=6, column=0, sticky=E+W, ipadx=4, ipady=2)
+        self.back.grid(row=2 + (len(sl)+1)//2 * 2, column=0, sticky=E+W, ipadx=4, ipady=2)
 
     def setGD(self, e):
         try: self.gd = self.avls.get(self.avls.curselection())

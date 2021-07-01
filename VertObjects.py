@@ -300,6 +300,28 @@ class VertObject:
         self.rotMat = rotX @ rotZ @ rotY
         self.angles = list(rr)
 
+class VertWater0:
+    def __init__(self, coords, viewer, pScale,
+                 wDir, wLen, wAmp, wSpd, numW):
+        self.wDir = numpy.array(wDir)
+        self.pS = pScale
+        self.wLen = numpy.array(wLen)
+        self.wAmp = numpy.array(wAmp) * 0.1
+        self.wSpd = numpy.array(wSpd)
+        self.numW = numW
+        self.hasSetup = False
+        self.viewer = viewer
+        self.stTime = time.time()
+        self.coords = coords
+
+    def update(self):
+        if not self.hasSetup:
+            self.viewer.draw.setupWave(self.coords, self.wDir,
+                                       self.wLen, self.wAmp, self.wSpd,
+                                       self.numW)
+            self.hasSetup = True
+        self.viewer.draw.updateWave(self.pS, self.stTime, self.texNum)
+
 
 class VertWater(VertObject):
     def __init__(self, *args, size=60, pScale=1, wDir=[(0.4,-0.1), (0.4, 0.1)],
@@ -719,7 +741,7 @@ def normalize(a):
 
 
 class VertTerrain0:
-    def __init__(self, coords, heights, scale=1,
+    def __init__(self, coords, heights, scale=1, rot=(0,0,0),
                  vertScale=1, vertPow=1, vertMax=None):
 
         self.coords = np.array(coords)
@@ -744,9 +766,21 @@ class VertTerrain0:
             vertMax = vertMax * vertScale
             self.heights = self.heights**vertPow / vertMax**(vertPow-1)
 
+        rr = rot
+        rotX = numpy.array([[1, 0, 0],
+                            [0, cos(rr[0]), -sin(rr[0])],
+                            [0, sin(rr[0]), cos(rr[0])]])
+        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
+                            [0, 1, 0],
+                            [-sin(rr[1]), 0, cos(rr[1])]])
+        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
+                            [sin(rr[2]), cos(rr[2]), 0],
+                            [0, 0, 1]])
+        self.rotMat = rotX @ rotZ @ rotY
+
     def getHeight(self, x, z):
         """World coords x,z -> world coord y"""
-        landCoord = (numpy.array([x, 0, z]) - self.coords) / self.scale
+        landCoord = ((numpy.array([x, 0, z]) - self.coords) / self.scale) @ self.rotMat.T
         tex1 = int(landCoord[0] % (self.size[0]+1))
         tex2 = int(landCoord[2] % (self.size[1]+1))
         h = self.heights[tex1, tex2]
@@ -881,7 +915,7 @@ class VertTerrain(VertObject):
 
     def getHeight(self, x, z):
         """World coords x,z -> world coord y"""
-        landCoord = (numpy.array([x, 0, z]) - self.coords) / self.scale
+        landCoord = ((numpy.array([x, 0, z]) - self.coords) / self.scale) @ self.rotMat.T
         texr1 = max(0, min(landCoord[0], self.size[0]))
         tex1 = int(texr1)
         texr1 -= tex1

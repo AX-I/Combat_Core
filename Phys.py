@@ -20,6 +20,7 @@
 
 import numpy as np
 import math
+from math import sin, cos
 
 D = 3
 G = 9.8
@@ -172,7 +173,7 @@ class BulletCollider(CircleCollider):
 
 class TerrainCollider(Collider):
     t = "Terrain"
-    def __init__(self, pos, dim, heights, scale=1):
+    def __init__(self, pos, dim, heights, scale=1, rot=(0,0,0)):
         """dim -> D-1 nums (+heights)"""
         super().__init__()
         self.pos = np.array(pos)
@@ -186,8 +187,20 @@ class TerrainCollider(Collider):
             rj = np.arange(self.dim+1)
             row = np.stack((ri, self.h[i], rj)).T
             self.pts.append(row)
+
+        rr = rot
+        rotX = np.array([[1, 0, 0],
+                         [0, cos(rr[0]), -sin(rr[0])],
+                         [0, sin(rr[0]), cos(rr[0])]])
+        rotY = np.array([[cos(rr[1]), 0, sin(rr[1])],
+                         [0, 1, 0],
+                         [-sin(rr[1]), 0, cos(rr[1])]])
+        rotZ = np.array([[cos(rr[2]), -sin(rr[2]), 0],
+                         [sin(rr[2]), cos(rr[2]), 0],
+                         [0, 0, 1]])
+        self.rotMat = rotX @ rotZ @ rotY
         
-        self.pts = np.array(self.pts) * self.S + self.pos
+        self.pts = np.array(self.pts) * self.S @ self.rotMat + self.pos
 
     def isCollide(self, obj):
         self.colDist = None

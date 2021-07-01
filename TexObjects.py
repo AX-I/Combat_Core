@@ -58,7 +58,8 @@ class TexSkyBox:
         elif m*5 == ti.size[0]:
             self.bottom = 0
         else:
-            raise ValueError("Image is not w:h = 6:1 or 5:1!")
+            self.bottom = 1
+            print("Image is not w:h = 6:1 or 5:1!")
 
         self.numWedges = 6 * m**2 * 2
         self.N = N + 1
@@ -75,7 +76,6 @@ class TexSkyBox:
 
         numpy.clip(ta, None, 256*256-1, out=ta)
 
-        a = ta.shape
         self.viewer.skyTex = ta.astype("uint16")
         
 
