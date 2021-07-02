@@ -346,7 +346,7 @@ class VertWater(VertObject):
         for i in range(self.size + 1):
             ri = np.repeat(i, self.size+1)
             rj = np.arange(self.size+1)
-            row = np.stack((ri, np.zeros_like(ri), rj)).T
+            row = np.stack((ri, np.zeros_like(ri) - (self.coords[1] / self.scale), rj)).T
             self.pts.append(row)
         self.pts = np.array(self.pts)
 

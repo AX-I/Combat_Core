@@ -76,7 +76,7 @@ void main() {
     vec3 pos = vmat*(w_vert-vpos);
 
 	depth = 1.0 / pos.z;
-    v_pos = in_vert * depth;
+    v_pos = w_vert * depth;
     v_UV = in_UV * depth;
 	v_norm = w_norm * depth;
 

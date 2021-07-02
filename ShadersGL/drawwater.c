@@ -108,7 +108,7 @@ void main() {
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + REFL_DBIAS;
 
-        if ((1.f/sz > 600) && (currdist > 600)) {
+        if ((1.f/sz > 100) && (currdist > 100)) {
 			ssr_loc = vec2(sx, sy);
             hit = 1;
 		}
