@@ -211,6 +211,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doMB = True
 
         self.camAvg = False
+        self.cam1P = False
         self.envPointLights = []
 
     def waitMenu(self):
@@ -263,9 +264,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('t', self.tgTM1)
         self.bindKey('T', self.tgTM2)
         self.bindKey('<F5>', self.tgCamAvg)
+        self.bindKey('<F6>', self.tgCam1P)
 
     def tgCamAvg(self):
         self.camAvg = not self.camAvg
+    def tgCam1P(self):
+        self.cam1P = not self.cam1P
 
     def tgTM1(self):
         tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
@@ -1796,7 +1800,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             a["b1"].updateTM()
 
-            self.testAnim(a)
+            if not self.fCam or a['id'] != self.selchar:
+                self.testAnim(a)
 
             if CURRTIME - a['animTrans'] < 0.2:
                 self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.2)
@@ -1805,6 +1810,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if not a['moving'] and a['jump'] <= 0:
                 self.setYoffset(a)
+
+            if self.fCam and a['id'] == self.selchar:
+                head = a['b1'].children[0].children[2]
+                ang = head.angles
+                ang[1] = 0
+                ang[2] = -asin(self.vv[1])
+                head.rotate(ang)
 
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
 
@@ -1826,13 +1838,23 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    if p['id'] in self.actPlayers], axis=0)
             self.pos += self.players[sc]['cheight'] * 0.66
 
+        if self.cam1P:
+            self.camAvg = False
+            self.fCam = True
+            p = self.players[sc]
+            p['fCam'] = True
+            head = p['b1'].children[0].children[2]
+            self.pos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
+
+            for tn in p['ctexn']:
+                self.matShaders[tn]['cull'] = 1
 
         if self.fCam:
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
-            if not self.VRMode:
+            if not self.VRMode and not self.cam1P:
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
                 self.pos[1] -= a['legIKoffset']
 
