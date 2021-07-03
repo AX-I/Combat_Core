@@ -877,11 +877,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.vertObjects[self.vtNames[f]].castShadow = False
                     self.water = VertWater0(
                         (0,0,0), self, pScale=0.04,
-                        wDir=[(0.4,-0.17), (0.4, 0.2)],
+                        wDir=[(-0.4,0.17), (-0.4, -0.2)],
                         wLen=[(10, 4, 3), (7, 5, 2)],
                         wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
                         wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
                     self.water.texNum = self.vtNames[f]
+                if 'Plant' in f or '093' in f:
+                    self.matShaders[self.vtNames[f]]['translucent'] = 1
 
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
             # First bounce
@@ -894,6 +896,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/lilienstein_2k.ahdr",
                                     rot=(0,0,0), hdrScale=14)
             self.skyBox.created()
+
+            skyShader = self.matShaders[self.skyBox.texNum]
+            skyShader['isEqui'] = 1
+            skyShader['rotY'] = 0.22
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 

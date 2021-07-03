@@ -632,11 +632,18 @@ class CLDraw:
 
                 if 'sky' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSky)
+                    ss = shaders[i]
+                    if 'isEqui' in ss:
+                        draw['isEqui'] = ss['isEqui']
+                    if 'rotY' in ss:
+                        draw['rotY'] = ss['rotY']
                 elif 'alpha' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawAlpha)
                     sa = shaders[i]['alpha']
                     draw['TA'] = 2
                     self.TA[sa].use(location=2)
+                    if 'translucent' in shaders[i]:
+                        draw['translucent'] = shaders[i]['translucent']
 
                 elif 'emissive' in shaders[i]:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)

@@ -41,6 +41,8 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D TA;
 
+uniform int translucent;
+
 in vec3 vertLight;
 
 void main() {
@@ -94,8 +96,13 @@ void main() {
 
 	vec3 norm = normalize(v_norm * tz);
 
-	//vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
-	vec3 light = 0.6 * abs(dot(norm, LDir)) * (1-shadow) * LInt;
+    vec3 light;
+    if (translucent == 1)
+      light = 0.6 * abs(dot(norm, LDir)) * (1-shadow) * LInt;
+    else
+      light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
+
+
 
 	for (int i = 1; i < lenD; i++) {
 	    light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
