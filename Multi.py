@@ -236,9 +236,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.bindKey("F", self.tgControl1)
         self.bindKey("e", self.mvCam)
         self.bindKey("x", lambda: self.fire("blank"))
-        self.bindKey("z", lambda: self.fire("orange"))
-        self.bindKey("c", lambda: self.fire("red"))
-        self.bindKey("v", lambda: self.fire("black"))
+        self.bindKey("z", lambda: self.fireAnim("orange"))
+        self.bindKey("c", lambda: self.fireAnim("red"))
+        self.bindKey("v", lambda: self.fireAnim("black"))
         self.bindKey("<space>", self.jump)
         self.bindKey("<Up>", self.z1)
         self.bindKey("<Down>", self.z2)
@@ -618,7 +618,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "vertVel":0, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
-             'animOffset':np.zeros(3), 'animTrans':-100}
+             'animOffset':np.zeros(3), 'animTrans':-100,
+             'frameFired':-100, 'fireColor':None,
+             'throwAnim':False, 'animFired':False}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1123,7 +1125,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
                              self.volmFX / 2 / snd[color][1])})
 
-    def fire(self, color, sc=None, vh=None):
+    def fireAnim(self, color, sc=None, vh=None):
+        if sc is None:
+            sc = self.selchar
+        a = self.players[sc]
+        if a['frameFired'] > 0: return True
+        a['frameFired'] = self.frameNum
+        a['fireColor'] = color
+        return a["Energy"] >= self.COSTS[color]
+
+    def fire(self, color, sc=None, vh=None, throw=False):
         if sc is None:
             sc = self.selchar
         if vh is None:
@@ -1147,6 +1158,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         d = np.array([cos(a["cr"]), vh, sin(a["cr"])])
         self.srbs[cb].v = d*s
         self.srbs[cb].pos = np.array(a["b1"].offset[:3]) + 0.8*(d*np.array([1,0,1]))
+        self.srbs[cb].pos[1] += int(throw)
 
         snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
 
@@ -1791,7 +1803,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['b1'].offset[:3] += off - a['b1'].lastOffset
                     a['b1'].lastOffset = off
                     a['animOffset'] = off
-                else:
+                elif a['id'] != self.selchar or not a['throwAnim']:
                     self.stepPoseLoop(a, a["obj"], self.keyFrames,
                                       df*self.frameTime * self.poseDt*a["moving"])
 
@@ -1807,6 +1819,27 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 elif a['animTrans'] > 0:
                     a['rig'].importPose(self.idle, updateRoot=False)
                     a['animTrans'] = -100
+
+            try:
+                _ = self.throwKF
+            except:
+                self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
+                a['throwAnim'] = False
+            if self.frameNum - a['frameFired'] == 1:
+                a['throwAnim'] = True
+                a['animFired'] = False
+                a['poset'] = self.throwKF[0][0]
+
+            if a['throwAnim']:
+                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2, loop=False)
+                a['moving'] = False
+                if not a['animFired'] and a['poset'] > self.throwKF[4][0]:
+                    a['animFired'] = True
+                    self.fire(a['fireColor'], a['id'], throw=True)
+                    a['frameFired'] = -100
+                if a['poset'] > self.throwKF[-1][0]:
+                    a['throwAnim'] = False
+                    a['rig'].importPose(self.idle, updateRoot=False)
 
 
             a["b1"].updateTM()

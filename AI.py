@@ -370,8 +370,10 @@ class AIManager:
                          1, 0, a["moving"])
             a["cr"] = fol[1]
             vh = fol[2]
-            if not self.fire(choice, pn, vh):
-                self.fire(choice2, pn, vh)
+            firefunc = self.fire if choice == 'blank' else self.fireAnim
+            if not firefunc(choice, pn, vh):
+                firefunc = self.fire if choice2 == 'blank' else self.fireAnim
+                firefunc(choice2, pn, vh)
 
     def _follow(self, pn):
         """Straight line towards target"""
