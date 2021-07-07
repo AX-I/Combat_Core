@@ -3,6 +3,7 @@ import numpy as np
 from math import pi
 
 def loadAnim(fn, timeScale=1):
+    """Returns (time, angles, root offset)"""
     keyFrames = []
     co = [0,0,0]
     with open(fn) as f:
@@ -54,26 +55,27 @@ class AnimManager:
         if a > pi: a -= 2*pi
         return a
 
-    def stepPoseLoop(self, p, vobj, keyFrames, st=1, loop=True):
-        p['poset'] += p['pstep'] * st
-        if p['poset'] > keyFrames[-1][0]:
+    def stepPoseLoop(self, p, vobj, keyFrames, st=1,
+                     loop=True, bone=None, timer='poset'):
+        p[timer] += p['pstep'] * st
+        if p[timer] > keyFrames[-1][0]:
             if not loop: return
-            p['poset'] -= keyFrames[-1][0] - keyFrames[0][0]
-        if p['poset'] < keyFrames[0][0]:
-            p['poset'] += keyFrames[-1][0] - keyFrames[0][0]
+            p[timer] -= keyFrames[-1][0] - keyFrames[0][0]
+        if p[timer] < keyFrames[0][0]:
+            p[timer] += keyFrames[-1][0] - keyFrames[0][0]
 
         if len(self.keyFrames) < 2: return
         k = None
         for i in range(len(keyFrames)):
-            if p['poset'] < keyFrames[i][0]:
+            if p[timer] < keyFrames[i][0]:
                 k = max(0, min(len(keyFrames)-2, i-1))
-                r = p['poset'] - keyFrames[k][0]
+                r = p[timer] - keyFrames[k][0]
                 r /= keyFrames[k+1][0] - keyFrames[k][0]
                 break
         if k is not None:
             sign = 1 if st > 0 else -1
 
-            if p['jump'] < 0:
+            if p['jump'] < 0 and bone is None:
                 # Linear interp
                 # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
                 # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
@@ -85,9 +87,15 @@ class AnimManager:
                 p['b1'].lastOffset = off
                 p['animOffset'] = off
 
-            ang = p['b1'].angles
-            ang += np.array(keyFrames[k][1]['angle'], 'float32') * (1-r) * sign
-            ang += np.array(keyFrames[k+1][1]['angle'], 'float32') * r * sign
-            p['b1'].rotate(ang)
+            if bone is None:
+                ang = p['b1'].angles
+                ang += np.array(keyFrames[k][1]['angle'], 'float32') * (1-r)# * sign
+                ang += np.array(keyFrames[k+1][1]['angle'], 'float32') * r# * sign
+                p['b1'].rotate(ang)
 
-            p["rig"].interpPose(keyFrames[k][1], keyFrames[k+1][1], r)
+            pose = p['rig'].interpTree(keyFrames[k][1], keyFrames[k+1][1], r)
+            if bone is None:
+                bone = p['rig']
+                bone.importPose(pose, updateRoot=False)
+            else:
+                bone.importPose(pose, updateRoot=True)

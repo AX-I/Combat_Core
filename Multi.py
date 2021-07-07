@@ -619,8 +619,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "jump":-1, "vertVel":0, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
              'animOffset':np.zeros(3), 'animTrans':-100,
-             'frameFired':-100, 'fireColor':None,
-             'throwAnim':False, 'animFired':False}
+             'frameFired':-100, 'fireColor':None, 'fireVH':0,
+             'throwAnim':False, 'animFired':False,
+             'poseThrow':0}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1132,6 +1133,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if a['frameFired'] > 0: return True
         a['frameFired'] = self.frameNum
         a['fireColor'] = color
+        a['fireVH'] = vh
         return a["Energy"] >= self.COSTS[color]
 
     def fire(self, color, sc=None, vh=None, throw=False):
@@ -1196,6 +1198,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.idleTest = Anim.loadAnim(p+'Idletest.ava')
         self.gestures.append(self.idleTest[0][1])
+
+        self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
+        for i in range(len(self.throwKF)):
+            self.throwKF[i] = (self.throwKF[i][0],
+                               self.throwKF[i][1]['children'][0],
+                               self.throwKF[i][2])
 
         space = 2 if self.stage == 3 else 3
 
@@ -1803,7 +1811,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['b1'].offset[:3] += off - a['b1'].lastOffset
                     a['b1'].lastOffset = off
                     a['animOffset'] = off
-                elif a['id'] != self.selchar or not a['throwAnim']:
+                else:
                     self.stepPoseLoop(a, a["obj"], self.keyFrames,
                                       df*self.frameTime * self.poseDt*a["moving"])
 
@@ -1820,26 +1828,24 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['rig'].importPose(self.idle, updateRoot=False)
                     a['animTrans'] = -100
 
-            try:
-                _ = self.throwKF
-            except:
-                self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
-                a['throwAnim'] = False
+
             if self.frameNum - a['frameFired'] == 1:
                 a['throwAnim'] = True
                 a['animFired'] = False
-                a['poset'] = self.throwKF[0][0]
+                a['poseThrow'] = self.throwKF[0][0]
 
             if a['throwAnim']:
-                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2, loop=False)
-                a['moving'] = False
-                if not a['animFired'] and a['poset'] > self.throwKF[4][0]:
+                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2,
+                                  loop=False, bone=a['b1'].children[0],
+                                  timer='poseThrow')
+                if not a['animFired'] and a['poseThrow'] > self.throwKF[4][0]:
                     a['animFired'] = True
-                    self.fire(a['fireColor'], a['id'], throw=True)
+                    self.fire(a['fireColor'], a['id'], a['fireVH'], throw=True)
                     a['frameFired'] = -100
-                if a['poset'] > self.throwKF[-1][0]:
+                if a['poseThrow'] > self.throwKF[-1][0]:
                     a['throwAnim'] = False
-                    a['rig'].importPose(self.idle, updateRoot=False)
+                    if not a['moving']:
+                        a['rig'].importPose(self.idle, updateRoot=False)
 
 
             a["b1"].updateTM()

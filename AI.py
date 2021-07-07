@@ -363,14 +363,16 @@ class AIManager:
                 choice2 = "red"
 
         if fire:
+            throw = int(choice != 'blank')
             pred = (agent.navTarget["b1"].offset - agent.targPred)
             pred[1] = 0
             dist = np.sqrt(np.sum((a["b1"].offset - agent.navTarget["b1"].offset)**2))
-            fol = follow(agent.navTarget["b1"].offset + dist * pred, a["b1"].offset,
+            fol = follow(agent.navTarget["b1"].offset + dist * pred,
+                         a["b1"].offset + np.array([0,throw,0,0.]),
                          1, 0, a["moving"])
             a["cr"] = fol[1]
             vh = fol[2]
-            firefunc = self.fire if choice == 'blank' else self.fireAnim
+            firefunc = self.fireAnim if throw else self.fire
             if not firefunc(choice, pn, vh):
                 firefunc = self.fire if choice2 == 'blank' else self.fireAnim
                 firefunc(choice2, pn, vh)
