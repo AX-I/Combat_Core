@@ -205,7 +205,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.dofFoc = 3
         self.gamma = 1.4
-        self.tonemap = 'gamma'
+        self.tonemap = 'gamma' if self.stage == 1 else 'aces'
         self.doSSAO = False
         self.showAINav = False
         self.doMB = True
@@ -270,6 +270,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.camAvg = not self.camAvg
     def tgCam1P(self):
         self.cam1P = not self.cam1P
+        if self.cam1P:
+            self.camAvg = False
+            self.fCam = True
+            self.cam1Pframe = self.frameNum
+            self.α = -self.players[self.selchar]["cr"] + pi/2
 
     def tgTM1(self):
         tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
@@ -1845,8 +1850,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.pos += self.players[sc]['cheight'] * 0.66
 
         if self.cam1P:
-            self.camAvg = False
-            self.fCam = True
+            if self.frameNum == self.cam1Pframe + 2:
+                d = self.directionalLights[0]
+                self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
             p = self.players[sc]
             p['fCam'] = True
             head = p['b1'].children[0].children[2]
