@@ -3,6 +3,7 @@
 #version 330
 
 #define MAXCOC 4.f
+#define MAXSKIP 4.f
 #define PI2 6.283f
 
 uniform sampler2D tex1;
@@ -56,8 +57,8 @@ void main() {
 
 	float nsamples = 0;
 	float cover;
-	int skip = max(1, int(coc / MAXCOC));
-    float radius = coc;
+	int skip = min(int(MAXSKIP), max(1, int(coc / MAXCOC)));
+    float radius = min(MAXCOC * MAXSKIP, coc);
 
 	for (int i = -int(radius); i <= int(radius); i += skip) {
 		for (int j = -int(radius); j <= int(radius); j += skip) {

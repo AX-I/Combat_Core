@@ -135,6 +135,7 @@ class CLDraw:
         self.oldShaders = {}
 
         self.dofFocus = 3
+        self.doSSAO = False
 
         self.setupBlur()
 
@@ -416,22 +417,7 @@ class CLDraw:
     def ssao(self):
         try: _ = self.ssaoProg
         except: self.setupSSAO()
-
-        ctx.disable(moderngl.DEPTH_TEST)
-        ctx.disable(moderngl.BLEND)
-
-        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
-        self.POSTFBO.use()
-        self.ssaoProg['vscale'].write(np.float32(self.sScale))
-        self.ssaoProg['tex1'] = 0
-        self.ssaoProg['texd'] = 1
-        self.FB.use(location=0)
-        self.DBT.use(location=1)
-
-        self.ssaoVao.render(moderngl.TRIANGLES)
-
-        # Blend with frame
-        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+        self.doSSAO = True
 
     def dof(self, focus):
         self.dofFocus = np.float32(focus)
@@ -780,6 +766,27 @@ class CLDraw:
 
 
         self.fbo.depth_mask = False
+
+        if self.doSSAO:
+            ctx.disable(moderngl.DEPTH_TEST)
+            ctx.disable(moderngl.BLEND)
+
+            self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+            self.POSTFBO.use()
+            self.ssaoProg['vscale'].write(np.float32(self.sScale))
+            self.ssaoProg['tex1'] = 0
+            self.ssaoProg['texd'] = 1
+            self.FB.use(location=0)
+            self.DBT.use(location=1)
+
+            self.ssaoVao.render(moderngl.TRIANGLES)
+
+            # Blend with frame
+            self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+            ctx.enable(moderngl.BLEND)
+            ctx.enable(moderngl.DEPTH_TEST)
+
+            self.doSSAO = False
 
         # Transparent
         for i in range(len(self.VBO)):

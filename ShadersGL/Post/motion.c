@@ -52,8 +52,8 @@ void main() {
 	float dy = oldY - cy;
 	float dx = oldX - cx;
 	for (float i=0; i <= SAMPLES; i+= 1) {
-		float sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 0.f, hF-1.f);
-		float sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 0.f, wF-1.f);
+		float sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 1.f, hF-1.f);
+		float sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 1.f, wF-1.f);
 
 		outRGB += texture(tex1, vec2(sx, sy)*wh).rgb;
 	}
