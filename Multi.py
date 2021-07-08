@@ -365,6 +365,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             targs = [0 for _ in range(self.NPLAYERS)]
             for t in range(len(pm)):
                 targs[pm[t]] = activeIds[t]
+                if pm[t] == activeIds[t]:
+                    targs[pm[t]] = activeIds[t-1]
             self.testTargs = targs
 
             with open(PATH+'lib/EyeTracking.txt') as fuv:
@@ -1835,10 +1837,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['poseThrow'] = self.throwKF[0][0]
 
             if a['throwAnim']:
-                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2,
+                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2.2,
                                   loop=False, bone=a['b1'].children[0],
                                   timer='poseThrow')
-                if not a['animFired'] and a['poseThrow'] > self.throwKF[4][0]:
+                if not a['animFired'] and a['poseThrow'] > self.throwKF[5][0]:
                     a['animFired'] = True
                     self.fire(a['fireColor'], a['id'], a['fireVH'], throw=True)
                     a['frameFired'] = -100
