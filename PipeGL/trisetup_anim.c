@@ -37,6 +37,8 @@ in float boneNum;
 
 uniform int off;
 
+uniform int stage;
+
 out float depth;
 
 void main() {
@@ -80,6 +82,23 @@ void main() {
 				 / (1.0 + dot(pl, pl)) * SLInt[i];
 	  }
 	}
+
+
+	if (stage == 1) {
+	  // Window
+	  float atriumbgx = 42.;
+	  float atriumLight = 1.2 * max(0, (18 + b_vert.x - atriumbgx)) / 18;
+
+	  atriumLight *= (0.33 + dot(-b_norm, vec3(1,0,0))) / 1.33;
+      light += max(0.f, min(1.2f, atriumLight));
+
+      // Lights
+      float rd = 5 - b_vert.y;
+      if (rd < 0) rd = (b_vert.y - 5) * 10;
+      light += 0.6 * max(0, 0.5 + dot(-b_norm, vec3(0,1,0))) / 1.5 / (0.8 + rd);
+    }
+
+
     vertLight = light;
 
 }

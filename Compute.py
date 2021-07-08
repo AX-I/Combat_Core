@@ -336,7 +336,8 @@ class ThreeDBackend:
         self.draw.drawAll(self.matShaders,
                           mask=self.renderMask,
                           shadowIds=s,
-                          useOpacitySM=self.useOpSM)
+                          useOpacitySM=self.useOpSM,
+                          stage=self.stage)
 
         cc = []
         for ps in self.particleSystems:

@@ -671,6 +671,11 @@ class CLDraw:
                     draw['SM'] = 0
 
                 try:
+                    if 'stage' in kwargs:
+                        draw['stage'] = kwargs['stage']
+                except: pass
+
+                try:
                     draw['width'].write(np.float32(self.W))
                     draw['height'].write(np.float32(self.H))
                 except: pass

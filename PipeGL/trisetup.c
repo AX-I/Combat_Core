@@ -25,6 +25,7 @@ uniform vec3 SLDir[128];
 uniform int lenSL;
 out vec3 vertLight;
 
+uniform int stage;
 
 out float depth;
 
@@ -55,6 +56,23 @@ void main() {
 			     / (1.0 + dot(pl, pl)) * SLInt[i];
 	  }
     }
+
+
+    if (stage == 1) {
+	  // Window
+      float atriumbgx = 42.;
+      float atriumLight = 2 * max(0, (18 + in_vert.x - atriumbgx)) / 18;
+
+      atriumLight *= (0.5 + dot(-in_norm, vec3(1,0,0))) / 1.5;
+      light += max(0.f, min(1.2f, atriumLight));
+
+      // Lights
+	  float rd = 5 - in_vert.y;
+      if (rd < 0) rd = (in_vert.y - 5) * 10;
+      light += 1.1 * max(0, 0.5 + dot(-in_norm, vec3(0,1,0))) / 1.5 / (0.8 + rd);
+    }
+
+
     vertLight = light;
 
 }

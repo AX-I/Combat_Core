@@ -204,7 +204,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.expPow = 2.7
 
         self.dofFoc = 3
-        self.gamma = 1.4
+        self.gamma = 1.75 if self.stage == 1 else 1.4
         self.tonemap = 'gamma' if self.stage == 1 else 'aces'
         self.doSSAO = False
         self.showAINav = False
@@ -774,7 +774,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.075,0.15,0.3]})
 
             # Local lights are getting out of hand
-            self.directionalLights.append({"dir":[0, pi/2], "i":[0.35,0.35,0.35]})
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
 
             self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                                     rot=(0,0,0), hdrScale=48)
