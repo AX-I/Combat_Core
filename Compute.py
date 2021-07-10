@@ -39,6 +39,8 @@ import json
 
 import ctypes
 
+import openvr
+
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -218,6 +220,7 @@ class ThreeDBackend:
 
         import OpsConv
         GL = OpsConv.getSettings(False)["Render"] == "GL"
+        self.GL = GL
 
         if GL:
             import Ops_GL as Ops
@@ -359,19 +362,34 @@ class ThreeDBackend:
         self.postProcess()
 
         result = self.draw.getFrame()
-        self.rgb = result
+        if self.VRMode and self.GL:
+            self.rgb = np.array(result)[::-1]
+        else:
+            self.rgb = result
 
         self.debugOverlay()
 
         if self.VRMode:
-            rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
-            ibuf = ctypes.create_string_buffer(rgba.tobytes())
+            if self.GL:
+                try: _ = self.VRtex
+                except:
+                    print('Setup VR')
+                    self.VRtex = openvr.Texture_t()
+                    self.VRtex.handle = int(self.draw.FB_GL)
+                    self.VRtex.eType = openvr.TextureType_OpenGL
+                    self.VRtex.eColorSpace = openvr.ColorSpace_Gamma
 
-            b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
-            self.ov.showOverlay(b)
-            b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
-            self.ov.hideOverlay(b2)
-            self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
+                self.cmp.submit(openvr.Eye_Left, self.VRtex)
+                self.cmp.submit(openvr.Eye_Right, self.VRtex)
+            else:
+                rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
+                ibuf = ctypes.create_string_buffer(rgba.tobytes())
+
+                b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
+                self.ov.showOverlay(b)
+                b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
+                self.ov.hideOverlay(b2)
+                self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
 
 
         return [self.rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]

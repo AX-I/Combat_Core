@@ -23,6 +23,8 @@ class CombatVR(Multi.CombatApp):
         poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
         poses = poses_t()
 
+        print("Recommended W H:", vr_sys.getRecommendedRenderTargetSize())
+
         ctrls = []
 
         for i in range(5):
@@ -70,11 +72,9 @@ class CombatVR(Multi.CombatApp):
         if self.frameNum == 0:
             self.players[self.selchar]["fCam"] = True
 
-        self.frameStart = time.perf_counter()
-
         sc = self.selchar
 
-        scale = 1.55
+        scale = 1.48
         offY = -0
         
         self.cmp.waitGetPoses(self.VRposes, None)
@@ -93,6 +93,7 @@ class CombatVR(Multi.CombatApp):
         self.vMat[1:] = self.vMat[:0:-1]
         self.vMat[:,1] *= -1
         self.vMat[:,2] *= -1
+        self.vMat = np.array(self.vMat, order='C')
 
         self.vv = self.vMat[0]
 
@@ -155,11 +156,14 @@ def run():
     
     while True:
         app = CombatVR()
+        app.doMB = False
         if app.proceed:
             print("Starting")
             app.start()
             print("Running")
             app.runBackend()
+            fps = app.frameNum/app.totTime
+            print("Average fps:", fps)
             if hasattr(app, "WIN"):
                 state = 0
                 try:
@@ -180,19 +184,19 @@ def run():
             app.qo.join_thread()
             app.server.terminate()
             app.server.join()
+            try: app.navProcess.terminate()
+            except: pass
             try:
                 with open(PATH+"lib/Stat.txt") as f: pass
             except FileNotFoundError:
                 with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
         print("Closing sound")
-        app.si.put({"Fade":0}, True, 0.1)
+        app.si.put({"Fade":{'Time':0, 'Tracks':{'*'}}}, True, 0.1)
         time.sleep(2.1)
         app.si.put(None, True, 0.1)
         app.finish()
         print("Finished")
         if not app.proceed: break
-        fps = app.frameNum/app.totTime
-        print("Average fps:", fps)
 
 if __name__ == "__main__":
     run()

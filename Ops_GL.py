@@ -8,6 +8,8 @@ import time
 
 import moderngl
 
+from OpenGL.GL import glGenTextures
+
 import sys, os
 
 import OpsConv
@@ -87,7 +89,11 @@ class CLDraw:
         self.fbo = ctx.framebuffer(self.FB, self.DB)
         self.fbo.use()
 
-        self.fs = ctx.simple_framebuffer((w, h))
+        # Final output
+        self.FB_GL = glGenTextures(1) + 1
+        self.FS_GL = ctx.texture((w, h), 3, dtype='f1')
+        self.DS_GL = ctx.depth_texture((w, h))
+        self.fs = ctx.framebuffer(self.FS_GL, self.DS_GL)
 
         # Readable depth buffer
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
