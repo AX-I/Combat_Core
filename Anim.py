@@ -2,6 +2,22 @@ import json
 import numpy as np
 from math import pi
 
+def interpAttr(t: float, kf: list):
+    """kf: list of (time, attr)"""
+    r = None
+    if t < kf[0][0]:
+        return kf[0][1]
+    for i in range(len(kf)):
+        if t < kf[i][0]:
+            r = t - kf[i-1][0]
+            r /= kf[i][0] - kf[i-1][0]
+            break
+    if r is None:
+        return kf[i][1]
+
+    return kf[i-1][1] * (1-r) + kf[i][1] * r
+
+
 def loadAnim(fn, timeScale=1):
     """Returns (time, angles, root offset)"""
     keyFrames = []
@@ -26,7 +42,7 @@ def cubicInterp(t: float, *args):
     sol = np.array([t**i for i in range(3,-1,-1)]) @ curve
     return sol[0]
 
-def cubicInterpLoop(kf, k, p):
+def cubicInterpLoop(kf, k, p, timer='poset'):
     """kf: keyframes (time, pose, offset), k: current keyframe, p: player"""
     k_prev = k-1 if k > 0 else k-2
     k_next = k+2 if k < len(kf)-2 else (k+3)%len(kf)
@@ -42,9 +58,9 @@ def cubicInterpLoop(kf, k, p):
                 xc[i+1] += kf[-1][0] - kf[0][0]
             else:
                 xc[i] -= kf[-1][0] - kf[0][0]
-    off = np.array([cubicInterp(p['poset'], *zip(xc, yc0)),
-                    cubicInterp(p['poset'], *zip(xc, yc1)),
-                    cubicInterp(p['poset'], *zip(xc, yc2))])
+    off = np.array([cubicInterp(p[timer], *zip(xc, yc0)),
+                    cubicInterp(p[timer], *zip(xc, yc1)),
+                    cubicInterp(p[timer], *zip(xc, yc2))])
     return off
 
 
@@ -80,7 +96,7 @@ class AnimManager:
                 # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
                 # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
 
-                off = cubicInterpLoop(keyFrames, k, p)
+                off = cubicInterpLoop(keyFrames, k, p, timer)
                 if st < 0: off[0] *= -0.6
 
                 p['b1'].offset[:3] += off - p['b1'].lastOffset

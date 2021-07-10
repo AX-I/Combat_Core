@@ -43,6 +43,7 @@ out vec4 f_color;
 uniform float rabsorb;
 uniform float rlight;
 uniform float rdist;
+uniform float rscatter;
 
 uint rand_xorshift(uint rng_state) {
     rng_state ^= (rng_state << 13);
@@ -57,6 +58,9 @@ void main() {
 
 	float ABSORB = 0.06f;
 	if (rabsorb != 0) ABSORB = rabsorb;
+
+	float inscatter = 0.f;
+	if (rscatter != 0) inscatter = rscatter;
 
     vec2 wh = 1 / vec2(width, height);
     float wF = width;
@@ -94,7 +98,6 @@ void main() {
 	float currDepth = dot(pos - vpos, Vd);
 	float transmit = 1.f;
 
-	float inscatter = 0.f;
 	float RdotL = -dot(rayDir, LDir);
 	float phase = 0.5f * (1.f - G*G) / (4.f*3.14f* pow(1.f + G*G - 2.f*G * RdotL, 1.5f));
 	phase += 0.5f * (1.f - GBACK*GBACK) / (4.f*3.14f* pow(1.f + GBACK*GBACK - 2.f*GBACK * RdotL, 1.5f));
@@ -111,7 +114,7 @@ void main() {
 
 		//if ((sx >= 0) && (sx < 2*wS-1) && (sy >= 0) && (sy < 2*wS-1)) {
 			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase;
-			else light += LIGHT * inscatter * scatter;
+			else light += LIGHT * inscatter * scatter * phase;
 		//}
 		pos += rayDir * DIST;
 		currDepth = dot(pos - vpos, Vd);

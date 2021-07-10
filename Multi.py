@@ -266,6 +266,107 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('<F5>', self.tgCamAvg)
         self.bindKey('<F6>', self.tgCam1P)
 
+        self.bindKey('p', self.printStuff)
+        self.bindKey('o', self.lightTest)
+
+    def printStuff(self):
+        print('pos', self.pos,
+              'charpos', self.players[self.selchar]['b1'].offset[:3])
+
+    def lightTest(self):
+        self.transStart = time.time()
+
+        self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
+        for p in range(len(self.players)):
+            self.players[p]['poseFlash'] = self.flashKF[0][0]
+
+    def testTempleTrans(self):
+        try:
+            t = time.time() - self.transStart
+        except:
+            pos = self.players[self.selchar]['b1'].offset[:3]
+            if Phys.eucDist(pos, (-14.5, 2, 20)) < 1:
+                self.lightTest()
+                t = 0
+            else:
+                t = -1
+
+        if t > 12:
+            return
+
+        # rest 1, peak 600
+        pointKF = [(0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
+                   (5, 90), (6, 42), (7, 20), (8.5, 5), (10, 1)]
+        self.envPointLights[2]['i'] = np.array((1,1,1.)) * Anim.interpAttr(t, pointKF)
+
+
+        d = self.directionalLights[0]
+        dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
+                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.6,0.9]))]
+
+        d['i'] = Anim.interpAttr(t, dirKF)
+
+        fogKF = [(0,   np.array((0.4, 0.2,400, 1))),
+                 (0.8, np.array((1.6, 0.3,400, 1))),
+                 (2,   np.array((1.6, 0.2,400, 1))),
+                 (5, np.array((0.1, 0.01, 80,  0.6))),
+                 (9, np.array((0.02,0.002,40,  0)))]
+
+        fparams = Anim.interpAttr(t, fogKF)
+
+        for i in range(len(self.matShaders)):
+            if 'fog' in self.matShaders[i]:
+                s = dict(self.matShaders[i])
+                s['fog'] = fparams[0]
+                s['fogAbsorb'] = fparams[1]
+                s['fogDist'] = fparams[2]
+                s['fogScatter'] = fparams[3]
+                self.matShaders[i] = s
+
+        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
+        if 0 < t < 3:
+            tempObjs = np.array(self.castObjs)
+            tempObjs = tempObjs * (1 - np.array(self.testRM()))
+            self.shadowMap(0, tempObjs, bias=0.5)
+
+        for p in self.actPlayers:
+            a = self.players[p]
+            dist = Phys.eucDist(a['b1'].offset[:3], (-14.5, 2, 20))
+            if t > (dist/40) and a['poseFlash'] <= self.flashKF[-1][0]:
+                a['moving'] = False
+                a['animTrans'] = -1
+
+                step = self.frameTime / (1 + dist/30 * (1 - (t > 4)))
+                self.stepPoseLoop(a, a['obj'], self.flashKF, step,
+                                  loop=False, timer='poseFlash')
+
+    def testRM(self, rm=None):
+        if rm is None:
+            rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
+        if self.stage != 4:
+            return rm
+
+        try: t = time.time() - self.transStart
+        except: t = 0
+
+        if t > 2:
+            r = list(rm)
+            for f in self.vtNames:
+                if 'rocks_ground_test' in f:
+                    r[self.vtNames[f]] = True
+            return r
+        else:
+            r = list(rm)
+            for f in self.vtNames:
+                if '3DRock004' in f or 'None' in f or 'Blank2' in f:
+                    r[self.vtNames[f]] = False
+                elif 'rocks_ground_test' in f or 'Cloud' in f:
+                    r[self.vtNames[f]] = False
+                elif self.vtNames[f] > self.players[-1]['obj'].texNum:
+                    r[self.vtNames[f]] = True
+            return r
+
     def tgCamAvg(self):
         self.camAvg = not self.camAvg
     def tgCam1P(self):
@@ -568,7 +669,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc["pos"] = -40 * viewVec(*sc["dir"]) + numpy.array([20, 5, 20])
         self.updateShadowCam(0)
         sc["bias"] = (0.18 * abs(cos(ti)) + 0.12) * 2048 / self.shRes
-        self.shadowMap(0, bias=sc["bias"])
+
+        tempObjs = np.array(self.castObjs)
+        tempObjs = tempObjs * (1 - np.array(self.testRM()))
+
+        self.shadowMap(0, tempObjs, bias=sc["bias"])
         self.simpleShaderVert()
 
         d = self.directionalLights[0]
@@ -861,7 +966,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             tsize = 320
             tscale = 100 / tsize
             coords = [10 + tsize*tscale/2, -3.4, 20 + tsize*tscale/2]
-            self.terrain = VertTerrain0(coords, "C:/Aa/Blender/Temple/Height.png",
+            self.terrain = VertTerrain0(coords, PATH+"../Models/Temple/Height.png",
                                         rot=(0,pi,0),
                                         scale=tscale, vertScale=22,
                                         vertPow=2.2, vertMax=0.6)
@@ -872,9 +977,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.w.addCollider(self.t2)
 
             self.addVertObject(VertModel, [10, 0, 20], rot=(0,-pi/2,0),
-                               filename="C:/Aa/Blender/Temple/Temple.obj",
+                               filename=PATH+"../Models/Temple/Temple1.obj",
                                shadow="CR",
                                blender=True)
+
+            self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
+                               filename=PATH+"../Models/Temple/TempleTrans.obj",
+                               shadow="CR")
 
             for f in self.vtNames:
                 if 'Fog' in f:
@@ -894,6 +1003,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.water.texNum = self.vtNames[f]
                 if 'Plant' in f or '093' in f:
                     self.matShaders[self.vtNames[f]]['translucent'] = 1
+
+            pp1 = np.array((-14.5,15,24.))
+            pp2 = np.array((-14.5,15,16.))
+            pi1 = np.array((1,0.91,0.72)) * 40
+            pi2 = np.array((0.48,0.99,1)) * 32
+
+            ppc = np.array((-14.5,2.3,20))
+            pic = np.array((1,1,1.))
+            self.envPointLights = [{'i':pi1, 'pos':pp1},
+                                   {'i':pi2, 'pos':pp2},
+                                   {'i':pic, 'pos':ppc}]
 
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
             # First bounce
@@ -957,6 +1077,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            texture=PATH+"../Assets/Blank2.png",
                            useShaders={"2d":1, "fog":fog, 'fogAbsorb':fabs,
                                        'fogDist':fdist})
+
+        if self.stage == 4:
+            self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
+                               filename=PATH+"../Models/Temple/Clouds.obj",
+                               shadow="",
+                               useShaders={'add':0.12, 'noline':True})
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
@@ -1208,6 +1334,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                self.throwKF[i][2])
 
         space = 2 if self.stage == 3 else 3
+        xpos = -20 if self.stage == 4 else 28
 
         for n in range(len(self.players)):
             a = self.players[n]
@@ -1227,7 +1354,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             a['b1'].lastOffset = np.array((0,0,0), 'float32')
 
-            a["b1"].offset = np.array((28, 0, 15 + space*n, 1.))
+            a["b1"].offset = np.array((xpos, 0, 15 + space*n, 1.))
             a["b1"].offset[1] = self.terrain.getHeight(a["b1"].offset[0],
                                                        a["b1"].offset[2]) + 1.6
             a["rig"].importPose(self.idle, updateRoot=False)
@@ -1531,7 +1658,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else: self.uInfo["End"] = endText[1]
             elif alive == 0: self.uInfo["End"] = endText[2]
 
-        self.renderMask = rm
+        if self.stage == 4:
+            self.testTempleTrans()
+
+        self.renderMask = self.testRM(rm)
         if SHOWALL:
             self.renderMask = [False for x in range(len(self.vtNames))]
             actPlayers = list(range(len(self.players)))
