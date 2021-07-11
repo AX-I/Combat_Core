@@ -421,8 +421,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
         for xn in a["ctexn"]:
-            self.draw.highlight([-1,-1,-1], xn, mult=True)
-            self.matShaders[xn]['highlight'] = (-1,-1,-1)
+            self.draw.highlight([0,0,0], xn, mult=True)
+            self.matShaders[xn]['highlight'] = (0,0,0)
 
     def testRest(self, sc=None):
         if sc is None: sc = self.selchar
