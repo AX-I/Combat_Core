@@ -34,6 +34,7 @@ uniform int lenP;
 
 
 uniform vec3 highColor;
+uniform vec3 highMult;
 
 out vec4 f_color;
 
@@ -114,6 +115,7 @@ void main() {
     light += vertLight;
 
     light += highColor;
+    light *= (1 + highMult);
 
     vec3 rgb = texture(tex1, v_UV / depth).rgb * light;
     f_color = vec4(rgb, 0.5);

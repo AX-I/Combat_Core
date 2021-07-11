@@ -277,7 +277,12 @@ class CLDraw:
         dat[:,:3] = (dat[:,:3] - o) * diff + o
         self.VBO[tn].write(dat, offset=cStart*size)
 
-    def highlight(self, color, tn):
+    def highlight(self, color, tn, mult=False):
+        if mult:
+            try:
+                self.DRAW[tn]['highMult'].write(np.array(color, 'float32') - 1)
+            except KeyError: pass
+            return
         try:
             self.DRAW[tn]['highColor'].write(np.array(color, 'float32'))
         except KeyError: pass
@@ -604,105 +609,122 @@ class CLDraw:
         self.DRAW[tn]['uv_hi'].write(np.array(hi, 'float32'))
         self.DRAW[tn]['uv_offset'].write(np.array(offset, 'float32'))
 
+    def changeShader(self, tn, shader, **kwargs):
+        i = tn
+        shaders = {i:shader}
+        if i in self.BO:
+            ts = trisetupAnim
+        elif '2d' in shaders[i]:
+            ts = trisetup2d
+        else:
+            ts = trisetup
+
+        p = self.VBO[i]
+
+        if 'sky' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawSky)
+            ss = shaders[i]
+            if 'isEqui' in ss:
+                draw['isEqui'] = ss['isEqui']
+            if 'rotY' in ss:
+                draw['rotY'] = ss['rotY']
+        elif 'alpha' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawAlpha)
+            sa = shaders[i]['alpha']
+            draw['TA'] = 2
+            self.TA[sa].use(location=2)
+            if 'translucent' in shaders[i]:
+                draw['translucent'] = shaders[i]['translucent']
+            if 'highlight' in shaders[i]:
+                draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
+
+        elif 'emissive' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
+            draw['vPow'].write(np.float32(shaders[i]['emissive']))
+
+        elif 'add' in shaders[i]:
+            if 'add' in self.oldShaders[i]:
+                draw = self.DRAW[i]
+            else:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
+            draw['vPow'].write(np.float32(shaders[i]['add']))
+            if 'fadeDist' in shaders[i]:
+                draw['fadeDist'] = shaders[i]['fadeDist']
+
+        elif 'sub' in shaders[i]:
+            if 'sub' in self.oldShaders[i]:
+                draw = self.DRAW[i]
+            else:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSub)
+            draw['emPow'].write(np.float32(shaders[i]['sub']))
+
+        elif 'border' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawBorder)
+
+        elif 'fog' in shaders[i]:
+            if 'fog' not in self.oldShaders[i]:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawFog)
+                ra = np.random.rand(64) - 0.5
+                draw['R'].write(ra.astype('float32'))
+            else:
+                draw = self.DRAW[i]
+            draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
+            if 'fogAbsorb' in shaders[i]:
+                draw['rabsorb'].write(np.float32(shaders[i]['fogAbsorb']))
+            if 'fogDist' in shaders[i]:
+                draw['rdist'].write(np.float32(shaders[i]['fogDist']))
+            if 'fogScatter' in shaders[i]:
+                draw['rscatter'].write(np.float32(shaders[i]['fogScatter']))
+
+        elif 'SSR' in shaders[i]:
+            if shaders[i]['SSR'] == '0':
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
+            elif shaders[i]['SSR'] == 1:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
+        else:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
+            draw['SM'] = 0
+            if 'highlight' in shaders[i]:
+                draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
+
+        try:
+            if 'stage' in kwargs:
+                draw['stage'] = kwargs['stage']
+        except: pass
+
+        try:
+            draw['width'].write(np.float32(self.W))
+            draw['height'].write(np.float32(self.H))
+        except: pass
+
+        draw['vscale'].write(self.sScale)
+        draw['aspect'].write(np.float32(self.H/self.W))
+
+        self.DRAW[i] = draw
+
+        self.writeShArgs(i)
+
+        if i in self.BO:
+            vao = ctx.vertex_array(draw,
+                [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
+                 (self.BN[i], '1f /v', 'boneNum')])
+        else:
+            vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+
+        self.oldShaders[i] = dict(shaders[i])
+
+        self.VAO[i] = vao
+
+
+
     def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
 
         if mask is None:
             mask = [False] * len(shaders)
 
-
         for i in range(len(self.VBO)):
             if shaders[i] != self.oldShaders[i]:
-
-                if i in self.BO:
-                    ts = trisetupAnim
-                elif '2d' in shaders[i]:
-                    ts = trisetup2d
-                else:
-                    ts = trisetup
-
-                p = self.VBO[i]
-
-                if 'sky' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSky)
-                    ss = shaders[i]
-                    if 'isEqui' in ss:
-                        draw['isEqui'] = ss['isEqui']
-                    if 'rotY' in ss:
-                        draw['rotY'] = ss['rotY']
-                elif 'alpha' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawAlpha)
-                    sa = shaders[i]['alpha']
-                    draw['TA'] = 2
-                    self.TA[sa].use(location=2)
-                    if 'translucent' in shaders[i]:
-                        draw['translucent'] = shaders[i]['translucent']
-
-                elif 'emissive' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
-                    draw['vPow'].write(np.float32(shaders[i]['emissive']))
-
-                elif 'add' in shaders[i]:
-                    if 'add' in self.oldShaders[i]:
-                        draw = self.DRAW[i]
-                    else:
-                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
-                    draw['vPow'].write(np.float32(shaders[i]['add']))
-
-                elif 'sub' in shaders[i]:
-                    if 'sub' in self.oldShaders[i]:
-                        draw = self.DRAW[i]
-                    else:
-                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawSub)
-                    draw['emPow'].write(np.float32(shaders[i]['sub']))
-
-                elif 'border' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawBorder)
-
-                elif 'fog' in shaders[i]:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawFog)
-                    ra = np.random.rand(64) - 0.5
-                    draw['R'].write(ra.astype('float32'))
-                    draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
-                    if 'fogAbsorb' in shaders[i]:
-                        draw['rabsorb'].write(np.float32(shaders[i]['fogAbsorb']))
-                    if 'fogDist' in shaders[i]:
-                        draw['rdist'].write(np.float32(shaders[i]['fogDist']))
-                elif 'SSR' in shaders[i]:
-                    if shaders[i]['SSR'] == '0':
-                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
-                    elif shaders[i]['SSR'] == 1:
-                        draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
-                else:
-                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
-                    draw['SM'] = 0
-
-                try:
-                    if 'stage' in kwargs:
-                        draw['stage'] = kwargs['stage']
-                except: pass
-
-                try:
-                    draw['width'].write(np.float32(self.W))
-                    draw['height'].write(np.float32(self.H))
-                except: pass
-
-                draw['vscale'].write(self.sScale)
-                draw['aspect'].write(np.float32(self.H/self.W))
-
-                self.DRAW[i] = draw
-
-                self.writeShArgs(i)
-
-                if i in self.BO:
-                    vao = ctx.vertex_array(draw,
-                        [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
-                         (self.BN[i], '1f /v', 'boneNum')])
-                else:
-                    vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
-
-                self.oldShaders[i] = dict(shaders[i])
-
-                self.VAO[i] = vao
+                self.changeShader(i, shaders[i], **kwargs)
 
         # Write to readable depth buffer
         self.fboZ.use()
@@ -843,7 +865,8 @@ class CLDraw:
             vao.render(moderngl.TRIANGLES)
 
             if 'add' in shaders[i] or 'sub' in shaders[i]:
-                vao.render(moderngl.LINES)
+                if 'noline' not in shaders[i]:
+                    vao.render(moderngl.LINES)
 
         self.fbo.depth_mask = True
 

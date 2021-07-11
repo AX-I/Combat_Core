@@ -18,6 +18,10 @@ out vec2 v_UV;
 in vec3 in_norm;
 out vec3 v_norm;
 
+uniform vec2 uv_lo;
+uniform vec2 uv_hi;
+uniform vec2 uv_offset;
+
 
 uniform vec3 SLInt[128];
 uniform vec3 SLPos[128];
@@ -33,9 +37,15 @@ void main() {
 
     vec3 pos = vmat*(in_vert-vpos);
 
+    vec2 tmp_UV = in_UV;
+	if ((tmp_UV.x >= uv_lo.x) && (tmp_UV.x <= uv_hi.x) &&
+	    (tmp_UV.y >= uv_lo.y) && (tmp_UV.y <= uv_hi.y)) {
+	  tmp_UV += uv_offset;
+	}
+
 	depth = 1.0 / pos.z;
     v_pos = in_vert * depth;
-    v_UV = in_UV * depth;
+    v_UV = tmp_UV * depth;
 	v_norm = in_norm * depth;
 
     pos.xy /= abs(pos.z);

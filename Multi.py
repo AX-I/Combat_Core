@@ -268,11 +268,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.bindKey('p', self.printStuff)
         self.bindKey('o', self.lightTest)
+        self.bindKey('i', self.respawnTest)
 
     def printStuff(self):
         print('pos', self.pos,
               'charpos', self.players[self.selchar]['b1'].offset[:3])
 
+    # ==== Temple interactivity ====
     def lightTest(self):
         self.transStart = time.time()
 
@@ -367,6 +369,120 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     r[self.vtNames[f]] = True
             return r
 
+
+    # ==== Respawning / recovery ====
+    def setupRestKF(self):
+        self.restKF = Anim.loadAnim(PATH+'../Poses/RestTest.ava')
+
+        off_fact = 1 if self.selchar == 2 else 1.3
+        arm_fact = (2.4, 2, 1, 2.4, 2.4, 2.5, 2.2, 2.3, 1.8)[self.selchar]
+        for i in range(len(self.restKF)):
+            tempPose = self.restKF[i][1]
+            armPose = tempPose['children'][0]['children'][0]['angle']
+            if armPose[2] > 0: armPose[2] -= 2*pi
+            armPose[2] *= arm_fact
+            self.restKF[i] = (self.restKF[i][0],
+                              tempPose,
+                              self.restKF[i][2] * off_fact)
+
+    def respawnTest(self, sc=None):
+        self.setupRestKF()
+
+        if sc is None: sc = self.selchar
+        a = self.players[sc]
+        if 'restAnim' in a: return
+        if a['jump'] > 0: return
+
+        a['restStart'] = time.time()
+        a['restFrame'] = -100
+        a['restAnim'] = self.restKF[0][0]
+        r = self.restRings
+        self.ringPos = np.array(a['b1'].offset[:3])
+        self.draw.translate(a['b1'].offset[:3],
+                            r.cStart*3, r.cEnd*3, r.texNum)
+        a['legIKoffset'] = 0
+        a['tempYPos'] = float(a['b1'].offset[1])
+
+        if self.getHealth(a['id']) < 0:
+            a['pv'].colliders[1].hc += self.maxHP * self.getHealth(a['id']) - 0.01
+
+    def undoGhost(self):
+        a = self.players[self.selchar]
+        for xn in a["ctexn"]:
+            if 'sub' in self.matShaders[xn]:
+                temp = dict(self.matShaders[xn])
+                del temp["sub"]
+                self.matShaders[xn] = temp
+            if "alphaTemp" in self.matShaders[xn]:
+                self.matShaders[xn]['alpha'] = self.matShaders[xn]["alphaTemp"]
+
+            self.draw.changeShader(xn, self.matShaders[xn], stage=self.stage)
+
+
+        self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+        for xn in a["ctexn"]:
+            self.draw.highlight([-1,-1,-1], xn, mult=True)
+            self.matShaders[xn]['highlight'] = (-1,-1,-1)
+
+    def testRest(self, sc=None):
+        if sc is None: sc = self.selchar
+        a = self.players[sc]
+        r = self.restRings
+
+        addKF = [(0, 0), (1, 0.3), (2, 0.4), (3, 0.2), (5, 0)]
+
+        if 'restAnim' in a:
+            t = time.time() - a['restStart']
+            a['moving'] = False
+            a['animTrans'] = -1
+            self.stepPoseLoop(a, a['obj'], self.restKF, self.frameTime*0.4,
+                              loop=False, timer='restAnim')
+
+            self.setYoffsetTest(a)
+
+            self.matShaders[r.texNum]['add'] = Anim.interpAttr(t, addKF)
+
+            self.draw.setUVOff(r.texNum, (0,0), (1,1), (t*0.2, 0))
+
+            if self.getHealth(a['id']) < 0.6:
+                a['pv'].colliders[0].hc -= self.frameTime * 4
+
+            xn = a["ctexn"][0]
+            if 'sub' in self.matShaders[xn]:
+                self.matShaders[xn]['sub'] -= 0.6 * self.frameTime
+
+                if self.matShaders[xn]['sub'] < 0:
+                    self.matShaders[xn]['sub'] = 0
+                    a['restFrame'] = self.frameNum
+                    a['undoGhostTime'] = time.time()
+                    self.undoGhost()
+            elif 'undoGhostTime' in a:
+                hl = max(0, min(1, 0.6 * (time.time() - a['undoGhostTime'])))
+                for i in a["ctexn"]:
+                    self.draw.highlight([hl,hl,hl], i, mult=True)
+
+            if self.frameNum - a['restFrame'] == 1:
+                d = self.directionalLights[0]
+                self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
+            if a['restAnim'] >= self.restKF[-1][0]:
+                del a['restAnim']
+                if 'deathTime' in a:
+                    del a['deathTime']
+                self.draw.translate(-self.ringPos,
+                                    r.cStart*3, r.cEnd*3, r.texNum)
+                a['movingOld'] = True
+
+    def setYoffsetTest(self, p):
+        try: footR = p['b1'].children[1].children[0].children[0]
+        except IndexError: return
+
+        ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
+        offR = footR.TM[3,1] - 0.126 - ihR
+        p['b1'].offset[1] -= offR
+
+
+    # ==== Camera control ====
     def tgCamAvg(self):
         self.camAvg = not self.camAvg
     def tgCam1P(self):
@@ -507,7 +623,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             fact = 2*(1+vec[0])
             targz = targz * fact
 
-        head.rotate((0, targz, targy))
+        if 'restAnim' in p:
+            head.rotate((0, targz, ang[2]))
+        else:
+            head.rotate((0, targz, targy))
 
         if p['id'] in self.eyeUV:
             uvp = self.eyeUV[p['id']]
@@ -547,8 +666,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             U = 0
             L = 0
         else:
-            U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
-            L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
+            try:
+                U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
+                L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
+            except ValueError:
+                U = 0
+                L = 0
 
         # -Z is UP, +Z is DOWN
         if interp is None:
@@ -623,7 +746,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def mvCam(self):
         if not self.fCam:
             self.α = -self.players[self.selchar]["cr"] + pi/2
-        self.fCam = not self.fCam
+        if not self.cam1P:
+            self.fCam = not self.fCam
         self.players[self.selchar]["fCam"] = self.fCam
 
     def moveKey(self, key):
@@ -1066,6 +1190,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.w.addRB(self.srbs[-1])
 
 
+        self.addVertObject(VertModel, [0,-0.6,0], scale=(1,0.6,1),
+                           filename=PATH+'../Models/Rings.obj',
+                           shadow='', useShaders={'add':0.5, 'noline':True})
+        self.restRings = self.vertObjects[-1]
+
 
         if self.stage == 2 or self.stage == 4:
             fog = 1.4 if self.stage == 2 else 0.02
@@ -1332,6 +1461,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.throwKF[i] = (self.throwKF[i][0],
                                self.throwKF[i][1]['children'][0],
                                self.throwKF[i][2])
+
+        self.setupRestKF()
 
         space = 2 if self.stage == 3 else 3
         xpos = -20 if self.stage == 4 else 28
@@ -1661,6 +1792,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.stage == 4:
             self.testTempleTrans()
 
+        self.testRest()
+
         self.renderMask = self.testRM(rm)
         if SHOWALL:
             self.renderMask = [False for x in range(len(self.vtNames))]
@@ -1719,6 +1852,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 for xn in a["ctexn"]:
                     self.matShaders[xn]["sub"] = tr
                     if "alpha" in self.matShaders[xn]:
+                        self.matShaders[xn]['alphaTemp'] = self.matShaders[xn]["alpha"]
                         del self.matShaders[xn]["alpha"]
                 g = a["ghost"]
                 if (not self.VRMode) or (self.frameNum & 1):
@@ -1987,17 +2121,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if CURRTIME - a['animTrans'] < 0.2:
                 self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.2)
-            else:
+            elif 'restAnim' not in a:
                 self.testLegIK(a)
 
-            if not a['moving'] and a['jump'] <= 0:
+            if not a['moving'] and a['jump'] <= 0 and 'restAnim' not in a:
                 self.setYoffset(a)
 
             if self.fCam and a['id'] == self.selchar:
+                torso = a['b1'].children[0]
                 head = a['b1'].children[0].children[2]
                 ang = head.angles
                 ang[1] = 0
-                ang[2] = -asin(self.vv[1])
+                ang[2] = -asin(self.vv[1]) - torso.angles[2]
                 head.rotate(ang)
 
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
