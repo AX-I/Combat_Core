@@ -50,6 +50,8 @@ import Anim
 
 from VertObjects import VertWater0
 
+from IK import doFullLegIK
+
 PATH = OpsConv.PATH
 SWITCHABLE = True
 SHOWALL = False
@@ -2127,7 +2129,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["b1"].updateTM()
 
             if CURRTIME - a['animTrans'] < 0.2:
-                self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.2)
+                self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.4)
+
+                try:
+                    footR = a['b1'].children[1].children[0].children[0]
+                    ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
+                    ikR = np.array((footR.TM[3,0], ihR, footR.TM[3,2]))
+                    footL = a['b1'].children[2].children[0].children[0]
+                    ihL = self.terrain.getHeight(*footL.TM[3,:3:2])
+                    ikL = np.array((footL.TM[3,0], ihL, footL.TM[3,2]))
+                    a['legIKPos'] = (ikR, ikL)
+                except IndexError: pass
+
             elif 'restAnim' not in a:
                 self.testLegIK(a)
 
@@ -2151,6 +2164,26 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['tempPose'] = a['rig'].b0.exportPose()
                 a['rig'].interpPose(a['tempPose'], self.idle, 1 - breathRate * 0.9)
 
+
+            # Include throwing for leg IK
+            if not a['moving'] and not a['gesturing'] \
+               and 'restAnim' not in a and a['animTrans'] < 0:
+
+                a["rig"].b0.getTransform()
+
+                footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
+
+                try: ikR, ikL = a['legIKPos']
+                except KeyError: pass
+                else:
+                    try:
+                        interp = None
+                        if CURRTIME + a['animTrans'] < 0.4:
+                            interp = (CURRTIME + a['animTrans']) / 0.4
+                        doFullLegIK(a['b1'].children[1], ikR, a, footSize, interp)
+                        doFullLegIK(a['b1'].children[2], ikL, a, footSize, interp)
+                    except IndexError:
+                        pass
 
 
             if not self.fCam or a['id'] != self.selchar:
