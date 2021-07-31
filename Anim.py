@@ -72,7 +72,8 @@ class AnimManager:
         return a
 
     def stepPoseLoop(self, p, vobj, keyFrames, st=1,
-                     loop=True, bone=None, timer='poset'):
+                     loop=True, bone=None, timer='poset',
+                     offsetMult=1):
         p[timer] += p['pstep'] * st
         if p[timer] > keyFrames[-1][0]:
             if not loop: return
@@ -97,7 +98,9 @@ class AnimManager:
                 # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
 
                 off = cubicInterpLoop(keyFrames, k, p, timer)
-                if st < 0: off[0] *= -0.6
+                if st < 0: off[1] = -0.4 * off[1] - 0.08
+
+                off *= offsetMult
 
                 p['b1'].offset[:3] += off - p['b1'].lastOffset
                 p['b1'].lastOffset = off
@@ -105,9 +108,10 @@ class AnimManager:
 
             if bone is None:
                 ang = p['b1'].angles
-                ang += np.array(keyFrames[k][1]['angle'], 'float32') * (1-r)# * sign
-                ang += np.array(keyFrames[k+1][1]['angle'], 'float32') * r# * sign
-                p['b1'].rotate(ang)
+                diff = np.array(keyFrames[k][1]['angle'], 'float32') * (1-r)
+                diff += np.array(keyFrames[k+1][1]['angle'], 'float32') * r
+                diff[2] *= sign
+                p['b1'].rotate(ang + diff)
 
             pose = p['rig'].interpTree(keyFrames[k][1], keyFrames[k+1][1], r)
             if bone is None:

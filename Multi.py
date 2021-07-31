@@ -852,7 +852,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'animOffset':np.zeros(3), 'animTrans':-100,
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
              'throwAnim':False, 'animFired':False,
-             'poseThrow':0}
+             'poseThrow':0, 'poseIdle':0}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1456,6 +1456,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.idleTest = Anim.loadAnim(p+'Idletest.ava')
         self.gestures.append(self.idleTest[0][1])
 
+        self.idlingTest = Anim.loadAnim(p+'IdlingTest6.ava')
+        for i in range(len(self.idlingTest)):
+            self.idlingTest[i] = (self.idlingTest[i][0] * 1.6,
+                                  self.idlingTest[i][1],
+                                  self.idlingTest[i][2] * 0.6)
+
         self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
         for i in range(len(self.throwKF)):
             self.throwKF[i] = (self.throwKF[i][0],
@@ -2028,6 +2034,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     bx /= d; by /= d
 
                 bx *= self.frameTime; by *= self.frameTime
+                if a['moving'] < 0:
+                    bx *= 0.9; by *= 0.9
 
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
@@ -2072,8 +2080,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
                     a["rig"].interpPose(self.idle, self.keyFrames[transKF][1], fact)
 
-                    off = np.array([0,0,0.]) * (1-fact)
-                    off += (self.keyFrames[transKF][2] @ a['b1'].rotMat) * fact
+                    off = np.array(self.keyFrames[transKF][2])
+                    if a['moving'] < 0: off[1] = -0.4 * off[1] - 0.08
+                    off = (off @ a['b1'].rotMat) * fact
+                    off += a['b1'].lastOffset * (1-fact)
                     a['b1'].offset[:3] += off - a['b1'].lastOffset
                     a['b1'].lastOffset = off
                     a['animOffset'] = off
@@ -2116,9 +2126,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             a["b1"].updateTM()
 
-            if not self.fCam or a['id'] != self.selchar:
-                self.testAnim(a)
-
             if CURRTIME - a['animTrans'] < 0.2:
                 self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.2)
             elif 'restAnim' not in a:
@@ -2126,6 +2133,28 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if not a['moving'] and a['jump'] <= 0 and 'restAnim' not in a:
                 self.setYoffset(a)
+
+            if not a['moving'] and not a['gesturing'] \
+               and not a['throwAnim'] and 'restAnim' not in a \
+               and a['animTrans'] < 0 and ('poseFlash' not in a or \
+                                           a['poseFlash'] > self.flashKF[-1][0]):
+
+                breathRate = 0.5 # Between 0.5 and 1 is best
+
+                breathRate *= (0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
+
+                self.stepPoseLoop(a, a['obj'], self.idlingTest,
+                                  self.frameTime * (breathRate + 0.6)/2,
+                                  loop=True, timer='poseIdle',
+                                  offsetMult=breathRate * 0.9)
+
+                a['tempPose'] = a['rig'].b0.exportPose()
+                a['rig'].interpPose(a['tempPose'], self.idle, 1 - breathRate * 0.9)
+
+
+
+            if not self.fCam or a['id'] != self.selchar:
+                self.testAnim(a)
 
             if self.fCam and a['id'] == self.selchar:
                 torso = a['b1'].children[0]
