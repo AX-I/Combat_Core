@@ -250,7 +250,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.gestures = []
         p = PATH + "../Poses/"
         for g in ["Armcross.pose", "Bow.pose", "Hi.pose", "Hold.pose"]:
-            self.gestures.append(json.load(open(p+g)))
+            self.gestures.append(Anim.flattenPose(json.load(open(p+g))))
 
         self.bindKey("1", lambda: self.gesture(self.selchar, 0))
         self.bindKey("2", lambda: self.gesture(self.selchar, 1))
@@ -525,7 +525,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p["gestNum"] = n
         p["poset"] = 0
         p["pstep"] = 3
-        p['tempPose'] = p['rig'].b0.exportPose()
+        p['tempPose'] = p['rig'].exportPoseFlat()
 
     def jump(self, pn=None):
         if pn is None: pn = self.selchar
@@ -557,8 +557,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if p["poset"] < 0:
             p["poset"] = 0; finish = True
 
-        initPose = self.idle if p['pstep'] < 0 else p['tempPose']
-        p["rig"].interpPose(initPose, self.gestures[p["gestNum"]], p["poset"])
+        initPose = self.idleFlat if p['pstep'] < 0 else p['tempPose']
+        p["rig"].interpPoseFlat(initPose, self.gestures[p["gestNum"]], p["poset"])
         self.updateRig(p["rig"], p["ctexn"], p["num"], vobj)
 
         if finish: self.gestFinish(p["id"])
@@ -1455,15 +1455,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
+        self.idleFlat = Anim.flattenPose(self.idle)
 
         self.idleTest = Anim.loadAnim(p+'Idletest.ava')
-        self.gestures.append(self.idleTest[0][1])
+        self.gestures.append(Anim.flattenPose(self.idleTest[0][1]))
 
         self.idlingTest = Anim.loadAnim(p+'IdlingTest6.ava')
         for i in range(len(self.idlingTest)):
             self.idlingTest[i] = (self.idlingTest[i][0] * 1.6,
                                   self.idlingTest[i][1],
-                                  self.idlingTest[i][2] * 0.6)
+                                  self.idlingTest[i][2] * 0.6,
+                                  self.idlingTest[i][3])
 
         self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
         for i in range(len(self.throwKF)):
@@ -2026,7 +2028,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if not a['movingOld']:
                     a['animTrans'] = CURRTIME
                     a['poset'] = self.keyFrames[transKF][0]
-                    a['tempPose'] = a['rig'].exportPose()
+                    a['tempPose'] = a['rig'].exportPoseFlat()
 
                 bx = hvel*a["moving"]*cos(a["cr"])
                 by = hvel*a["moving"]*sin(a["cr"])
@@ -2080,9 +2082,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 df = 1 + 3*self.VRMode
 
                 if CURRTIME - a['animTrans'] < 0.2:
+                    # print('Trans idle->walk')
                     fact = (CURRTIME - a['animTrans']) / 0.2
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    a["rig"].interpPose(a['tempPose'], self.keyFrames[transKF][1], fact)
+                    a["rig"].interpPoseFlat(a['tempPose'], self.keyFrames[transKF][3], fact)
 
                     off = np.array(self.keyFrames[transKF][2])
                     if a['moving'] < 0: off[1] = -0.4 * off[1] - 0.08
@@ -2093,27 +2096,27 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['animOffset'] = off
                 else:
                     self.stepPoseLoop(a, a["obj"], self.keyFrames,
-                                      df*self.frameTime * self.poseDt*a["moving"])
+                                      df*self.frameTime * self.poseDt*a["moving"],
+                                      isFlat=True)
 
             elif a["movingOld"]:
                 a['animTrans'] = CURRTIME
-                a['tempPose'] = a['rig'].b0.exportPose()
+                a['tempPose'] = a['rig'].exportPoseFlat()
 
             if not a['moving'] and not a['gesturing']:
                 if CURRTIME - a['animTrans'] < 0.2:
+                    # print('Trans walk->idle')
                     fact = (CURRTIME - a['animTrans']) / 0.2
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    a['rig'].interpPose(a['tempPose'], self.idle, fact)
+                    a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, fact)
 
                     off = a['b1'].lastOffset * (1-fact)
                     a['b1'].offset[:3] += off - a['b1'].lastOffset
                     a['b1'].lastOffset = off
                     a['animOffset'] = off
-
                 elif a['animTrans'] > 0:
                     a['rig'].importPose(self.idle, updateRoot=False)
                     a['animTrans'] *= -1
-
 
             if self.frameNum - a['frameFired'] == 1:
                 a['throwAnim'] = True
@@ -2166,16 +2169,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.stepPoseLoop(a, a['obj'], self.idlingTest,
                                   self.frameTime * (breathRate + 0.6)/2,
                                   loop=True, timer='poseIdle',
-                                  offsetMult=breathRate * 0.9)
+                                  offsetMult=breathRate * 0.9,
+                                  isFlat=True)
 
-                a['tempPose'] = a['rig'].b0.exportPose()
-                a['rig'].interpPose(a['tempPose'], self.idle, 1 - breathRate * 0.9)
+                a['tempPose'] = a['rig'].exportPoseFlat()
+                a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, 1 - breathRate * 0.9)
+
 
                 if CURRTIME + a['animTrans'] < 0.5:
+                    # print('Trans idle->breathing')
                     fact = (CURRTIME + a['animTrans']) / 0.5
 
-                    a['tempPose'] = a['rig'].b0.exportPose()
-                    a['rig'].interpPose(self.idle, a['tempPose'], fact)
+                    a['tempPose'] = a['rig'].exportPoseFlat()
+                    a['rig'].interpPoseFlat(self.idleFlat, a['tempPose'], fact)
 
                     off = (1-fact) * a['b1TempOff'] + fact * a['animOffset']
                     a['b1'].offset[:3] += off - a['animOffset']

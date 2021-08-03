@@ -31,6 +31,7 @@ class Rig:
         self.rigChildren(b, r)
         self.allBones = list(b[x] for x in sorted(b))
         self.b0 = self.allBones[0]
+        self.N = len(self.allBones)
 
     def recurseRig(self, b, r, s):
         if "N" in r:
@@ -62,11 +63,10 @@ class Rig:
         for n in range(3):
             n0 = a0[n]
             n1 = a1[n]
-            if abs(n1 - n0) > pi:
-                if n1 > n0:
-                    a0[n] += 2*pi
-                else:
-                    a1[n] += 2*pi
+            if n1 - n0 > pi:
+                a0[n] += 2*pi
+            if n0 - n1 > pi:
+                a1[n] += 2*pi
         
         ang = a0 * (1-t) + a1 * t
         
@@ -76,7 +76,30 @@ class Rig:
         for i in range(min(len(p0["children"]), len(p1['children']))):
             p.append(self.interpTree(p0["children"][i], p1["children"][i], t, r=1))
         return {"angle":ang, "children":p}
-        
+
+    def importPoseFlat(self, p, updateRoot=True):
+        """p has shape (x, 3)"""
+        st = 0 if updateRoot else 1
+        for i in range(st, min(p.shape[0], self.N)):
+            self.allBones[i].rotate(p[i])
+    def exportPoseFlat(self):
+        return np.array([bone.angles for bone in self.allBones])
+
+    def interpPoseFlat(self, p0, p1, t):
+        self.importPoseFlat(self.interpFlat(p0, p1, t), updateRoot=False)
+    def interpFlat(self, p0, p1, t):
+        """p0, p1 have shape (x, 3)"""
+        dim = min(p0.shape[0], p1.shape[0])
+        a0 = np.array(p0[:dim]) % (2*pi)
+        a1 = np.array(p1[:dim]) % (2*pi)
+
+        mask = (a1 - a0) > pi
+        a0[mask] += 2*pi
+        mask = (a0 - a1) > pi
+        a1[mask] += 2*pi
+
+        return a0 * (1-t) + a1 * t
+
 class Bone:
     def __init__(self, offset=(0,0,0), origin=None, rot=(0,0,0),
                  bn=None, numBones=None, nO=0):
@@ -114,8 +137,8 @@ class Bone:
         return {"angle":[round(x, 6) for x in self.angles.tolist()], "children":p}
 
     def importPose(self, p, r=0, updateRoot=True):
-        self.angles = p["angle"]
         if updateRoot:
+            self.angles = p["angle"]
             self.rotate()
         if "children" not in p:
             p["children"] = []
