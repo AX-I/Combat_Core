@@ -572,7 +572,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         del p["gestMid"]
 
 
-    def testAnim(self, p):
+    def testAnim(self, p, interp=None):
         """p in self.players"""
         if self.frameNum < 4: return
         if p['moving']: return
@@ -625,10 +625,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             fact = 2*(1+vec[0])
             targz = targz * fact
 
-        if 'restAnim' in p:
-            head.rotate((0, targz, ang[2]))
-        else:
-            head.rotate((0, targz, targy))
+        if interp is None: interp = 1
+        pose = {'angle': (0, targz, ang[2] if 'restAnim' in p else targy)}
+        temp = head.exportPose()
+        final = p['rig'].interpTree(temp, pose, interp)
+        head.rotate(final['angle'])
 
         if p['id'] in self.eyeUV:
             uvp = self.eyeUV[p['id']]
@@ -2025,6 +2026,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if not a['movingOld']:
                     a['animTrans'] = CURRTIME
                     a['poset'] = self.keyFrames[transKF][0]
+                    a['tempPose'] = a['rig'].exportPose()
 
                 bx = hvel*a["moving"]*cos(a["cr"])
                 by = hvel*a["moving"]*sin(a["cr"])
@@ -2080,7 +2082,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    a["rig"].interpPose(self.idle, self.keyFrames[transKF][1], fact)
+                    a["rig"].interpPose(a['tempPose'], self.keyFrames[transKF][1], fact)
 
                     off = np.array(self.keyFrames[transKF][2])
                     if a['moving'] < 0: off[1] = -0.4 * off[1] - 0.08
@@ -2097,14 +2099,20 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['animTrans'] = CURRTIME
                 a['tempPose'] = a['rig'].b0.exportPose()
 
-            elif not a['gesturing']:
+            if not a['moving'] and not a['gesturing']:
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
                     fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
                     a['rig'].interpPose(a['tempPose'], self.idle, fact)
+
+                    off = a['b1'].lastOffset * (1-fact)
+                    a['b1'].offset[:3] += off - a['b1'].lastOffset
+                    a['b1'].lastOffset = off
+                    a['animOffset'] = off
+
                 elif a['animTrans'] > 0:
                     a['rig'].importPose(self.idle, updateRoot=False)
-                    a['animTrans'] = -100
+                    a['animTrans'] *= -1
 
 
             if self.frameNum - a['frameFired'] == 1:
@@ -2122,8 +2130,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['frameFired'] = -100
                 if a['poseThrow'] > self.throwKF[-1][0]:
                     a['throwAnim'] = False
-                    if not a['moving']:
-                        a['rig'].importPose(self.idle, updateRoot=False)
 
 
             a["b1"].updateTM()
@@ -2140,6 +2146,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     ikL = np.array((footL.TM[3,0], ihL, footL.TM[3,2]))
                     a['legIKPos'] = (ikR, ikL)
                 except IndexError: pass
+                a['b1TempOff'] = np.array(a['animOffset'])
 
             elif 'restAnim' not in a:
                 self.testLegIK(a)
@@ -2164,6 +2171,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['tempPose'] = a['rig'].b0.exportPose()
                 a['rig'].interpPose(a['tempPose'], self.idle, 1 - breathRate * 0.9)
 
+                if CURRTIME + a['animTrans'] < 0.5:
+                    fact = (CURRTIME + a['animTrans']) / 0.5
+
+                    a['tempPose'] = a['rig'].b0.exportPose()
+                    a['rig'].interpPose(self.idle, a['tempPose'], fact)
+
+                    off = (1-fact) * a['b1TempOff'] + fact * a['animOffset']
+                    a['b1'].offset[:3] += off - a['animOffset']
+                    a['b1'].lastOffset = off
+                    a['animOffset'] = off
 
             # Include throwing for leg IK
             if not a['moving'] and not a['gesturing'] \
@@ -2187,7 +2204,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
             if not self.fCam or a['id'] != self.selchar:
-                self.testAnim(a)
+                interp = None
+                if not a['moving'] and CURRTIME - a['animTrans'] < 0.2:
+                    interp = (CURRTIME - a['animTrans']) / 0.2
+                self.testAnim(a, interp)
 
             if self.fCam and a['id'] == self.selchar:
                 torso = a['b1'].children[0]
