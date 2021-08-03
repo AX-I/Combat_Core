@@ -296,7 +296,21 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 t = -1
 
         if t > 12:
+            # Fade out sky light if inside temple
+            di = np.array(self.directionalLights[4]['i'])
+            do = np.array([0.1,0.25,0.45])
+            pos = self.players[self.selchar]['b1'].offset[:3]
+
+            # Border x: (-30, 7)
+            f = max(0, min(1, (pos[0] - 5)/8)) + max(0, min(1, (-30 - pos[0])/8))
+            # Border z: (3, 35)
+            f += max(0, min(1, (pos[2] - 30)/8)) + max(0, min(1, (5 - pos[2])/8))
+
+            f = max(0.3, min(1, f))
+            self.directionalLights[4]['i'] = di * 0.8 + do * f * 0.2
             return
+        if t > 2:
+            self.matShaders[self.clouds.texNum]['add'] = 0.05
 
         # rest 1, peak 600
         pointKF = [(0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
@@ -306,7 +320,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         d = self.directionalLights[0]
         dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
-                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.6,0.9]))]
+                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.6,0.9]) * 1.2)]
 
         d['i'] = Anim.interpAttr(t, dirKF)
 
@@ -1128,13 +1142,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
                         wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
                     self.water.texNum = self.vtNames[f]
-                if 'Plant' in f or '093' in f:
+                if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
                     self.matShaders[self.vtNames[f]]['translucent'] = 1
 
             pp1 = np.array((-14.5,15,24.))
             pp2 = np.array((-14.5,15,16.))
-            pi1 = np.array((1,0.91,0.72)) * 40
-            pi2 = np.array((0.48,0.99,1)) * 32
+            pi1 = np.array((1,0.91,0.72)) * 30
+            pi2 = np.array((0.48,0.99,1)) * 24
 
             ppc = np.array((-14.5,2.3,20))
             pic = np.array((1,1,1.))
@@ -1144,19 +1158,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
             # First bounce
-            self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.24,0.25,0.2]})
+            self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.22,0.24,0.2]})
             # Second bounce
-            self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[0.1,0.09,0.08]})
+            self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
             # Sky
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.1,0.2]})
-            self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.5]})
-            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/lilienstein_2k.ahdr",
-                                    rot=(0,0,0), hdrScale=14)
+            self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.45]})
+            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/approaching_storm_1k.ahdr",
+                                    rot=(0,0,0), hdrScale=16)
             self.skyBox.created()
 
             skyShader = self.matShaders[self.skyBox.texNum]
             skyShader['isEqui'] = 1
-            skyShader['rotY'] = 0.22
+            skyShader['rotY'] = 0.25
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
@@ -1214,7 +1228,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
                                filename=PATH+"../Models/Temple/Clouds.obj",
                                shadow="",
-                               useShaders={'add':0.12, 'noline':True})
+                               useShaders={'add':0.08, 'noline':True,
+                                           'fadeDist':2})
+            self.clouds = self.vertObjects[-1]
 
         for i in range(self.numBullets // 3):
             p = [20, 3+i, 20]
