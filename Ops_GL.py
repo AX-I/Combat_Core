@@ -90,7 +90,10 @@ class CLDraw:
         self.fbo.use()
 
         # Final output
-        self.FB_GL = glGenTextures(1) + 1
+        try:
+            self.FB_GL = glGenTextures(1) + 1
+        except:
+            print('Unable to get GL buffer id')
         self.FS_GL = ctx.texture((w, h), 3, dtype='f1')
         self.DS_GL = ctx.depth_texture((w, h))
         self.fs = ctx.framebuffer(self.FS_GL, self.DS_GL)
@@ -141,6 +144,7 @@ class CLDraw:
         self.oldShaders = {}
 
         self.dofFocus = 3
+        self.dofAperture = 12
         self.doSSAO = False
 
         self.setupBlur()
@@ -430,8 +434,10 @@ class CLDraw:
         except: self.setupSSAO()
         self.doSSAO = True
 
-    def dof(self, focus):
+    def dof(self, focus, aperture=None):
         self.dofFocus = np.float32(focus)
+        if aperture is not None:
+            self.dofAperture = np.float32(aperture)
 
     def setupBlur(self):
         # Temp
@@ -519,6 +525,7 @@ class CLDraw:
         self.fs.clear(0.0, 0.0, 0.0, 0.0)
         self.fs.use()
         self.post_prog['focus'] = self.dofFocus
+        self.post_prog['aperture'] = self.dofAperture
         self.post_prog['tex1'] = 0
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])

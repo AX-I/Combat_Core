@@ -13,6 +13,7 @@ uniform float width;
 uniform float height;
 uniform float exposure;
 uniform float focus;
+uniform float aperture;
 
 uniform int tonemap;
 
@@ -48,10 +49,13 @@ void main() {
 	vec2 wh = 1 / vec2(width, height);
 	vec2 tc = gl_FragCoord.xy;
 
+	// For VR mode
+	//tc.y = height - tc.y;
+	//tc.x = (tc.x - width/2) * 0.95 + width/2;
+
 	float d = texture(db, tc*wh).r;
 
-    float apeture = 12.f;
-    float coc = apeture * abs(d-focus) / focus / d;
+    float coc = aperture * abs(d-focus) / focus / d;
 
 	vec3 color = vec3(0);
 
@@ -70,7 +74,7 @@ void main() {
 				if ((target.x < 0) || (target.x >= width) || (target.y < 0) || (target.y >= height)) cover = 0;
 
 				float sz = texture(db, target * wh).r;
-				float ecoc = apeture * abs(sz-focus) / focus / sz;
+				float ecoc = aperture * abs(sz-focus) / focus / sz;
 				ecoc = min(MAXCOC, ecoc);
 
 				if (radius > ecoc) cover *= ecoc / radius;
