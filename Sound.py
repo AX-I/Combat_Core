@@ -26,8 +26,12 @@ import pyaudio
 import wave
 import time
 from queue import Empty
+from math import sqrt
 
 CHUNK = 1024
+
+def eucLen(a):
+    return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 
 class SoundManager:
     def __init__(self, si):
@@ -40,7 +44,13 @@ class SoundManager:
         self.globalVol = 1
         self.fadeTime = 2
         self.fadeTracks = set()
-    
+
+        self.positionTracks = {}
+        self.ptcount = 0
+
+        self.pos = np.zeros(3, 'float')
+        self.vvh = np.array([1.,0,0])
+
     def run(self, w=2, r=22050, n=2):
         """w = 2 for int16"""
         self.channels = n
@@ -63,7 +73,24 @@ class SoundManager:
                         running = False
                         break
                     if "Play" in cmd:
-                        self.playFile(*cmd["Play"])
+                        # Either {"Play": ('file', vol, loop)} or
+                        #        {"Play": ('file', vol, loop, params)} or
+                        #        {"Play": ('file', vol, params)
+                        if type(cmd['Play'][2]) is bool:
+                            self.playFile(*cmd["Play"][:3])
+                            if len(cmd['Play']) == 4:
+                                self.positionTracks[self.ptcount] = \
+                                    {'track':self.tcount,
+                                     'baseVol':cmd['Play'][1],
+                                     'params':cmd['Play'][3]}
+                                self.ptcount += 1
+                        else:
+                            self.playFile(cmd["Play"][0],
+                                      cmd['Play'][1] * self.sndAttn(*cmd['Play'][2]))
+
+                    elif 'SetPos' in cmd:
+                        self.pos = cmd['SetPos']['pos']
+                        self.vvh = cmd['SetPos']['vvh']
                     elif "Fade" in cmd:
                         self.fade = self.rcount + cmd["Fade"]['Time']
                         self.fadeTracks = cmd['Fade']['Tracks']
@@ -94,7 +121,16 @@ class SoundManager:
 
     def output(self):
         frames = np.zeros((CHUNK,self.channels), "int16")
-        
+
+        for i in list(self.positionTracks.keys()):
+            p = self.positionTracks[i]
+            if p['track'] not in self.tracks:
+                del self.positionTracks[i]
+                continue
+            self.tracks[p['track']]['vol'] *= 0.5
+            self.tracks[p['track']]['vol'] += 0.5 * p['baseVol'] * self.sndAttn(*p['params'])
+
+
         for i in list(self.tracks.keys()):
             t = self.tracks[i]
             d = t["wave"].readframes(CHUNK)
@@ -149,6 +185,26 @@ class SoundManager:
 
     def close(self):
         self.p.terminate()
+
+    def sndAttn(self, src, mult=5, const=1.2, doWrap=False, minDist=None):
+        svec = (src - self.pos)
+        dist = eucLen(svec)
+        if minDist is None:
+            attn = mult / (dist + const)
+        else:
+            attn = mult / (max(dist, minDist) + const)
+
+        LR = (svec / dist) @ self.vvh
+        left = (LR + 1) / 2
+        right = -(LR - 1) / 2
+        pan = np.array((left, right))
+        if doWrap:
+            if type(doWrap) is float:
+                wrap = doWrap
+            else:
+                wrap = max(0, 1 - dist / const)
+            pan = 0.2 + 0.8 * (pan * (1-wrap) + 0.5 * wrap)
+        return attn * pan
 
 if __name__ == "__main__":
     import queue

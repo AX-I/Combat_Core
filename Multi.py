@@ -550,9 +550,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p["jump"] = self.frameNum
         p["vertVel"] = 6.0
 
-        LR = self.sndAttn(p['b1'].offset[:3], 5, 1.2)
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
-        self.si.put({"Play":(PATH + jfn, self.volmFX / 3 * LR)})
+        self.si.put({"Play":(PATH + jfn, self.volmFX / 3,
+                             (p['b1'].offset[:3], 5, 1.2))})
 
     def stepGest(self, p, vobj, st=1):
         p["poset"] += p["pstep"] * st
@@ -743,15 +743,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i = np.array((1,1,1.)) * min(1, 1.33 * max(0, p["poset"] - 0.25))**2
         self.pointLights.append({"i":i, "pos":(pr + pl) / 2})
 
-    def sndAttn(self, src, mult=5, const=1.2):
-        LR = (src - self.pos)
-        dist = Phys.eucLen(LR)
-        attn = mult / (dist + const)
-        LR = (LR / dist) @ self.vVhorz()
-        left = (LR + 1) / 2
-        right = -(LR - 1) / 2
-        return attn * np.array((left, right))
-
     def z1(self): self.setFOV(max(45, self.fovX * 0.96))
     def z2(self): self.setFOV(min(120, self.fovX * 1.04166))
 
@@ -840,9 +831,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
-        LR = self.sndAttn(p, 6, 1)
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
-                             self.volmFX / 3 * LR)})
+                             self.volmFX / 3, (np.array(p), 6, 1))})
 
     def addPlayer(self, o):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=True)
@@ -1438,11 +1428,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.srbs[cb].pos = np.array(a["b1"].offset[:3]) + 0.8*(d*np.array([1,0,1]))
         self.srbs[cb].pos[1] += int(throw)
 
-        snd = {"blank":("A",3), "orange":("B",2), "red":("C",3), "black":("D",2)}
+        snd = {"blank":("A",2), "orange":("B",1.5), "red":("C",2), "black":("D",1.5)}
 
-        LR = self.sndAttn(a["b1"].offset[:3], 2.7, 1)
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volmFX / snd[color][1] * LR)})
+                             self.volmFX / snd[color][1], (a["b1"].offset[:3], 2.7, 1))})
 
         if sc == self.selchar:
             self.frameFired = color
@@ -1717,9 +1706,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
 
-        LR = self.sndAttn(i["pos"], 4, 1)
         self.si.put({"Play":(PATH+"../Sound/Pickup.wav",
-                             self.volmFX / 3 * LR)})
+                             self.volmFX / 3, (i["pos"], 4, 1))})
 
     def resetPickup(self):
         i = self.pickups[0]
@@ -1748,6 +1736,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print('Total', round((self.ftime[x] - self.ftime['.']) / self.frameNum, 5))
 
     def frameUpdate(self):
+        self.si.put({'SetPos':{'pos':self.pos,
+                               'vvh':self.vVhorz()}})
+
         if self.VRMode: self.frameUpdateVR()
 
         vf = 7 if self.VRMode else 1
@@ -2027,9 +2018,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
-                    LR = self.sndAttn(a['b1'].offset[:3], 6, 1)
                     self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
-                                         abs(a['vertVel']) / 8 * self.volmFX / 3 * LR)})
+                                         abs(a['vertVel']) / 8 * self.volmFX / 3,
+                                         (a['b1'].offset[:3], 6, 1))})
 
                     if abs(a["vertVel"]) > 8:
                         a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
@@ -2088,12 +2079,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
                             a['lastStep'] = time.time()
 
-                            LR = self.sndAttn(a['b1'].offset[:3], 6, 1.2)
                             sfn = ['Short_Heavy_0{}.wav', 'StonyPath_0{}.wav']
-                            sfn = sfn[self.stage&1].format(random.randint(1, 6))
+                            sf = sfn[self.stage&1].format(random.randint(1, 6))
 
-                            self.si.put({"Play":(PATH+'../Sound/New/'+sfn,
-                                                 self.volmFX / 2 * LR)})
+                            if self.stage == 4:
+                                sf = 'Short_Heavy_0{}.wav'
+                                if a['b1'].offset[0] < 12 and \
+                                   -2 < a['b1'].offset[2] < 41:
+                                    sf = 'StonyPath_0{}.wav'
+                                sf = sf.format(random.randint(1, 6))
+
+                            self.si.put({"Play":(PATH+'../Sound/New/'+sf,
+                                                 self.volmFX / 2,
+                                                 (a['b1'].offset[:3], 6, 1.2))})
 
                 df = 1 + 3*self.VRMode
 
