@@ -45,7 +45,8 @@ class TCPServer:
         self.isclient = isclient
 
         self.TO = {"timeout":0.2, "headers":{"User-Agent":"AXICombat/src"}}
-        self.maxFPS = 15
+        self.maxFPS = 18
+        self.frameNum = 0
         
         if isclient:
             a = requests.get(host + "/List", **self.TO)
@@ -86,15 +87,19 @@ class TCPServer:
             except Empty: pass
 
             try:
+                st = time.perf_counter()
                 if self.isclient:
                     data = requests.post(self.HOST + "/GameDat", data=p, **self.TO)
                 else:
                     p["getAll"] = 1
                     data = requests.post(self.HOST + "/GameDat", data=p, **self.TO)
                 self.processData(data)
+                if self.frameNum & 7 == 0:
+                    print('Ping: {:.3}'.format(time.perf_counter() - st), end='\r')
             except (Timeout, ReadTimeout, ConnectionError): pass
 
             dt = time.time() - self.startTime
+            self.frameNum += 1
             if dt < (1/self.maxFPS):
                 time.sleep((1/self.maxFPS) - dt)
         
