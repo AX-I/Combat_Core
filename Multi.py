@@ -443,11 +443,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
     # ==== Respawning / recovery ====
-    def setupRestKF(self):
+    def setupRestKF(self, sc):
         self.restKF = Anim.loadAnim(PATH+'../Poses/RestTest.ava')
 
-        off_fact = 1 if self.selchar == 2 else 1.3
-        arm_fact = (2.4, 2, 1, 2.4, 2.4, 2.5, 2.2, 2.3, 1.8)[self.selchar]
+        off_fact = 1 if sc == 2 else 1.3
+        arm_fact = (2.4, 2, 1.2, 2.4, 2.4, 2.5, 2.2, 2.3, 1.8)[sc]
         for i in range(len(self.restKF)):
             tempPose = self.restKF[i][1]
             armPose = tempPose['children'][0]['children'][0]['angle']
@@ -458,9 +458,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                               self.restKF[i][2] * off_fact)
 
     def respawnTest(self, sc=None):
-        self.setupRestKF()
-
         if sc is None: sc = self.selchar
+
+        if self.restPlayer is None and sc != self.lastRestPlayer:
+            self.restPlayer = sc
+            self.lastRestPlayer = sc
+        else: return False
+
+        self.setupRestKF(sc)
+
         a = self.players[sc]
         if 'restAnim' in a: return
         if a['jump'] > 0: return
@@ -482,7 +488,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a['pv'].colliders[1].hc += self.maxHP * self.getHealth(a['id']) - 0.01
 
     def undoGhost(self):
-        a = self.players[self.selchar]
+        sc = self.restPlayer
+        a = self.players[sc]
         for xn in a["ctexn"]:
             if 'sub' in self.matShaders[xn]:
                 temp = dict(self.matShaders[xn])
@@ -499,8 +506,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.draw.highlight([0,0,0], xn, mult=True)
             self.matShaders[xn]['highlight'] = (0,0,0)
 
-    def testRest(self, sc=None):
-        if sc is None: sc = self.selchar
+    def testRest(self):
+        sc = self.restPlayer
+        if sc is None: return
+
         a = self.players[sc]
         r = self.restRings
 
@@ -542,6 +551,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if a['restAnim'] >= self.restKF[-1][0]:
                 del a['restAnim']
+                self.restPlayer = None
                 if 'deathTime' in a:
                     del a['deathTime']
                 self.draw.translate(-self.ringPos,
@@ -1539,7 +1549,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                self.throwKF[i][1]['children'][0],
                                self.throwKF[i][2])
 
-        self.setupRestKF()
+        self.restPlayer = None
+        self.lastRestPlayer = None
 
         space = 2 if self.stage == 3 else 3
         xpos = -20 if self.stage == 4 else 28
@@ -1634,7 +1645,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         pick = {"p":pp, "t":self.pickups[0]["t"]}
 
         adat = {"players":dat, "sp":sp, "act":act, "exp":exp, "pu":pick,
-                "time":self.frameNum, "rl":round(self.directionalLights[0]["dir"][1], 2)}
+                "time":self.frameNum, "rl":round(self.directionalLights[0]["dir"][1], 2),
+                'restPlayer':self.restPlayer}
         if self.frameFired: adat["ff"] = self.frameFired
 
         try:
@@ -1656,7 +1668,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             "jp": a["jump"]
             }
 
-        adat = {"players":dat, "time":self.frameNum}
+        adat = {"players":dat, "time":self.frameNum,
+                'restPlayer':self.restPlayer}
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
@@ -1747,6 +1760,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if "rl" in b:
                     if self.directionalLights[0]["dir"][1] != b["rl"]:
                         self.rotateLight(b["rl"])
+                if 'restPlayer' in b:
+                    if b['restPlayer'] is not None and self.restPlayer is None:
+                        if b['restPlayer'] != self.lastRestPlayer:
+                            self.respawnTest(b['restPlayer'])
 
             except queue.Empty: pass
             except KeyError:
@@ -2264,13 +2281,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['animOffset'] = off
 
             # Include throwing for leg IK
-            if not a['moving'] and not a['gesturing'] \
-               and 'restAnim' not in a and a['animTrans'] < 0:
+            if not a['moving'] and 'restAnim' not in a and a['animTrans'] < 0:
 
                 a["rig"].b0.getTransform()
 
                 footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
-
                 try: ikR, ikL = a['legIKPos']
                 except KeyError: pass
                 else:
