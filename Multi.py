@@ -1502,7 +1502,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
                              self.volmFX / snd[color][1], (a["b1"].offset[:3], 2.7, 1))})
 
-        if sc == self.selchar:
+        if sc == self.selchar and color == 'blank':
             self.frameFired = color
 
         return color
@@ -1618,17 +1618,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def sendState(self):
         dat = {}
-        for a in self.players:
+        for i in self.actPlayers:
+            a = self.players[i]
             dat[a["num"]] = {
                 "r1": np.round(a["b1"].offset, 3).tolist(),
                 "m1": int(a["moving"]),
                 "c1": a["cr"],
+                'throwAnim': a['throwAnim'],
+                'fireColor': a['fireColor'],
                 "hc": [c.hc for c in a["pv"].colliders],
                 "ee": a["Energy"],
                 "gg": a["gestNum"], "gi": a["gestId"],
                 "jp": a["jump"],
                 #"hf": a["isHit"]
                 }
+        dat[self.selchar]['vh'] = float(self.vv[1])
+        dat[self.selchar]['fCam'] = self.fCam
 
         sp = [{"pos":np.round(self.srbs[i].pos, 3).tolist(),
                "vel":np.round(self.srbs[i].v, 3).tolist(),
@@ -1663,9 +1668,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             "c1": a["cr"],
             "fire": self.frameFired,
             "fire2": self.frameFiredOld,
+            'throwAnim': a['throwAnim'],
+            'fireColor': a['fireColor'],
             "vh": float(self.vv[1]),
             "gg": a["gestNum"], "gi": a["gestId"],
-            "jp": a["jump"]
+            "jp": a["jump"],
+            'fCam': self.fCam
             }
 
         adat = {"players":dat, "time":self.frameNum,
@@ -1715,6 +1723,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     sc["b1"].offset = np.array(a["r1"])
                     sc["moving"] = a["m1"]
                     sc["cr"] = a["c1"]
+                    if 'vh' in a: sc['vh'] = a['vh']
+                    if 'fCam' in a: sc['fCam'] = a['fCam']
                     if "ee" in a: sc["Energy"] = a["ee"]
                     if "fire" in a:
                         if a["fire"]:
@@ -1722,6 +1732,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     if "fire2" in a:
                         if a["fire2"]:
                             self.fire(a["fire2"], int(pn), a["vh"])
+
+                    if 'throwAnim' in a: # IMPLIES 'fireColor' in a
+                        #print(pn, a['throwAnim'])
+                        if a['throwAnim'] and not sc['throwAnim']:
+                            sc['throwAnim'] = a['throwAnim']
+                            sc['fireColor'] = a['fireColor']
+                            sc['animFired'] = False
+                            sc['fireVH'] = a['vh']
+                            sc['poseThrow'] = self.throwKF[0][0]
 
                     if a["gg"] is not None:
                         if self.players[int(pn)]["gestNum"] != a["gg"]:
@@ -2305,12 +2324,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     interp = (CURRTIME - a['animTrans']) / 0.2
                 self.testAnim(a, interp)
 
-            if self.fCam and a['id'] == self.selchar:
+            if a['fCam'] and a['id'] not in self.aiNums:
+                if a['id'] == self.selchar:
+                    a['vh'] = self.vv[1]
                 torso = a['b1'].children[0]
                 head = a['b1'].children[0].children[2]
                 ang = head.angles
                 ang[1] = 0
-                ang[2] = -asin(self.vv[1]) - torso.angles[2]
+                ang[2] = -asin(a['vh']) - torso.angles[2]
                 head.rotate(ang)
 
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
