@@ -76,7 +76,9 @@ class SoundManager:
                         # Either {"Play": ('file', vol, loop)} or
                         #        {"Play": ('file', vol, loop, params)} or
                         #        {"Play": ('file', vol, params)
-                        if type(cmd['Play'][2]) is bool:
+                        if len(cmd['Play']) < 3:
+                            self.playFile(*cmd["Play"])
+                        elif type(cmd['Play'][2]) is bool:
                             self.playFile(*cmd["Play"][:3])
                             if len(cmd['Play']) == 4:
                                 self.positionTracks[self.ptcount] = \
@@ -143,13 +145,20 @@ class SoundManager:
             s = s * (t["vol"] * trackVol)
             if s.shape[0] == CHUNK:
                 frames += s.astype("int16")
+                written = CHUNK
             else:
                 frames[:s.shape[0]] += s.astype("int16")
+                written = s.shape[0]
             t["frame"] += CHUNK
             if t["frame"] > t["N"]:
                 if t["loop"]:
-                    t["frame"] = 0
+                    t["frame"] -= t['N']
                     t["wave"].rewind()
+                    if written < CHUNK:
+                        s = np.frombuffer(t['wave'].readframes(CHUNK-written),
+                                          'int16').reshape((-1, self.channels))
+                        s = s * (t["vol"] * trackVol)
+                        frames[written:] += s.astype('int16')
                 else:
                     del self.tracks[i]
         
@@ -199,20 +208,19 @@ class SoundManager:
         right = -(LR - 1) / 2
         pan = np.array((left, right))
         if doWrap:
+            wrap = max(0, 1 - dist / const)
             if type(doWrap) is float:
-                wrap = doWrap
-            else:
-                wrap = max(0, 1 - dist / const)
-            pan = 0.2 + 0.8 * (pan * (1-wrap) + 0.5 * wrap)
+                wrap = max(wrap, doWrap)
+            pan = 0.2 + 0.7 * (pan * (1-wrap) + 0.5 * wrap)
         return attn * pan
 
 if __name__ == "__main__":
     import queue
     q = queue.Queue(8)
-    q.put({"Play":["C:/AXI_Visualizer/Sound/Env_Desert.wav", (0.7, 0.7)]})
+    q.put({"Play":["C:/AXI_Visualizer/Sound/Env_Desert.wav", (0.7, 0.7), False]})
     q.put({"Play":["C:/AXI_Visualizer/Sound/Pickup.wav", (0.2, 0.8), True]})
     q.put({"Play":["C:/AXI_Visualizer/Sound/FireA.wav", (0.4, 0.2), True]})
     q.put({"Play":["C:/AXI_Visualizer/Sound/FireD.wav", (0.7, 0.2), True]})
-    q.put({"Fade":150})
+    q.put({"Fade":{'Time':150, 'Tracks':'*'}})
     a = SoundManager(q)
     a.run(2, 22050, 2)
