@@ -269,7 +269,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('<F6>', self.tgCam1P)
 
         self.bindKey('p', self.printStuff)
-        self.bindKey('o', self.lightTest)
+        if self.stage == 4:
+            self.bindKey('o', self.lightTest)
         self.bindKey('i', self.respawnTest)
 
     def printStuff(self):
@@ -282,6 +283,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try: _ = self.changedMusic
         except:
             self.changedMusic = 0
+        self.changedShader = False
 
         self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.wav'}}})
 
@@ -290,6 +292,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
         for p in range(len(self.players)):
             self.players[p]['poseFlash'] = self.flashKF[0][0]
+
+        for v in self.vtNames:
+            if 'Sandstone' in v:
+                self.sandstoneBricksTex = self.vtNames[v]
 
     def changeMusic(self):
         self.si.put({"Play":(PATH+"../Sound/Forest4.wav", self.volm, True,
@@ -318,12 +324,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try:
             t = time.time() - self.transStart
         except:
-            pos = self.players[self.selchar]['b1'].offset[:3]
-            if Phys.eucDist(pos, (-14.5, 2, 20)) < 1:
-                self.lightTest()
-                t = 0
-            else:
-                t = -1
+            for p in self.actPlayers:
+                pos = self.players[p]['b1'].offset[:3]
+                if Phys.eucDist(pos, (-14.5, 2, 20)) < 1:
+                    self.lightTest()
+                    t = 0
+                else:
+                    t = -1
 
         if t > 12:
             # Fade out sky light if inside temple
@@ -341,10 +348,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             return
         if t > 6 and self.changedMusic == 1:
             self.changeMusic()
+        if t > 6 and not self.changedShader:
+            sbt = self.sandstoneBricksTex
+            self.matShaders[sbt] = {}
+            self.draw.changeShaderZ(self.sandstoneBricksTex, {})
+            self.draw.changeShader(sbt, {}, stage=self.stage)
+            self.changedShader = True
         if t > 2.2 and self.changedMusic == 0:
             self.changeNoise()
         if t > 2:
             self.matShaders[self.clouds.texNum]['add'] = 0.05
+        if 6 > t > 0:
+            self.matShaders[self.sandstoneBricksTex] = {
+                'dissolve':{'origin':(-14.5,0.5,20),
+                            'fact':np.float32(8 * t)}}
+            self.draw.changeShaderZ(self.sandstoneBricksTex,
+                                    self.matShaders[self.sandstoneBricksTex])
 
         # rest 1, peak 600
         pointKF = [(0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
@@ -404,9 +423,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if t > 2:
             r = list(rm)
-            for f in self.vtNames:
-                if 'rocks_ground_test' in f:
-                    r[self.vtNames[f]] = True
+            if t > 3:
+                for f in self.vtNames:
+                    if 'rocks_ground_test' in f:
+                        r[self.vtNames[f]] = True
             return r
         else:
             r = list(rm)
@@ -417,6 +437,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     r[self.vtNames[f]] = False
                 elif self.vtNames[f] > self.players[-1]['obj'].texNum:
                     r[self.vtNames[f]] = True
+            if t > 0.5:
+                r[self.sandstoneBricksTex] = False
             return r
 
 
@@ -1817,7 +1839,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                    ("DRAW", (128, 192, 255, 255))]
 
         if len(actPlayers) > 1:
-            if not self.gameStarted:
+            if not self.gameStarted and self.stage != 4:
                 snd = self.ENVTRACKS
                 self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
                 self.gameStarted = True

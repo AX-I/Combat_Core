@@ -59,6 +59,9 @@ drawMinAlpha = makeProgram("drawminalpha.c")
 drawZ = makeProgram("drawZ.c")
 drawZA = makeProgram("drawZalpha.c")
 
+drawDissolve = makeProgram('drawdissolve.c')
+drawZDissolve = makeProgram('drawZdissolve.c')
+
 drawFog = makeProgram('drawfog.c')
 drawSSR = makeProgram('drawwater.c')
 drawGlass = makeProgram('drawglass.c')
@@ -688,6 +691,15 @@ class CLDraw:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
             elif shaders[i]['SSR'] == 1:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
+
+        elif 'dissolve' in shaders[i]:
+            if 'dissolve' in self.oldShaders[i]:
+                draw = self.DRAW[i]
+            else:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawDissolve)
+            draw['fadeOrigin'].write(np.array(shaders[i]['dissolve']['origin'], 'float32'))
+            draw['fadeFact'].write(shaders[i]['dissolve']['fact'])
+
         else:
             draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
             draw['SM'] = 0
@@ -722,6 +734,27 @@ class CLDraw:
 
         self.VAO[i] = vao
 
+    def changeShaderZ(self, tn, shader):
+        i = tn
+        p = self.VBO[i]
+        if 'alpha' in shader:
+            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZA)
+            draw['TA'] = 2
+            vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
+        elif 'dissolve' in shader:
+            if 'dissolve' in self.oldShaders[i]:
+                draw = self.DRAWZ[i][1]
+                vao = self.DRAWZ[i][0]
+            else:
+                draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZDissolve)
+                vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
+            draw['fadeOrigin'].write(np.array(shader['dissolve']['origin'], 'float32'))
+            draw['fadeFact'].write(shader['dissolve']['fact'])
+        else:
+            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
+            vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
+        draw['aspect'].write(np.float32(self.H/self.W))
+        self.DRAWZ[i] = (vao, draw)
 
 
     def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
