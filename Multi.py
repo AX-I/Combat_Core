@@ -279,10 +279,40 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     # ==== Temple interactivity ====
     def lightTest(self):
         self.transStart = time.time()
+        try: _ = self.changedMusic
+        except:
+            self.changedMusic = 0
+
+        self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.wav'}}})
+
+        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.wav', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
         for p in range(len(self.players)):
             self.players[p]['poseFlash'] = self.flashKF[0][0]
+
+    def changeMusic(self):
+        self.si.put({"Play":(PATH+"../Sound/Forest4.wav", self.volm, True,
+                             (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
+
+        reverb = PATH+"../Sound/Forest4_Reverb.wav"
+
+        # Front L/R
+        self.si.put({"Play":(reverb, self.volm, True,
+                             (np.array((10,3,40.)), 12, 8, True))})
+        self.si.put({"Play":(reverb, self.volm, True,
+                             (np.array((10,3,0.)), 12, 8, True))})
+        # Back L/R
+        self.si.put({"Play":(reverb, self.volm, True,
+                             (np.array((-40,3,40.)), 12, 8, True))})
+        self.si.put({"Play":(reverb, self.volm, True,
+                             (np.array((-40,3,0.)), 12, 8, True))})
+        self.changedMusic = 2
+
+    def changeNoise(self):
+        self.si.put({"Play":(PATH+"../Sound/ForestNoise.wav", self.volmFX, True,
+                             (np.array((55, 12, 20.)), 70, 16, 1.0))})
+        self.changedMusic = 1
 
     def testTempleTrans(self):
         try:
@@ -309,6 +339,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             f = max(0.3, min(1, f))
             self.directionalLights[4]['i'] = di * 0.8 + do * f * 0.2
             return
+        if t > 6 and self.changedMusic == 1:
+            self.changeMusic()
+        if t > 2.2 and self.changedMusic == 0:
+            self.changeNoise()
         if t > 2:
             self.matShaders[self.clouds.texNum]['add'] = 0.05
 
@@ -408,6 +442,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a = self.players[sc]
         if 'restAnim' in a: return
         if a['jump'] > 0: return
+
+        self.si.put({'Play':(PATH+'../Sound/Recover.wav', self.volmFX * 0.8,
+                             False)})
 
         a['restStart'] = time.time()
         a['restFrame'] = -100
@@ -1441,7 +1478,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def onStart(self):
         self.gameStarted = False
 
-        if self.isClient:
+        if self.stage == 4:
+            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.wav', self.volmFX * 0.9, True)})
+        elif self.isClient:
             snd = self.ENVTRACKS
             self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
             self.gameStarted = True
