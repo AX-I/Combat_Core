@@ -673,21 +673,31 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.frameNum < 4: return
         if p['moving']: return
 
+        regenTargs = False
+
         try: _ = self.testTargs
         except:
-            activeIds = list(self.actPlayers)
-            pm = np.random.permutation(activeIds)
-            targs = [0 for _ in range(self.NPLAYERS)]
-            for t in range(len(pm)):
-                targs[pm[t]] = activeIds[t]
-                if pm[t] == activeIds[t]:
-                    targs[pm[t]] = activeIds[t-1]
-            self.testTargs = targs
+            regenTargs = True
 
             with open(PATH+'lib/EyeTracking.txt') as fuv:
                 uvInfo = fuv.readlines()
                 uvInfo = json.loads(''.join(uvInfo[3:]))
                 self.eyeUV = {int(n):uvInfo[n] for n in uvInfo}
+        else:
+            if self.testTargNum != len(self.actPlayers):
+                regenTargs = True
+
+        if regenTargs:
+            activeIds = list(self.actPlayers)
+            self.testTargNum = len(activeIds)
+            pm = np.random.permutation(activeIds)
+            targs = [None for _ in range(self.NPLAYERS)]
+            for t in range(len(pm)):
+                targs[pm[t]] = activeIds[t]
+                if pm[t] == activeIds[t]:
+                    targs[pm[t]] = activeIds[t-1]
+            # {src: targ, ...}
+            self.testTargs = targs
 
 
         head = p['b1'].children[0].children[2]
@@ -696,7 +706,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         rot = np.array(head.TM[:3,:3])
         pos = head.TM[3,:3] + np.array([0,0.1,0])
 
-        target = self.players[self.testTargs[p['id']]]
+        tg = self.testTargs[p['id']] or 0
+        if tg == p['id']: return
+        target = self.players[tg]
 
         thead = target['b1'].children[0].children[2]
         tpos = thead.TM[3,:3] + np.array([0,0.1,0])
@@ -789,6 +801,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i = self.players[0]['rig'].interpTree(temp, pose, interp)
         legU.importPose(i)
 
+    def setFullLegIKPos(self, a):
+        try:
+            footR = a['b1'].children[1].children[0].children[0]
+            ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
+            ikR = np.array((footR.TM[3,0], ihR, footR.TM[3,2]))
+            footL = a['b1'].children[2].children[0].children[0]
+            ihL = self.terrain.getHeight(*footL.TM[3,:3:2])
+            ikL = np.array((footL.TM[3,0], ihL, footL.TM[3,2]))
+            a['legIKPos'] = (ikR, ikL)
+            a['lastIKfacing'] = a['cr']
+        except IndexError: pass
 
     def setYoffset(self, p):
         ih = self.terrain.getHeight(*(p['b1'].offset[::2] - p['animOffset'][::2]))
@@ -2279,22 +2302,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if CURRTIME - a['animTrans'] < 0.2:
                 self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.4)
 
-                try:
-                    footR = a['b1'].children[1].children[0].children[0]
-                    ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
-                    ikR = np.array((footR.TM[3,0], ihR, footR.TM[3,2]))
-                    footL = a['b1'].children[2].children[0].children[0]
-                    ihL = self.terrain.getHeight(*footL.TM[3,:3:2])
-                    ikL = np.array((footL.TM[3,0], ihL, footL.TM[3,2]))
-                    a['legIKPos'] = (ikR, ikL)
-                except IndexError: pass
+                self.setFullLegIKPos(a)
+
                 a['b1TempOff'] = np.array(a['animOffset'])
 
-            elif 'restAnim' not in a:
+            if a['throwAnim'] or a['gesturing']:
                 self.testLegIK(a)
 
             if not a['moving'] and a['jump'] <= 0 and 'restAnim' not in a:
                 self.setYoffset(a)
+                if 'lastIKfacing' in a:
+                    if abs(a['cr'] - a['lastIKfacing']) > 0.45*pi:
+                        a['animTrans'] = CURRTIME
+                        a['tempPose'] = a['rig'].exportPoseFlat()
 
             if not a['moving'] and not a['gesturing'] \
                and not a['throwAnim'] and 'restAnim' not in a \
@@ -2373,9 +2393,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameProfile('PlayerMove')
 
         if not self.VRMode:
-            self.pos = self.players[sc]["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
-            self.pos[1] += self.players[sc]['legIKoffset']
-            self.pos -= self.players[sc]['animOffset']
+            sp = self.players[sc]
+            self.pos = sp["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
+            self.pos[1] += sp['legIKoffset']
+            self.pos -= sp['animOffset']
 
         if self.camAvg:
             self.pos = np.average([p['b1'].offset[:3] for p in self.players
