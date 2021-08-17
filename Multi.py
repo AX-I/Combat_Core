@@ -290,7 +290,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({'Play':(PATH+'../Sound/NoiseFlash.wav', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
-        for p in range(len(self.players)):
+        for p in self.actPlayers:
             self.players[p]['poseFlash'] = self.flashKF[0][0]
 
         for v in self.vtNames:
@@ -417,7 +417,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for p in self.actPlayers:
             a = self.players[p]
             dist = Phys.eucDist(a['b1'].offset[:3], (-14.5, 2, 20))
-            if t > (dist/40) and a['poseFlash'] <= self.flashKF[-1][0]:
+            if t > (dist/40) and 'poseFlash' in a \
+               and a['poseFlash'] <= self.flashKF[-1][0]:
                 a['moving'] = False
                 a['animTrans'] = -1
 
