@@ -332,6 +332,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else:
                     t = -1
 
+        self.draw.setUVOff(self.flameMTL, (0,0), (1,1),
+                           (-int(t*14)//5*0.2, int(t*14-1)*0.2))
+
         if t > 12:
             # Fade out sky light if inside temple
             di = np.array(self.directionalLights[4]['i'])
@@ -345,6 +348,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             f = max(0.3, min(1, f))
             self.directionalLights[4]['i'] = di * 0.8 + do * f * 0.2
+
+            di[:] = self.directionalLights[3]['i']
+            do[:] = [0.04,0.1,0.2]
+            self.directionalLights[3]['i'] = di * 0.7 + do * max(0.6, f) * 0.3
+
+            # Fade out bounce light too
+            di[:] = self.directionalLights[1]['i']
+            do[:] = [0.22,0.24,0.2]
+            self.directionalLights[1]['i'] = di * 0.7 + do * max(0.7, f) * 0.3
+
             return
         if t > 6 and self.changedMusic == 1:
             self.changeMusic()
@@ -373,7 +386,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         d = self.directionalLights[0]
         dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
-                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.6,0.9]) * 1.2)]
+                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.5,0.5]) * 1.4)]
 
         d['i'] = Anim.interpAttr(t, dirKF)
 
@@ -1165,23 +1178,21 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         elif self.stage == 4:
             tsize = 320
             tscale = 100 / tsize
-            coords = [10 + tsize*tscale/2, -3.4, 20 + tsize*tscale/2]
-            self.terrain = VertTerrain0(coords, PATH+"../Models/Temple/Height.png",
-                                        rot=(0,pi,0),
-                                        scale=tscale, vertScale=22,
-                                        vertPow=2.2, vertMax=0.6)
+            coords = [10 + tsize*tscale/2, -3.15, 20 + tsize*tscale/2]
+            self.terrain = VertTerrain0(coords, PATH+"../Models/Temple/HeightNewL.png",
+                                        scale=tscale, vertScale=42.5)
 
             self.t2 = Phys.TerrainCollider(coords, self.terrain.size[0],
-                                           self.terrain.heights, 0.5)
+                                           self.terrain.heights, tscale)
             self.t2.onHit = lambda x: self.explode(x)
             self.w.addCollider(self.t2)
 
             self.addVertObject(VertModel, [10, 0, 20], rot=(0,-pi/2,0),
-                               filename=PATH+"../Models/Temple/Temple1.obj",
-                               shadow="CR",
+                               filename=PATH+"../Models/Temple/Temple9.obj",
+                               shadow="CR", mip=2,
                                blender=True)
 
-            self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
+            self.addVertObject(VertModel, [10,-0.05,20], rot=(0,-pi/2,0),
                                filename=PATH+"../Models/Temple/TempleTrans.obj",
                                shadow="CR")
 
@@ -1203,6 +1214,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.water.texNum = self.vtNames[f]
                 if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
                     self.matShaders[self.vtNames[f]]['translucent'] = 1
+                if 'Flower' in f:
+                    self.matShaders[self.vtNames[f]]['translucent'] = 1
+                if 'Flame' in f:
+                    self.flameMTL = self.vtNames[f]
+                    self.matShaders[self.flameMTL] = {'add': 1.6, 'noline': 1}
+                    self.vertObjects[self.flameMTL].castShadow = False
 
             pp1 = np.array((-14.5,15,24.))
             pp2 = np.array((-14.5,15,16.))
@@ -1215,16 +1232,27 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    {'i':pi2, 'pos':pp2},
                                    {'i':pic, 'pos':ppc}]
 
+            # Torches
+            fi = np.array((1,0.6,0.35)) * 2
+            self.envPointLights.extend([
+                {'i':fi, 'pos':(-6.3, 3.2,5.5)},
+                {'i':fi, 'pos':(-22.7,3.2,5.5)},
+                {'i':fi, 'pos':(-6.3, 3.2,34.5)},
+                {'i':fi, 'pos':(-22.7,3.2,34.5)}
+            ])
+
+            # Overwritten by transition
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
             # First bounce
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.22,0.24,0.2]})
             # Second bounce
             self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
             # Sky
-            self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.1,0.2]})
-            self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.45]})
-            self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/approaching_storm_1k.ahdr",
-                                    rot=(0,0,0), hdrScale=16)
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.12,0.16]})
+            self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.4]})
+
+            fn = "../Skyboxes/approaching_storm_1k.ahdr"
+            self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=16)
             self.skyBox.created()
 
             skyShader = self.matShaders[self.skyBox.texNum]
@@ -1379,8 +1407,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
 
-
-        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35), (-30, 60)]
+        # (Min xz, Max xz)
+        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35), (-35, 60)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]
@@ -2161,7 +2189,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 fx = a["b1"].offset[0] + bx
                 fy = a["b1"].offset[2] + by
                 b1, b2 = self.BORDER
-                borderOk = (fx < b2) and (fx > b1) and (fy < b2) and (fy > b1)
+                borderOk = (b1 < fx < b2) and (b1 < fy < b2)
 
                 if (slopeOk or stepOk) and borderOk:
                     a["b1"].offset[0] += bx
