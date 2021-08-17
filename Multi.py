@@ -344,10 +344,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             # Border x: (-30, 7)
             f = max(0, min(1, (pos[0] - 5)/8)) + max(0, min(1, (-30 - pos[0])/8))
             # Border z: (3, 35)
-            f += max(0, min(1, (pos[2] - 30)/8)) + max(0, min(1, (5 - pos[2])/8))
+            f += max(0, min(1, (pos[2] - 32)/8)) + max(0, min(1, (5 - pos[2])/8))
 
-            f = max(0.3, min(1, f))
-            self.directionalLights[4]['i'] = di * 0.8 + do * f * 0.2
+            f = min(1, f)
+            self.directionalLights[4]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
 
             di[:] = self.directionalLights[3]['i']
             do[:] = [0.04,0.1,0.2]
@@ -358,7 +358,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             do[:] = [0.22,0.24,0.2]
             self.directionalLights[1]['i'] = di * 0.7 + do * max(0.7, f) * 0.3
 
+            # Fade out fog too
+            di = self.matShaders[self.fogMTL]['fogDist']
+            do = 40
+            fdist = di * 0.9 + do * max(0.7, 1-f) * 0.1
+            self.matShaders[self.fogMTL]['fogDist'] = fdist
+
             return
+
         if t > 6 and self.changedMusic == 1:
             self.changeMusic()
         if t > 6 and not self.changedShader:
@@ -398,14 +405,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         fparams = Anim.interpAttr(t, fogKF)
 
-        for i in range(len(self.matShaders)):
-            if 'fog' in self.matShaders[i]:
-                s = dict(self.matShaders[i])
-                s['fog'] = fparams[0]
-                s['fogAbsorb'] = fparams[1]
-                s['fogDist'] = fparams[2]
-                s['fogScatter'] = fparams[3]
-                self.matShaders[i] = s
+        s = dict(self.matShaders[self.fogMTL])
+        s['fog'] = fparams[0]
+        s['fogAbsorb'] = fparams[1]
+        s['fogDist'] = fparams[2]
+        s['fogScatter'] = fparams[3]
+        self.matShaders[self.fogMTL] = s
 
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
@@ -1221,11 +1226,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                shadow="CR")
 
             for f in self.vtNames:
-                if 'Fog' in f:
-                    self.matShaders[self.vtNames[f]]['fog'] = 0.01
-                    self.matShaders[self.vtNames[f]]['fogAbsorb'] = 0.01
-                    self.matShaders[self.vtNames[f]]['2d'] = 1
-                    self.vertObjects[self.vtNames[f]].castShadow = False
                 if 'Water' in f:
                     self.matShaders[self.vtNames[f]]['SSR'] = '0'
                     self.vertObjects[self.vtNames[f]].castShadow = False
@@ -1238,12 +1238,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.water.texNum = self.vtNames[f]
                 if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
                     self.matShaders[self.vtNames[f]]['translucent'] = 1
-                if 'Flower' in f:
+                if 'Flower' in f or 'ce0a' in f:
                     self.matShaders[self.vtNames[f]]['translucent'] = 1
                 if 'Flame' in f:
                     self.flameMTL = self.vtNames[f]
                     self.matShaders[self.flameMTL] = {'add': 1.6, 'noline': 1}
                     self.vertObjects[self.flameMTL].castShadow = False
+                if 'Sandstone' in f:
+                    tm = self.vtextures[self.vtNames[f]] * 0.8
+                    self.vtextures[self.vtNames[f]] = tm.astype('uint16')
 
             pp1 = np.array((-14.5,15,24.))
             pp2 = np.array((-14.5,15,16.))
@@ -1334,6 +1337,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            texture=PATH+"../Assets/Blank2.png",
                            useShaders={"2d":1, "fog":fog, 'fogAbsorb':fabs,
                                        'fogDist':fdist})
+            self.fogMTL = self.vertObjects[-1].texNum
 
         if self.stage == 4:
             self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
