@@ -24,6 +24,9 @@
 import numpy as np
 import pyaudio
 import wave
+import pyogg
+import threading, queue
+
 import time
 from queue import Empty
 from math import sqrt
@@ -32,6 +35,27 @@ CHUNK = 1024
 
 def eucLen(a):
     return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
+
+def readFlac(f):
+    buf = np.frombuffer(pyogg.FlacFile(f).buffer, 'int16').reshape((-1,2))
+    return buf[:buf.shape[0]//2]
+
+def readFlacThread(f, q):
+    q.put((f, readFlac(f)))
+
+class arrayWave:
+    def __init__(self, ar):
+        """Wave interface for array"""
+        self.ar = ar
+        self.frame = 0
+    def getnframes(self):
+        return self.ar.shape[0]
+    def readframes(self, n):
+        out = self.ar[self.frame:self.frame+n]
+        self.frame += n
+        return out
+    def rewind(self):
+        self.frame = 0
 
 class SoundManager:
     def __init__(self, si):
@@ -51,6 +75,10 @@ class SoundManager:
         self.pos = np.zeros(3, 'float')
         self.vvh = np.array([1.,0,0])
 
+        self.preloadTracks = {}
+        self.preloadThreads = set()
+        self.preloadQ = queue.Queue(16)
+
     def run(self, w=2, r=22050, n=2):
         """w = 2 for int16"""
         self.channels = n
@@ -66,6 +94,12 @@ class SoundManager:
             batchDone = False
             num = 0
             while not batchDone:
+                if len(self.preloadThreads) > 0:
+                    try: p = self.preloadQ.get_nowait()
+                    except Empty: pass
+                    else:
+                        self.preloadTracks[p[0]] = p[1]
+                        #print('Recieved preload', p[0])
                 try: cmd = self.si.get(True, 0.01)
                 except Empty: batchDone = True
                 else:
@@ -107,6 +141,9 @@ class SoundManager:
                         for i in self.tracks:
                             if self.tracks[i]['filename'] == cmd['Loop']['Track']:
                                 self.tracks[i]['loop'] = cmd['Loop']['loop']
+                    elif "Preload" in cmd:
+                        for f in cmd['Preload']:
+                            self.preloadFile(f)
                 num += 1
                 if num > 7:
                     batchDone = True
@@ -116,6 +153,9 @@ class SoundManager:
 
         self.stream.stop_stream()
         self.stream.close()
+
+        for t in self.preloadThreads:
+            t.join()
 
         while not self.si.empty():
             try: self.si.get(True, 0.1)
@@ -175,22 +215,37 @@ class SoundManager:
         self.stream.write(frames.tobytes())
         
     def playFile(self, f, volume=(0.5, 0.5), loop=False):
-        a = wave.open(f, "rb")
+        flac = f[:-4] + '.flac'
+        if flac in self.preloadTracks:
+            a = arrayWave(self.preloadTracks[flac])
+        else:
+            try:
+                a = wave.open(f, "rb")
+            except FileNotFoundError:
+                #print('Read FLAC', f)
+                a = arrayWave(readFlac(f[:-4] + '.flac'))
+
         n = a.getnframes()
-        r = a.getframerate()
-        if r != self.rate: print("Non-matching framerate")
 
-        w = a.getsampwidth()
-        if w != self.width: print("Non-matching width")
-
-        c = a.getnchannels()
-        if c != self.channels: print('Non-matching channels')
-        
         track = {"wave":a, "frame":0, "N":n, 'filename': f,
                  "vol":np.array(volume, "float"), "loop":loop}
         
         self.tcount += 1
         self.tracks[self.tcount] = track
+
+    def preloadFile(self, f):
+        if f in self.preloadTracks:
+            print('Already preloaded')
+            return
+        try: a = wave.open(f, "rb")
+        except FileNotFoundError:
+            #print('Preload FLAC', f)
+            #a = readFlac(f[:-4] + '.flac')
+            #self.preloadTracks[f] = a
+            t = threading.Thread(target=readFlacThread,
+                                 args=(f[:-4] + '.flac', self.preloadQ))
+            t.start()
+            self.preloadThreads.add(t)
 
     def close(self):
         self.p.terminate()

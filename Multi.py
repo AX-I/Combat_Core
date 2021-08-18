@@ -86,6 +86,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
         self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
+        self.si.put({'Preload':[PATH + "../Sound/Noise.wav"]})
 
         self.proceed = True
         try:
@@ -986,6 +987,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a["Energy"] = 1
 
     def createObjects(self):
+        if self.stage != 4:
+            snd = self.ENVTRACKS
+            self.si.put({'Preload':[PATH+'../Sound/' + snd[self.stage]]})
+
         self.NPLAYERS = 0
 
         st = time.time()
@@ -1297,6 +1302,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             skyShader['rotY'] = 0.25
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
+            self.si.put({'Preload':[PATH+"../Sound/Forest4.wav",
+                                    PATH+"../Sound/Forest4_Reverb.wav",
+                                    PATH+"../Sound/NoiseOpen.wav",
+                                    PATH+"../Sound/ForestNoise.wav"]})
 
 
         self.spheres = []
