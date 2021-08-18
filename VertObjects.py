@@ -81,8 +81,9 @@ class VertObject:
         if "mip" in kwargs:
             self.mip = kwargs["mip"]
 
-        if "Lights" in texture or "plant" in texture or "as12lef" in texture: self.mip = None
-        
+        if "Background" in texture:
+            kwargs['shadow'] = ''
+
         if "shadow" in kwargs:
             self.castShadow = "C" in kwargs["shadow"]
             self.receiveShadow = "R" in kwargs["shadow"]
@@ -217,7 +218,7 @@ class VertObject:
             np.clip(self.v, 0, 1, out=self.v)
         self.transform(origin=self.origin, early=True)
         del self.u, self.v
-        if self.static:
+        if True: #self.static:
             del self.wedgePoints, self.vertNorms
     
     def transform(self, origin=False, early=False):

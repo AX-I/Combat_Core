@@ -1102,6 +1102,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                subDiv=1, shadow="CR",
                                blender=hasNewAtrium)
 
+            for f in self.vtNames:
+                if "CV" in f:
+                    self.matShaders[self.vtNames[f]]['emissive'] = 1.0
+                if "BackgroundLight" in f:
+                    self.matShaders[self.vtNames[f]]['add'] = 0.5
+                    self.matShaders[self.vtNames[f]]['noline'] = True
+                    self.matShaders[self.vtNames[f]]['cull'] = 1
+                if "FieldBackground" in f:
+                    self.matShaders[self.vtNames[f]]['emissive'] = 2.0
+
             self.terrain = VertTerrain0([0,-0.6,0],
                                         PATH+"../Atrium/AtriumNav.png",
                                         scale=0.293, vertScale=20)
