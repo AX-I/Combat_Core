@@ -46,6 +46,10 @@ uniform int translucent;
 
 in vec3 vertLight;
 
+uniform vec3 vpos;
+
+uniform float specular;
+
 void main() {
 	float tz = 1.0/depth;
 
@@ -119,9 +123,18 @@ void main() {
     light += vertLight;
 
     light += highColor;
+
+    // Rim light
+	vec3 a = v_pos*tz - vpos;
+	float nd = dot(a, norm);
+	vec3 refl = normalize(a - 2 * nd * norm);
+	float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
+	vec3 spec = theta * theta * vec3(0.008);
+    spec *= specular;
+
+
     light *= (1 + highMult);
 
-    vec3 rgb = texture(tex1, v_UV / depth).rgb * light;
-
+    vec3 rgb = texture(tex1, v_UV / depth).rgb * light + spec;
     f_color = vec4(rgb, 0.5);
 }

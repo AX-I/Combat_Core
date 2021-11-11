@@ -647,6 +647,8 @@ class CLDraw:
                 draw['translucent'] = shaders[i]['translucent']
             if 'highlight' in shaders[i]:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
+            if 'spec' in shaders[i]:
+                draw['specular'].write(np.float32(shaders[i]['spec']))
 
         elif 'emissive' in shaders[i]:
             draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
@@ -705,6 +707,8 @@ class CLDraw:
             draw['SM'] = 0
             if 'highlight' in shaders[i]:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
+            if 'spec' in shaders[i]:
+                draw['specular'].write(np.float32(shaders[i]['spec']))
 
         try:
             if 'stage' in kwargs:
@@ -809,11 +813,8 @@ class CLDraw:
 
             self.DRAWZ[i][0].render(moderngl.TRIANGLES)
 
-        ctx.enable(moderngl.BLEND)
 
         self.fbo.use()
-        ctx.blend_func = moderngl.ONE, moderngl.ZERO
-        ctx.blend_equation = moderngl.FUNC_ADD
         self.fbo.depth_mask = True
 
         # Opaque
@@ -842,7 +843,6 @@ class CLDraw:
 
         if self.doSSAO:
             ctx.disable(moderngl.DEPTH_TEST)
-            ctx.disable(moderngl.BLEND)
 
             self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
             self.POSTFBO.use()
@@ -856,10 +856,10 @@ class CLDraw:
 
             # Blend with frame
             self.blit(self.fbo, self.POSTBUF, self.W, self.H)
-            ctx.enable(moderngl.BLEND)
             ctx.enable(moderngl.DEPTH_TEST)
-
             self.doSSAO = False
+
+        ctx.enable(moderngl.BLEND)
 
         # Transparent
         for i in range(len(self.VBO)):
