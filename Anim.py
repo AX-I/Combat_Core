@@ -55,7 +55,7 @@ def cubicInterp(t: float, *args):
     y = np.array([[a[1] for a in args]], 'float32').T
     M = np.array([[a[0]**i for i in range(3,-1,-1)] for a in args], 'float32')
     curve = np.linalg.inv(M) @ y
-    sol = np.array([t**i for i in range(3,-1,-1)]) @ curve
+    sol = np.array([t**i for i in range(3,-1,-1)], 'float32') @ curve
     return sol[0]
 
 def cubicInterpLoop(kf, k, p, timer='poset'):

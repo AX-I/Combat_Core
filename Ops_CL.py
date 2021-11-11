@@ -258,7 +258,7 @@ class CLDraw:
             b[4*i+3] *= tt
         return b
 
-    def highlight(self, hc, tn):
+    def highlight(self, hc, tn, mult=None):
         hc = np.array(hc, dtype="float32")
         vs = np.int32(self.gSize[tn]*3//BLOCK_SIZE + 1)
         sct.highlight(cq, (vs, 1), (BLOCK_SIZE, 1),
@@ -495,9 +495,14 @@ class CLDraw:
     def setUVOff(self, tn, lo, hi, offset):
         pass
 
+    def changeShaderZ(self, tn, shader):
+        pass
+    def changeShader(self, tn, shader, **kwargs):
+        pass
+
     def drawAll(self, shaders,
                 mask=None, shadowIds=[0,1],
-                useOpacitySM=False):
+                useOpacitySM=False, stage=None):
 
         # Shaders are alpha shadow mip refl sky ortho cull etc.
 
@@ -874,7 +879,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.GO, self.SSGO)
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
-    def gamma(self, ex):
+    def gamma(self, ex, tonemap=None):
         s = 4; t = 4
         gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
                 np.float32(ex),
@@ -893,7 +898,7 @@ class CLDraw:
                 self.DB, self.sScale, self.RAND,
                 self.W, self.H, np.int32(s), g_times_l=True)
 
-    def dof(self, focus):
+    def dof(self, focus, aperture=None):
         s = 16
         dof.dof(cq, (self.H//s, self.W//s), (s, s),
                 self.RO, self.GO, self.BO,
