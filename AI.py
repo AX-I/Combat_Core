@@ -157,6 +157,8 @@ class AIAgent:
         self.navPath = None
         self.pathLen = None
 
+        self.isStuck = False
+
 class AIManager:
     def setupAI(self, nums):
         self.agents = {}
@@ -254,9 +256,9 @@ class AIManager:
                 agent.navTarget = self.players[closestTarget]
                 agent.targetInterest = 4
 
-            diff = a["b1"].offset - agent.lastPos
+            diff = (a["b1"].offset - np.array((*a['animOffset'], 0))) - agent.lastPos
 
-            if np.sum(diff[::2]) != 0:
+            if not agent.isStuck:
                 agent.stuck = 0
 
             a["cv"] = 0
@@ -317,7 +319,7 @@ class AIManager:
                                 gi = (0,2,3)[random.randint(0,2)]
                         self.gesture(pn, gi, "aa")
 
-            agent.lastPos = np.array(a["b1"].offset)
+            agent.lastPos = np.array(a["b1"].offset - np.array((*a['animOffset'],0)))
             agent.targPred = np.array(agent.navTarget["b1"].offset)
 
     def _retreat(self, pn):
@@ -396,7 +398,7 @@ class AIManager:
             agent.behavior["navigate"] += 0.2
             agent.lostTrack = 0
 
-        if a["moving"] and (np.sum(diff) == 0):
+        if a["moving"] and agent.isStuck:
             agent.stuck += 1
             if agent.stuck > 3:
                 agent.behavior["navigate"] = 10
@@ -527,7 +529,7 @@ class AIManager:
 
         a["cr"] = fol[1]
 
-        if a["moving"] and (np.sum(diff) == 0):
+        if a["moving"] and agent.isStuck:
             agent.stuck += 1
 
             a["cr"] += (agent.dirCC * 2 - 1) * 0.8

@@ -56,7 +56,7 @@ PATH = OpsConv.PATH
 SWITCHABLE = True
 SHOWALL = False
 GESTLEN = 0.6
-LOADALL = False
+LOADALL = True
 
 def mkServer(pi, po, kwargs):
     a = TCPServer(pi, po, isclient=False, **kwargs)
@@ -299,7 +299,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.sandstoneBricksTex = self.vtNames[v]
 
     def changeMusic(self):
-        self.si.put({"Play":(PATH+"../Sound/Forest4.wav", self.volm, True,
+        self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
                              (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
 
         reverb = PATH+"../Sound/Forest4_Reverb.wav"
@@ -325,13 +325,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try:
             t = time.time() - self.transStart
         except:
+            t = -1
             for p in self.actPlayers:
+                if self.isClient: break
                 pos = self.players[p]['b1'].offset[:3]
-                if Phys.eucDist(pos, (-14.5, 2, 20)) < 1:
+                if Phys.eucDist(pos, (-14.5, 2.4, 20)) < 1:
                     self.lightTest()
                     t = 0
-                else:
-                    t = -1
 
         self.draw.setUVOff(self.flameMTL, (0,0), (1,1),
                            (-int(t*14)//5*0.2, int(t*14-1)*0.2))
@@ -339,7 +339,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if t > 12:
             # Fade out sky light if inside temple
             di = np.array(self.directionalLights[4]['i'])
-            do = np.array([0.1,0.25,0.45])
+            do = np.array([0.1,0.25,0.4])
             pos = self.players[self.selchar]['b1'].offset[:3]
 
             # Border x: (-30, 7)
@@ -351,7 +351,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.directionalLights[4]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
 
             di[:] = self.directionalLights[3]['i']
-            do[:] = [0.04,0.1,0.2]
+            do[:] = [0.04,0.12,0.18]
             self.directionalLights[3]['i'] = di * 0.7 + do * max(0.6, f) * 0.3
 
             # Fade out bounce light too
@@ -394,7 +394,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         d = self.directionalLights[0]
         dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
-                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.5,0.5]) * 1.4)]
+                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.5,0.7]) * 1.4)]
 
         d['i'] = Anim.interpAttr(t, dirKF)
 
@@ -971,7 +971,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'animOffset':np.zeros(3), 'animTrans':-100,
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
              'throwAnim':False, 'animFired':False,
-             'poseThrow':0, 'poseIdle':0}
+             'poseThrow':0, 'poseIdle':0,
+             'vh':0}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -1001,10 +1002,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Samus_PED/Samus_3.rig", 1.33, 1.66),
+        self.rpi = [(mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
                     (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
                     (mpath + "L3/L3.rig", 0.75, 1.16),
-                    (mpath + "Test3/Test3I.rig", 0.8, 1.32),
+                    (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
                     (mpath + "Zelda/Ztest3.rig", 1, 1.32),
                     (mpath + "LinkTP/Li.rig", 0.75, 1.5),
                     (mpath + "Ahri/Ahri4.rig", 1.8, 1.62),
@@ -1015,60 +1016,61 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
                            animated=True, texMul=1, reflect="1a",
+                           useShaders={'spec':1},
                            scale=1.33, shadow="")
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Zelda2/Test5b.obj",
                            animated=True,
-                           texMul=2.5,
-                           scale=0.33, shadow="R", rot=(0,0,0))
+                           texMul=2.5, useShaders={'spec': 1},
+                           scale=0.33, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"L3/L3.obj",
                            animated=True,
-                           texMul=1,
+                           texMul=1, useShaders={'spec': 1},
                            scale=0.75, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
             self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Test3/Test3I.obj",
-                               animated=True,
-                               scale=0.8, shadow="R")
+                               filename=mpath+"Test3/Test3J.obj",
+                               animated=True, useShaders={'spec':1},
+                               scale=0.8 / 1.08, shadow="R")
             self.addPlayer(self.vertObjects[-1])
             self.matShaders[self.vertObjects[-1].nextMtl.texNum]["sub"] = 0.6
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Zelda/Ztest4.obj",
                                animated=True,
-                               texMul=2,
+                               texMul=2, useShaders={'spec':1},
                                scale=1, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"LinkTP/Li.obj",
                                animated=True,
-                               texMul=1.5,
+                               texMul=1.5, useShaders={'spec':1},
                                scale=0.75, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Ahri/Ahri4.obj",
-                               animated=True,
+                               animated=True, useShaders={'spec':1},
                                scale=1.8, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Stormtrooper/Trooper5.obj",
-                               animated=True,
+                               animated=True, useShaders={'spec':1},
                                scale=1.4, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Vader/Vader5.obj",
-                               animated=True,
+                               animated=True, useShaders={'spec':1},
                                scale=1.6, shadow="R")
             self.addPlayer(self.vertObjects[-1])
             self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
@@ -1088,7 +1090,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.w.addCollider(self.t2)
 
             self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
-            self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
+            self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.32,0.1]})
             self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
             self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
                                     rot=(0,-pi/3,0), hdrScale=12)
@@ -1097,15 +1099,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
         elif self.stage == 1:
-            hasNewAtrium = os.path.exists(PATH+"../Atrium/Atrium8.obj")
-            atriumName = '8.obj' if hasNewAtrium else 'AtlasY.obj'
-
             self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
-                               filename=PATH+"../Atrium/Atrium" + atriumName,
+                               filename=PATH+"../Atrium/Atrium8Atlas.obj",
                                scale=1.2, mip=2,
                                useShaders={"cull":1},
-                               subDiv=1, shadow="CR",
-                               blender=hasNewAtrium)
+                               subDiv=1, shadow="CR")
 
             for f in self.vtNames:
                 if "CV" in f:
@@ -1232,7 +1230,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.w.addCollider(self.t2)
 
             self.addVertObject(VertModel, [10, 0, 20], rot=(0,-pi/2,0),
-                               filename=PATH+"../Models/Temple/Temple9.obj",
+                               filename=PATH+"../Models/Temple/Temple9test.obj",
                                shadow="CR", mip=2,
                                blender=True)
 
@@ -1289,8 +1287,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.22,0.24,0.2]})
             # Second bounce
             self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
-            # Sky
-            self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.12,0.16]})
+            # Sky light
+            self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.12,0.18]})
             self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.4]})
 
             fn = "../Skyboxes/approaching_storm_1k.ahdr"
@@ -1303,7 +1301,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-            self.si.put({'Preload':[PATH+"../Sound/Forest4.wav",
+            self.si.put({'Preload':[PATH+"../Sound/Forest5.wav",
                                     PATH+"../Sound/Forest4_Reverb.wav",
                                     PATH+"../Sound/NoiseOpen.wav",
                                     PATH+"../Sound/ForestNoise.wav"]})
@@ -1505,7 +1503,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.motionBlur(self.oldVPos, self.oldVMat)
 
         db = self.draw.getDB()
-        target = max(0.8, min(6, db[self.H//2, self.W//2]))
+        target = max(0.6, min(6, db[self.H//2, self.W//2]))
         df = self.dofFoc
         if (target < self.dofFoc) or (self.frameNum & 1 == 0):
             self.dofFoc = sqrt(sqrt(df * df * df * target))
@@ -1541,6 +1539,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if sc is None:
             sc = self.selchar
         a = self.players[sc]
+        if vh is not None: a['vh'] = vh
         if a['frameFired'] > 0: return True
         a['frameFired'] = self.frameNum
         a['fireColor'] = color
@@ -1697,9 +1696,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in self.actPlayers:
             a = self.players[i]
             dat[a["num"]] = {
-                "r1": np.round(a["b1"].offset, 3).tolist(),
+                "r1": np.round(a["b1"].offset[:3] - a['animOffset'], 3).tolist(),
                 "m1": int(a["moving"]),
-                "c1": a["cr"],
+                "c1": a["cr"], 'c2': a['cv'],
                 'throwAnim': a['throwAnim'],
                 'fireColor': a['fireColor'],
                 "hc": [c.hc for c in a["pv"].colliders],
@@ -1707,6 +1706,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 "gg": a["gestNum"], "gi": a["gestId"],
                 "jp": a["jump"],
                 #"hf": a["isHit"]
+                'vh': a['vh']
                 }
         dat[self.selchar]['vh'] = float(self.vv[1])
         dat[self.selchar]['fCam'] = self.fCam
@@ -1730,6 +1730,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 'restPlayer':self.restPlayer}
         if self.frameFired: adat["ff"] = self.frameFired
 
+        try: adat['trans'] = self.transStart
+        except: pass
+
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
@@ -1739,9 +1742,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         dat = {}
         a = self.players[self.selchar]
         dat[a["num"]] = {
-            "r1": np.round(a["b1"].offset, 3).tolist(),
+            "r1": np.round(a["b1"].offset[:3] - a['animOffset'], 3).tolist(),
             "m1": a["moving"],
-            "c1": a["cr"],
+            "c1": a["cr"], 'c2': a['cv'],
             "fire": self.frameFired,
             "fire2": self.frameFiredOld,
             'throwAnim': a['throwAnim'],
@@ -1754,6 +1757,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         adat = {"players":dat, "time":self.frameNum,
                 'restPlayer':self.restPlayer}
+
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
@@ -1796,9 +1800,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         for i in range(len(a["hc"])):
                             sc["pv"].colliders[i].hc = a["hc"][i]
                     if int(pn) == self.selchar: continue
-                    sc["b1"].offset = np.array(a["r1"])
+                    sc["b1"].offset[:3] = a["r1"]
                     sc["moving"] = a["m1"]
                     sc["cr"] = a["c1"]
+                    sc['cv'] = a['c2']
                     if 'vh' in a: sc['vh'] = a['vh']
                     if 'fCam' in a: sc['fCam'] = a['fCam']
                     if "ee" in a: sc["Energy"] = a["ee"]
@@ -1860,6 +1865,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         if b['restPlayer'] != self.lastRestPlayer:
                             self.respawnTest(b['restPlayer'])
 
+                if 'trans' in b:
+                    try:
+                        if self.transSync != b['trans']:
+                            self.lightTest()
+                            self.transSync = b['trans']
+                    except AttributeError:
+                        self.lightTest()
+                        self.transSync = b['trans']
+
             except queue.Empty: pass
             except KeyError:
                 raise #print("Game has already finished!")
@@ -1914,7 +1928,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if self.VRMode: self.frameUpdateVR()
 
-        vf = 7 if self.VRMode else 1
+        vf = 3 if self.VRMode else 1
 
         if self.frameNum == 0:
             self.waitFinished = False
@@ -2178,6 +2192,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         self.resetPickup()
                         break
 
+        self.frameProfile('Pickup')
 
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
@@ -2265,8 +2280,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             self.si.put({"Play":(PATH+'../Sound/New/'+sf,
                                                  self.volmFX / 2,
                                                  (a['b1'].offset[:3], 6, 1.2))})
+                    playerStuck = False
+                else:
+                    playerStuck = True
 
-                df = 1 + 3*self.VRMode
+                if not self.isClient:
+                    if a['id'] in self.aiNums:
+                        self.agents[a['id']].isStuck = playerStuck
+
+                df = 1# + 3*self.VRMode
 
                 if CURRTIME - a['animTrans'] < 0.2:
                     # print('Trans idle->walk')
@@ -2473,6 +2495,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         self.draw.highlight([1.,0,0], i)
 
         self.frameProfile('Postprocess')
+
+##        if self.stage == 4:
+##            test = 0.6 + 0.3 * sin(time.time() / 13) + 0.1 * sin(time.time() / 5)
+##            d = self.directionalLights[0]
+##            d['i'] = np.array([1.8,1.6,0.9]) * test
+##            self.draw.setPrimaryLight(d['i'], np.array([viewVec(*d["dir"])]))
 
 
     def debugOverlay(self):
