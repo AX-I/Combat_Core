@@ -52,10 +52,10 @@ class CombatVR(Multi.CombatApp):
         self.ov.setOverlayWidthInMeters(self.vrBuf1, 0.6)
         self.ov.setOverlayWidthInMeters(self.vrBuf2, 0.6)
 
-        self.ov.setOverlayFromFile(self.vrBuf1, PATH+"lib/Combat.png")
-        self.ov.setOverlayFromFile(self.vrBuf2, PATH+"lib/Combat.png")
-        self.ov.showOverlay(self.vrBuf1)
-        self.ov.showOverlay(self.vrBuf2)
+##        self.ov.setOverlayFromFile(self.vrBuf1, PATH+"lib/Combat.png")
+##        self.ov.setOverlayFromFile(self.vrBuf2, PATH+"lib/Combat.png")
+##        self.ov.showOverlay(self.vrBuf1)
+##        self.ov.showOverlay(self.vrBuf2)
 
         mt = [(ctypes.c_float * 4) (1, 0, 0, 0.02),
               (ctypes.c_float * 4) (0, 1, 0, 0),
@@ -140,9 +140,9 @@ class CombatVR(Multi.CombatApp):
                 x, y = i.rAxis[0].x, i.rAxis[0].y
 
                 if (y > 0.8): self.fire("blank", vh=vh)
-                if (x > 0.8): self.fire("red", vh=vh)
-                if (y < -0.8): self.fire("orange", vh=vh)
-                if (x < -0.8): self.fire("black", vh=vh)
+                if (x > 0.8): self.fireAnim("red", vh=vh)
+                if (y < -0.8): self.fireAnim("orange", vh=vh)
+                if (x < -0.8): self.fireAnim("black", vh=vh)
 
                 if i.ulButtonPressed & 4:
                     self.gesture(self.selchar, 0)
