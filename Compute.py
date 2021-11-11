@@ -156,7 +156,7 @@ class ThreeDBackend:
                                  dtype="float")*0.25
         self.baseAxPoints = np.array(self.axPoints)
 
-        self.maxFPS = 60
+        self.maxFPS = 66
 
         self.VRMode = False
 
@@ -205,13 +205,17 @@ class ThreeDBackend:
     def start(self):
         self.createObjects()
 
-        self.vertPoints = [np.array(i) for i in self.vertpoints]
-        self.vertNorms = [np.array(i) for i in self.vertnorms]
-        self.vertU = [np.array(i) for i in self.vertu]
-        self.vertV = [np.array(i) for i in self.vertv]
+        self.vertPoints = []
+        self.vertNorms = []
+        self.vertU = []
+        self.vertV = []
+        for _ in range(len(self.vertpoints)):
+            self.vertPoints.append(np.array(self.vertpoints[0]))
+            self.vertNorms.append(np.array(self.vertnorms[0]))
+            self.vertU.append(np.array(self.vertu[0]))
+            self.vertV.append(np.array(self.vertv[0]))
+            del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
-
-        del self.vertpoints, self.vertnorms, self.vertu, self.vertv
 
         maxuv = max([i.shape[0] for i in self.vertU])
         Luv = len(self.vertU)
@@ -243,7 +247,7 @@ class ThreeDBackend:
         self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
 
         for i in range(len(self.vtextures)):
-            tex = self.vtextures[i]
+            tex = self.vtextures[0]
             if "mip" in self.matShaders[i] and not GL:
                 t = createMips(tex)
                 self.draw.addTextureGroup(
@@ -259,11 +263,12 @@ class ThreeDBackend:
                     self.vertNorms[i].reshape((-1,3)),
                     tex[:,:,0], tex[:,:,1], tex[:,:,2],
                     self.matShaders[i])
+            del self.vtextures[0]
 
         for tex in self.texAlphas:
             self.draw.addTexAlpha(tex)
 
-        del self.vtextures, self.texAlphas
+        del self.texAlphas
 
         if self.genNewBones:
             self.vertBones = []
