@@ -1800,7 +1800,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         for i in range(len(a["hc"])):
                             sc["pv"].colliders[i].hc = a["hc"][i]
                     if int(pn) == self.selchar: continue
-                    sc["b1"].offset[:3] = a["r1"]
+                    sc["b1"].offset[:3] = a["r1"][:3]
                     sc["moving"] = a["m1"]
                     sc["cr"] = a["c1"]
                     sc['cv'] = a['c2']
