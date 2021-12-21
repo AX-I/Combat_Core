@@ -332,8 +332,40 @@ class CLDraw:
             draw['lenW2'].write(self.WNUM[1])
 
 
-    def drawPS(self, *args):
-        pass
+    def drawPS(self, xyz, color, opacity, size):
+        try: _ = self.psProg
+        except:
+            ctx.point_size = 4
+            draw = ctx.program(vertex_shader=trisetup,
+                               fragment_shader=drawSub)
+
+            draw['emPow'].write(np.float32(0.5))
+
+            draw['vscale'].write(self.sScale)
+            draw['aspect'].write(np.float32(self.H/self.W))
+
+            self.psProg = draw
+
+        self.psProg['vmat'].write(self.vmat)
+        self.psProg['vpos'].write(self.vc)
+
+        p = xyz
+        vertices = np.stack((p[:,0], p[:,1], p[:,2]), axis=-1)
+
+        self.PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
+
+        self.PSvao = ctx.vertex_array(self.psProg, self.PSvbo, 'in_vert')
+
+        self.fbo.use()
+        self.fbo.depth_mask = True
+        ctx.enable(moderngl.DEPTH_TEST)
+
+        ctx.enable(moderngl.BLEND)
+        ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+        ctx.blend_equation = moderngl.FUNC_ADD
+
+        self.PSvao.render(moderngl.POINTS)
+
 
     def blit(self, dest, src, destW, destH):
         dest.use()
@@ -804,8 +836,8 @@ class CLDraw:
                 ctx.disable(moderngl.CULL_FACE)
 
             self.DRAWZ[i][1]['vscale'].write(self.sScale)
-            self.DRAWZ[i][1]['vpos'].write(self.vc.astype("float32"))
-            self.DRAWZ[i][1]['vmat'].write(self.vmat.astype("float32"))
+            self.DRAWZ[i][1]['vpos'].write(self.vc)
+            self.DRAWZ[i][1]['vmat'].write(self.vmat)
 
             if 'alpha' in shaders[i]:
                 sa = shaders[i]['alpha']
