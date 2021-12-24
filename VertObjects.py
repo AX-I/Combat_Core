@@ -748,19 +748,22 @@ class VertTerrain0:
         self.coords = np.array(coords)
         self.scale = scale
         
-        assert type(heights) is str
-        himg = Image.open(heights)
-        if himg.size[0] != himg.size[1]:
-            print("not square, cropping")
-            sm = min(himg.size)
-            himg = himg.crop((0,0,sm,sm))
-        if himg.mode == "F":
-            self.heights = numpy.array(himg)
-        else:
-            gr = himg.convert("L")
-            hmap = numpy.array(gr)
-            self.heights = hmap / 255
-        self.size = numpy.array(himg.size) - 1
+        if type(heights) is str:
+            himg = Image.open(heights)
+            if himg.size[0] != himg.size[1]:
+                print("not square, cropping")
+                sm = min(himg.size)
+                himg = himg.crop((0,0,sm,sm))
+            if himg.mode == "F":
+                self.heights = numpy.array(himg)
+            else:
+                gr = himg.convert("L")
+                hmap = numpy.array(gr)
+                self.heights = hmap / 255
+            self.size = numpy.array(himg.size) - 1
+        elif type(heights) is np.ndarray:
+            self.heights = np.array(heights)
+            self.size = np.array(heights.shape) - 1
 
         self.heights *= vertScale
         if vertPow != 1:

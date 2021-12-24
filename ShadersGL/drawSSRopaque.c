@@ -59,6 +59,8 @@ uniform sampler2D tex1;
 uniform sampler2D db;
 uniform sampler2D currFrame;
 
+in vec3 vertLight;
+
 void main() {
     vec3 SVd = rawVM[0];
     vec3 SVx = rawVM[1];
@@ -119,6 +121,8 @@ void main() {
         light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
       }
     }
+    light += vertLight;
+
     tsr *= light;
 
 

@@ -729,6 +729,8 @@ class CLDraw:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
             elif shaders[i]['SSR'] == 2:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
+                del shaders[i]['SSR']
+                shaders[i]['SSRopaque'] = 1
 
         elif 'dissolve' in shaders[i]:
             if 'dissolve' in self.oldShaders[i]:
@@ -863,7 +865,7 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            trans = {'add', 'border', 'SSR', 'sub', 'fog'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque'}
             if all(t not in shaders[i] for t in trans):
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
@@ -906,7 +908,7 @@ class CLDraw:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
 
-            elif 'SSR' in shaders[i]:
+            elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
                 ctx.disable(moderngl.DEPTH_TEST)
                 ctx.disable(moderngl.BLEND)
                 self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
@@ -915,7 +917,7 @@ class CLDraw:
                 ctx.enable(moderngl.BLEND)
 
                 self.fbo.use()
-                if shaders[i]['SSR'] == 2:
+                if 'SSRopaque' in shaders[i]:
                     self.fbo.depth_mask = True
                     ctx.blend_func = moderngl.ONE, moderngl.ZERO
                 else:
@@ -944,7 +946,7 @@ class CLDraw:
 
             vao.render(moderngl.TRIANGLES)
 
-            if 'SSR' in shaders[i] and shaders[i]['SSR'] == 2:
+            if 'SSRopaque' in shaders[i]:
                 self.fbo.depth_mask = False
             if 'add' in shaders[i] or 'sub' in shaders[i]:
                 if 'noline' not in shaders[i]:
