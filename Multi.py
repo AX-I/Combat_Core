@@ -170,10 +170,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             i += str(absLevel) + "f\n"
                     g.write(i)
 
-        stageNames = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest"]
+        stageNames = ["Desert", "CB Atrium", "Taiga",
+                      "New Stage", "Forest", 'Strachan']
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
-        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav", "H8.wav", "Forest0a.wav"]
+        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav",
+                          "H8.wav", "Forest0a.wav", 'Forest0a.wav']
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -988,7 +990,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a["Energy"] = 1
 
     def createObjects(self):
-        if self.stage != 4:
+        if self.stage < 4:
             snd = self.ENVTRACKS
             self.si.put({'Preload':[PATH+'../Sound/' + snd[self.stage]]})
 
@@ -1077,7 +1079,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         # Setup stage
-        STAGENAMES = 'Desert Atrium Taiga NewStage Forest'.split(' ')
+        STAGENAMES = 'Desert Atrium Taiga NewStage Forest Strachan'.split(' ')
         cs = __import__('Stages.' + STAGENAMES[self.stage],
                         fromlist=('setupStage'))
 
@@ -1231,7 +1233,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    "scale":1, "obj":self.vertObjects[-1]})
 
         # (Min xz, Max xz)
-        bd = [(-10, 50), (-10, 50), (-20, 50), (0, 35), (-35, 60)]
+        bd = [(-10, 50), (-10, 50), (-20, 50),
+              (0, 35), (-35, 60), (-30, 30)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]

@@ -65,6 +65,7 @@ drawZDissolve = makeProgram('drawZdissolve.c')
 drawFog = makeProgram('drawfog.c')
 drawSSR = makeProgram('drawwater.c')
 drawGlass = makeProgram('drawglass.c')
+drawSSRopaque = makeProgram('drawSSRopaque.c')
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -253,6 +254,10 @@ class CLDraw:
                 self.DRAW[n]['DInt'].write(self.DInt.tobytes())
                 self.DRAW[n]['DDir'].write(self.DDir.tobytes())
                 self.DRAW[n]['lenD'] = ld
+            except KeyError:
+                pass
+
+            try:
                 self.DRAW[n]['PInt'].write(self.PInt.tobytes())
                 self.DRAW[n]['PPos'].write(self.PPos.tobytes())
                 self.DRAW[n]['lenP'] = lp
@@ -260,7 +265,6 @@ class CLDraw:
             except KeyError:
                 pass
 
-        for n in range(len(self.DRAW)):
             try:
                 self.DRAW[n]['SLInt'].write(self.SInt.tobytes())
                 self.DRAW[n]['SLPos'].write(self.SPos.tobytes())
@@ -629,8 +633,6 @@ class CLDraw:
         if mip is not None or 'mip' in shader:
             tex.build_mipmaps()
 
-        tex.use(location=texNum)
-
         self.TEX.append(tex)
 
         self.DRAW.append(draw)
@@ -725,6 +727,8 @@ class CLDraw:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
             elif shaders[i]['SSR'] == 1:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
+            elif shaders[i]['SSR'] == 2:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
 
         elif 'dissolve' in shaders[i]:
             if 'dissolve' in self.oldShaders[i]:
@@ -911,7 +915,11 @@ class CLDraw:
                 ctx.enable(moderngl.BLEND)
 
                 self.fbo.use()
-                ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
+                if shaders[i]['SSR'] == 2:
+                    self.fbo.depth_mask = True
+                    ctx.blend_func = moderngl.ONE, moderngl.ZERO
+                else:
+                    ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
                 self.POSTBUF.use(location=3)
                 self.DRAW[i]['currFrame'] = 3
@@ -936,6 +944,8 @@ class CLDraw:
 
             vao.render(moderngl.TRIANGLES)
 
+            if 'SSR' in shaders[i] and shaders[i]['SSR'] == 2:
+                self.fbo.depth_mask = False
             if 'add' in shaders[i] or 'sub' in shaders[i]:
                 if 'noline' not in shaders[i]:
                     vao.render(moderngl.LINES)
