@@ -1234,7 +1234,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         # (Min xz, Max xz)
         bd = [(-10, 50), (-10, 50), (-20, 50),
-              (0, 35), (-35, 60), (-30, 30)]
+              (0, 35), (-35, 60), (-20, 40)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]
@@ -1356,7 +1356,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def onStart(self):
         self.gameStarted = False
 
-        if self.stage == 4:
+        if self.stage >= 4:
             self.si.put({'Play':(PATH+'../Sound/NoiseOpen.wav', self.volmFX * 0.9, True)})
         elif self.isClient:
             snd = self.ENVTRACKS
@@ -1736,7 +1736,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                    ("DRAW", (128, 192, 255, 255))]
 
         if len(actPlayers) > 1:
-            if not self.gameStarted and self.stage != 4:
+            if not self.gameStarted and self.stage < 4:
                 snd = self.ENVTRACKS
                 self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
                 self.gameStarted = True
