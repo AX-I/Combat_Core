@@ -128,12 +128,13 @@ class CombatMenu(Frame):
         else:
             pass
 
-        self.loc = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest"]
+        self.loc = ["Desert", "CB Atrium", "Taiga",
+                    "New Stage", "Forest", 'Strachan']
 
     def startMenu(self):
         self.grid(sticky=N+E+S+W)
 
-        self.title = Label(self, text="Welcome to AXI Combat v1.2 !", font=e)
+        self.title = Label(self, text="Welcome to AXI Combat v1.3 !", font=e)
         self.title.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
 
         i = Image.open(PATH+"lib/Combat.png")
@@ -536,7 +537,7 @@ class CombatMenu(Frame):
             return
 
         if not self.removeMain(): return
-        sl = ["Desert", "Atrium", "Taiga", "New Stage", "Forest"]
+        sl = ["Desert", "Atrium", "Taiga", "New Stage", "Forest", 'Strachan']
 
         self.title["text"] = "Select location"
 
@@ -544,7 +545,7 @@ class CombatMenu(Frame):
         self.stp = []
         cmds = [lambda: self.goStart(0), lambda: self.goStart(1),
                 lambda: self.goStart(2), lambda: self.goStart(3),
-                lambda: self.goStart(4)]
+                lambda: self.goStart(4), lambda: self.goStart(5)]
         for i in range(len(self.loc)):
             self.stb.append(Button(self, text=self.loc[i], fg="#008", bg="#bdf",
                                    command=cmds[i], font=f))
