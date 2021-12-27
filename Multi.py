@@ -1234,7 +1234,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         # (Min xz, Max xz)
         bd = [(-10, 50), (-10, 50), (-20, 50),
-              (0, 35), (-35, 60), (-20, 40)]
+              (0, 35), (-35, 60), (-20, 50)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
         self.stageSize = ss[self.stage]
