@@ -74,13 +74,13 @@ void main() {
     float cy = tc.y;
 
     vec3 vp = vpos;
-    float sScale = vscale * hF / 2;
+    float sVScale = vscale * hF / 2;
 
     float tz = 1.0/depth;
     vec3 pos = v_pos * tz;
     vec3 norm = normalize(v_norm * tz);
 
-    
+
     float fr = 1 - 0.8 * abs(dot(normalize(pos - vp), normalize(norm)));
     fr *= fr; fr *= fr; fr *= fr; //fr *= fr; fr *= fr; fr *= fr;
 
@@ -98,9 +98,19 @@ void main() {
     sf = clamp(sf, 0.0, 1.0) * wS;
 
     vec2 sxy = floor(sf) / wS;
+	vec2 s10 = floor(sf + vec2(1,0)) / wS;
+	vec2 s01 = floor(sf + vec2(0,1)) / wS;
+	vec2 s11 = floor(sf + vec2(1,1)) / wS;
+	float sr1 = sf.x - sxy.x*wS;
+	float sr2 = sf.y - sxy.y*wS;
+	float si1 = 1-sr1;
+	float si2 = 1-sr2;
 
-    float shadow = 0;
-    shadow += texture(SM, sxy).r < shz ? 1 : 0;
+	float shadow = 0;
+	shadow += texture(SM, sxy).r < shz ? si1*si2 : 0;
+	shadow += texture(SM, s10).r < shz ? sr1*si2 : 0;
+	shadow += texture(SM, s01).r < shz ? si1*sr2 : 0;
+	shadow += texture(SM, s11).r < shz ? sr1*sr2 : 0;
 
 
     sxyz = SV2 * (v_pos*tz - SPos2);
@@ -139,8 +149,8 @@ void main() {
 
     vec2 rxy = tc;
     float rpz = dot(a + refl, SVd);
-    vec2 rp = vec2(dot(a + refl, SVx) * -sScale / rpz + wF/2,
-                   dot(a + refl, SVy) * sScale / rpz + hF/2);
+    vec2 rp = vec2(dot(a + refl, SVx) * -sVScale / rpz + wF/2,
+                   dot(a + refl, SVy) * sVScale / rpz + hF/2);
 
     int hit = 0;
 

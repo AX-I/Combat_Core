@@ -55,7 +55,8 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[2.0,1.77,1.33]})
+    DInt = np.array([2.0,1.77,1.33]) / 2
+    self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DInt})
     self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.2,0.15,0.1]})
 
     fi = np.array((1,0.6,0.3)) * 25
