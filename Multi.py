@@ -1124,10 +1124,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.restRings = self.vertObjects[-1]
 
 
-        if self.stage == 2 or self.stage == 4:
-            fog = 1.4 if self.stage == 2 else 0.02
-            fabs = 0.06 if self.stage == 2 else 0.002
-            fdist = 0 if self.stage == 2 else 40
+        fogParams = {2: (1.4,0.06,0),
+                     4: (0.02,0.002,40),
+                     5: (0.06,0.001,24)}
+        if self.stage in fogParams:
+            fog, fabs, fdist = fogParams[self.stage]
 
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
@@ -1399,7 +1400,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.lastRestPlayer = None
 
         space = 2 if self.stage == 3 else 3
-        xpos = -20 if self.stage == 4 else 28
+        xpos = (28, 28, 28, 28, -20, 10)[self.stage]
 
         for n in range(len(self.players)):
             a = self.players[n]
