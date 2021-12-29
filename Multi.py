@@ -1126,7 +1126,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         fogParams = {2: (1.4,0.06,0),
                      4: (0.02,0.002,40),
-                     5: (0.06,0.001,24)}
+                     5: (0.04,0.001,24)}
         if self.stage in fogParams:
             fog, fabs, fdist = fogParams[self.stage]
 

@@ -919,7 +919,8 @@ class CLDraw:
                 self.fbo.use()
                 if 'SSRopaque' in shaders[i]:
                     self.fbo.depth_mask = True
-                    ctx.blend_func = moderngl.ONE, moderngl.ZERO
+                    ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+                    ctx.depth_func = '=='
                 else:
                     ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
@@ -948,6 +949,7 @@ class CLDraw:
 
             if 'SSRopaque' in shaders[i]:
                 self.fbo.depth_mask = False
+                ctx.depth_func = '<'
             if 'add' in shaders[i] or 'sub' in shaders[i]:
                 if 'noline' not in shaders[i]:
                     vao.render(moderngl.LINES)
