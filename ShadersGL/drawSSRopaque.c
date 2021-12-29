@@ -1,12 +1,9 @@
 // Screen Space Reflection
 // For AXI Combat
+// Use as 2nd pass
 
 #version 330
 
-#define NEAR 0.1
-#define FAR 200.0
-
-#define SBIAS -0.04
 
 #define REFL_STEP 2
 #define REFL_LENGTH 1024
@@ -19,30 +16,10 @@ uniform vec3 vpos;
 
 out vec4 f_color;
 
+uniform vec3 reflFallback;
 
 uniform vec3 LDir;
 uniform vec3 LInt;
-
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
-uniform sampler2D SM;
-uniform int wS;
-
-
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
-uniform sampler2D SM2;
-uniform int wS2;
-
-
-
-
-uniform vec3 PInt[16];
-uniform vec3 PPos[16];
-uniform int lenP;
-
 
 uniform float width;
 uniform float height;
@@ -59,7 +36,7 @@ uniform sampler2D tex1;
 uniform sampler2D db;
 uniform sampler2D currFrame;
 
-in vec3 vertLight;
+
 
 void main() {
     vec3 SVd = rawVM[0];
@@ -87,56 +64,7 @@ void main() {
     //float scatter = 0.2;//exp(ABSORB * (tz - texture(db, tc*wh).r));
     // is actually transmittance
 
-    //vec3 tsr = (1-scatter) * texture(tex1, v_UV / depth).rgb;
-    vec3 tsr = texture(tex1, v_UV / depth).rgb;
-
-
-
-    vec3 sxyz = SV * (v_pos*tz - SPos);
-    float shz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
-    vec2 sf = sxyz.xy * sScale/2 + 0.5;
-    sf = clamp(sf, 0.0, 1.0) * wS;
-
-    vec2 sxy = floor(sf) / wS;
-	vec2 s10 = floor(sf + vec2(1,0)) / wS;
-	vec2 s01 = floor(sf + vec2(0,1)) / wS;
-	vec2 s11 = floor(sf + vec2(1,1)) / wS;
-	float sr1 = sf.x - sxy.x*wS;
-	float sr2 = sf.y - sxy.y*wS;
-	float si1 = 1-sr1;
-	float si2 = 1-sr2;
-
-	float shadow = 0;
-	shadow += texture(SM, sxy).r < shz ? si1*si2 : 0;
-	shadow += texture(SM, s10).r < shz ? sr1*si2 : 0;
-	shadow += texture(SM, s01).r < shz ? si1*sr2 : 0;
-	shadow += texture(SM, s11).r < shz ? sr1*sr2 : 0;
-
-
-    sxyz = SV2 * (v_pos*tz - SPos2);
-    shz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
-    sf = sxyz.xy * sScale2/2 + 0.5;
-    if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
-      sf = sf * wS2;
-
-      sxy = floor(sf) / wS2;
-      shadow += texture(SM2, sxy).r < shz ? 1 : 0;
-    }
-    shadow = clamp(shadow, 0, 1);
-    
-    vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
-    for (int i = 0; i < lenP; i++) {
-      vec3 pl = pos - PPos[i];
-      if (dot(norm, pl) > 0.0) {
-        light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
-      }
-    }
-    light += vertLight;
-
-    tsr *= light;
-
-
-
+    vec3 tsr = (texture(tex1, v_UV / depth).rgb + LInt + LDir) * 0.001;
 
 
     vec3 a = pos - vp;
@@ -195,16 +123,16 @@ void main() {
     float fade = min(1.f, float(REFL_LENGTH - rn) / REFL_FADE);
 
 
-    vec3 refltest = vec3(0.06, 0.06, 0.06);
+    vec3 refltest = reflFallback;
 
 
     if (hit == 1) {
         ssr_out = texture(currFrame, ssr_loc*wh).rgb;
         vec3 finalRefl = fade * ssr_out + (1-fade) * refltest;
-        f_color = vec4(fr * finalRefl + (1-fr) * tsr, 1);
+        f_color = vec4(finalRefl + tsr, fr);
     } else {
-        f_color = vec4(fr * refltest + (1-fr) * tsr, 1);
+        f_color = vec4(refltest, fr);
     }
 
-    // Blend mode ONE SRC_ALPHA
+    // Blend mode SRC_ALPHA ONE_MINUS_SRC_ALPHA
 }
