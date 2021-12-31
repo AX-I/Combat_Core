@@ -202,6 +202,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameFiredOld = False
 
         self.activePlayers = {}
+        self.actPlayers = {}
         self.lastTimes = {}
 
         self.expNum = 0
@@ -1696,6 +1697,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print('Total', round((self.ftime[x] - self.ftime['.']) / self.frameNum, 5))
 
     def frameUpdate(self):
+        try:
+            self.STAGECONFIG.frameUpdate(self)
+        except AttributeError:
+            pass
+
         self.si.put({'SetPos':{'pos':self.pos,
                                'vvh':self.vVhorz()}})
 
