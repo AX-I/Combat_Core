@@ -66,6 +66,7 @@ drawFog = makeProgram('drawfog.c')
 drawSSR = makeProgram('drawwater.c')
 drawGlass = makeProgram('drawglass.c')
 drawSSRopaque = makeProgram('drawSSRopaque.c')
+drawMetal = makeProgram('drawmetallic.c')
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -739,6 +740,11 @@ class CLDraw:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawDissolve)
             draw['fadeOrigin'].write(np.array(shaders[i]['dissolve']['origin'], 'float32'))
             draw['fadeFact'].write(shaders[i]['dissolve']['fact'])
+
+        elif 'metal' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawMetal)
+            draw['isMetal'] = 1
+            draw['roughness'] = shaders[i]['metal']['roughness']
 
         else:
             draw = ctx.program(vertex_shader=ts, fragment_shader=drawSh)
