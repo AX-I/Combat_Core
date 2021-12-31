@@ -1857,6 +1857,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for a in self.players:
             if self.getHealth(a['id']) <= 0:
                 continue
+            if a['id'] not in self.actPlayers:
+                continue
             if a['jump'] > 0:
                 a["b1"].offset[:3] = a["pv"].pos + np.array([0,0.5,0]) \
                                      + a['animOffset'] - np.array([0,a['legIKoffset'],0])
