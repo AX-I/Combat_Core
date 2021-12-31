@@ -743,7 +743,8 @@ def normalize(a):
 
 class VertTerrain0:
     def __init__(self, coords, heights, scale=1, rot=(0,0,0),
-                 vertScale=1, vertPow=1, vertMax=None):
+                 vertScale=1, vertPow=1, vertMax=None,
+                 maxInf=False):
 
         self.coords = np.array(coords)
         self.scale = scale
@@ -760,6 +761,8 @@ class VertTerrain0:
                 gr = himg.convert("L")
                 hmap = numpy.array(gr)
                 self.heights = hmap / 255
+                if maxInf:
+                    self.heights[self.heights == 1] = 1000
             self.size = numpy.array(himg.size) - 1
         elif type(heights) is np.ndarray:
             self.heights = np.array(heights)
