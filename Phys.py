@@ -90,6 +90,9 @@ class CircleCollider(Collider):
 
         if obj.t == "Terrain":
             return obj.isCollide(self)
+
+        if obj.t == "Plane":
+            return obj.isCollide(self)
         
         raise NotImplementedError
 
@@ -99,6 +102,18 @@ class CircleCollider(Collider):
                 self.pos[1] += 0.01
 
             cdir = (obj.pos - self.pos) / eucDist(obj.pos, self.pos)
+            offset = self.r + obj.r - eucDist(obj.pos, self.pos)
+
+            if self.rb is None:
+                obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
+                obj.rb.pos += cdir * offset * 1.01
+                return
+            if obj.rb is None:
+                self.rb.v = self.rb.v - 2 * (self.rb.v @ cdir) * cdir
+                self.rb.pos -= cdir * offset * 1.01
+                if self.prop == 'player':
+                    self.rb.colDir = cdir
+                return
 
             Vsit = self.rb.v @ cdir
             Voit = obj.rb.v @ cdir
@@ -115,14 +130,15 @@ class CircleCollider(Collider):
             self.rb.v = Vsf
             obj.rb.v = Vof
 
-            offset = self.r + obj.r - eucDist(obj.pos, self.pos)
-
             tmass = self.rb.M + obj.rb.M
             self.rb.pos -= cdir * offset * self.rb.M / tmass * 1.01
             obj.rb.pos += cdir * offset * obj.rb.M / tmass * 1.01
 
         elif obj.t == "Terrain":
             obj.collisionImpulse(self)
+        elif obj.t == "Plane":
+            obj.collisionImpulse(self)
+
 
 class BulletCollider(CircleCollider):
     def __init__(self, radius, center, rb, damage=1, explode=False,
@@ -147,19 +163,19 @@ class BulletCollider(CircleCollider):
             else:
                 self.hc += 1
                 return True
-        try:
-            if obj.prop == "player":
-                obj.hc += self.dmg
-                obj.onHit()
 
-                if self.explode: obj.onExplode(self.rb.pos)
-                
-                self.disabled = True
-                self.rb.disabled = True
-                self.rb.pos[:] = 0.
-                self.rb.forces = []
-                return False
-        except AttributeError: pass
+        if obj.prop == "player":
+            obj.hc += self.dmg
+            obj.onHit()
+
+            if self.explode: obj.onExplode(self.rb.pos)
+
+            self.disabled = True
+            self.rb.disabled = True
+            self.rb.pos[:] = 0.
+            self.rb.forces = []
+            return False
+
         try:
             if obj.blackHole:
                 if self.explode: obj.onHit(self.rb.pos)
@@ -170,6 +186,46 @@ class BulletCollider(CircleCollider):
                 return False
         except AttributeError: pass
         return True
+
+
+class PlaneCollider(Collider):
+    t = "Plane"
+    def __init__(self, pos, d1, d2, thickness=0):
+        """centered at pos"""
+        super().__init__()
+        self.pos = np.array(pos)
+        self.r1 = eucLen(d1)
+        self.r2 = eucLen(d2)
+        self.d1 = np.array(d1) / self.r1
+        self.d2 = np.array(d2) / self.r2
+        self.norm = np.cross(self.d1, self.d2)
+        self.norm /= eucLen(self.norm)
+        self.th = thickness
+
+    def isCollide(self, obj):
+        if obj.t != "Circle":
+            return
+        if obj.rb is None:
+            return
+        diff = obj.pos - self.pos
+        if abs(diff @ self.norm) > obj.r:
+            return False
+        if abs(diff @ self.d1) > self.r1:
+            return False
+        if abs(diff @ self.d2) > self.r2:
+            return False
+        return True
+
+    def collisionImpulse(self, obj):
+        if obj.t != "Circle":
+            return
+        pd = obj.r - (obj.pos - self.pos) @ self.norm
+        offset = pd
+        cdir = self.norm
+
+        obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
+        obj.rb.pos += cdir * offset * 1.01
+
 
 class TerrainCollider(Collider):
     t = "Terrain"
@@ -203,6 +259,12 @@ class TerrainCollider(Collider):
         self.pts = np.array(self.pts) * self.S @ self.rotMat + self.pos
 
     def isCollide(self, obj):
+        if obj.prop == "player":
+            return
+
+        if obj.rb is None:
+            return
+
         self.colDist = None
         
         d1 = np.floor((obj.pos - obj.dim - self.pos) / self.S).astype("int")
