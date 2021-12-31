@@ -146,7 +146,7 @@ void main() {
 
     vec3 albedo = texture(tex1, v_UV / depth).rgb;
 
-    if (isMetal) {
+    if (isMetal == 1) {
       spec *= albedo;
       light *= 0;
     }

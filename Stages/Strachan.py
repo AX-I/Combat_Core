@@ -10,6 +10,7 @@ from PIL import Image
 
 import Phys
 
+SFX = '../Sound/Misc/'
 
 def setupStage(self):
     PX = 10
@@ -126,13 +127,25 @@ def setupStage(self):
     self.skyBox.created()
 
     self.showPillars = -1
+    self.buttonFullyPressed = False
+    self.buttonFullyLifted = True
 
 def movePillars(self):
+    if self.buttonFullyLifted:
+        self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
+                             (np.array((10,0,42)), 20, 8, True))})
+        self.buttonFullyLifted = False
+
+    if self.showPillars == -1:
+        self.si.put({'Play':(SFX+'chaingrind.wav', self.volmFX, False,
+                             (np.array((12,-2,10)), 80, 8, True))})
+
     self.showPillars = max(0, self.showPillars)
 
     tr = np.array([0,-0.2*self.frameTime,0])
     b = self.buttonGold
     if self.buttonPos < -0.1:
+        self.buttonFullyPressed = True
         return
     self.buttonPos += tr[1]
     self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
@@ -154,13 +167,26 @@ def frameUpdate(self):
     tr = np.array([0,mov,0])
 
     if not buttonPressed and self.buttonPos < 0:
+        if self.buttonFullyPressed:
+            self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
+                             (np.array((10,0,42)), 20, 8, True))})
+            self.buttonFullyPressed = False
         b = self.buttonGold
         self.buttonPos += mov
         self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+    if self.buttonPos >= 0:
+        self.buttonFullyLifted = True
 
     if self.showPillars < 0:
         return
+    if self.showPillars >= 1000:
+        return
     if self.showPillars > 0.7:
+        self.showPillars = 1000
+        self.si.put({'Play':(SFX+'metal_hit4.wav', self.volmFX, False,
+                             (np.array((20,-5,10)), 120, 8, True))})
+        self.si.put({'Play':(SFX+'metal_hit6.wav', self.volmFX, False,
+                             (np.array((0,-5,10)), 120, 8, True))})
         return
 
     self.showPillars += mov
