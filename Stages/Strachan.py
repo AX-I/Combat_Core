@@ -48,6 +48,18 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['spec'] = 1
 
 
+    self.addVertObject(VertModel, [PX,0,PZ+32],
+                       filename="../Models/Strachan/Button.obj",
+                       useShaders={"cull":1},
+                       shadow='R')
+
+    for f in self.vtNames:
+        if "Gold" in f:
+            self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.5}
+        if "GoldB" in f:
+            self.buttonGold = self.vertObjects[self.vtNames[f]]
+    self.buttonPos = 0
+
     for p in self.stagePlatforms:
         self.addVertObject(VertSphere, p, scale=0.8,
                            n=8, texture="../Models/Strachan/DullTurq1.png")
@@ -55,6 +67,20 @@ def setupStage(self):
 
     self.w.addCollider(Phys.PlaneCollider((PX, 5, PZ-16),
                                           (0,0,3),(10,0,0)))
+
+    self.pillars = []
+    for i in range(6):
+        self.addVertObject(VertModel, [PX+7.2,0,PZ-10 + 5.8*i],
+                           filename="../Models/Strachan/TablePillar.obj",
+                           mip=2, useShaders={"cull":1},
+                           shadow="CR")
+        self.pillars.append(self.vertObjects[-1])
+    self.pillars.reverse()
+    pa = self.vertObjects[-1]
+    self.pillarTexn = [pa.texNum]
+    while pa.nextMtl is not None:
+        pa = pa.nextMtl
+        self.pillarTexn.append(pa.texNum)
 
     tsize = 512
     hscale = 56
@@ -98,6 +124,70 @@ def setupStage(self):
     self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     self.skyBox.created()
+
+    self.showPillars = -1
+
+def movePillars(self):
+    self.showPillars = max(0, self.showPillars)
+
+    tr = np.array([0,-0.2*self.frameTime,0])
+    b = self.buttonGold
+    if self.buttonPos < -0.1:
+        return
+    self.buttonPos += tr[1]
+    self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+
+
+def frameUpdate(self):
+    if self.frameNum < 2:
+        return
+
+    buttonPressed = False
+    for p in self.actPlayers:
+        if self.isClient: break
+        pos = self.players[p]['b1'].offset[:3]
+        if Phys.eucDist(pos, (10, 1, 42)) < 0.8:
+            movePillars(self)
+            buttonPressed = True
+
+    mov = 0.2 * self.frameTime
+    tr = np.array([0,mov,0])
+
+    if not buttonPressed and self.buttonPos < 0:
+        b = self.buttonGold
+        self.buttonPos += mov
+        self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+
+    if self.showPillars < 0:
+        return
+    if self.showPillars > 0.7:
+        return
+
+    self.showPillars += mov
+
+    # terrain scale
+    tScale = self.terrain.scale
+    # dimensions of table
+    pSize = np.array((2.8, 0, 1))
+
+    for i in range(len(self.pillars)):
+        p = self.pillars[i]
+
+        tmin = (p.coords - pSize - self.terrain.coords) / tScale
+        tmax = (p.coords + pSize - self.terrain.coords) / tScale
+        self.terrain.heights[int(tmin[0]):int(tmax[0]),
+                             int(tmin[2]):int(tmax[2])] += mov*i / tScale
+        self.t2.pts[int(tmin[0]):int(tmax[0]),
+                    int(tmin[2]):int(tmax[2])] += tr*i
+
+        for tn in self.pillarTexn:
+            self.draw.translate(tr*i, p.cStart*3, p.cEnd*3, tn)
+            p = p.nextMtl
+
+    tempObjs = np.array(self.castObjs)
+    tempObjs = tempObjs * (1 - np.array(self.testRM()))
+
+    self.shadowMap(0, tempObjs, bias=self.shadowCams[0]["bias"])
 
 def getHeight(self, pos):
     r = 0.8
