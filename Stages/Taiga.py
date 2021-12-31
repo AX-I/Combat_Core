@@ -12,6 +12,8 @@ import numpy.random as nr
 
 import Phys
 
+def getHeight(self, pos):
+    return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
     mpath = PATH + '../Models/'

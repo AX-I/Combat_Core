@@ -584,7 +584,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try: footR = p['b1'].children[1].children[0].children[0]
         except IndexError: return
 
-        ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
+        ihR = self.STAGECONFIG.getHeight(self, footR.TM[3,:3])
         offR = footR.TM[3,1] - 0.126 - ihR
         p['b1'].offset[1] -= offR
 
@@ -776,7 +776,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         foot = legD.children[0]
 
         pos = legU.TM[3,:3]
-        ih = self.terrain.getHeight(pos[0], pos[2]) + 0.114 # Account for foot
+        ih = self.STAGECONFIG.getHeight(self, pos) + 0.114 # Account for foot
         targY = abs(pos[1] - ih)
         d1 = abs(legD.offset[1])
         d2 = abs(foot.offset[1])
@@ -813,17 +813,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def setFullLegIKPos(self, a):
         try:
             footR = a['b1'].children[1].children[0].children[0]
-            ihR = self.terrain.getHeight(*footR.TM[3,:3:2])
+            ihR = self.STAGECONFIG.getHeight(self, footR.TM[3,:3])
             ikR = np.array((footR.TM[3,0], ihR, footR.TM[3,2]))
             footL = a['b1'].children[2].children[0].children[0]
-            ihL = self.terrain.getHeight(*footL.TM[3,:3:2])
+            ihL = self.STAGECONFIG.getHeight(self, footL.TM[3,:3])
             ikL = np.array((footL.TM[3,0], ihL, footL.TM[3,2]))
             a['legIKPos'] = (ikR, ikL)
             a['lastIKfacing'] = a['cr']
         except IndexError: pass
 
     def setYoffset(self, p):
-        ih = self.terrain.getHeight(*(p['b1'].offset[::2] - p['animOffset'][::2]))
+        ih = self.STAGECONFIG.getHeight(self, (p['b1'].offset[:3] - p['animOffset'][:3]))
 
         p['b1'].offset[1] = ih + p['cheight'] + p['animOffset'][1]
         p['legIKoffset'] = 0
@@ -835,8 +835,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             legLU = p['b1'].children[2]
         except IndexError: return
 
-        ihR = self.terrain.getHeight(*legRU.TM[3,:3:2])
-        ihL = self.terrain.getHeight(*legLU.TM[3,:3:2])
+        ihR = self.STAGECONFIG.getHeight(self, legRU.TM[3,:3])
+        ihL = self.STAGECONFIG.getHeight(self, legLU.TM[3,:3])
 
         if abs(ihL - ihR) > 0.8: return
         p['b1'].offset[1] = min(ih, ihL, ihR) + p['cheight']
@@ -1084,6 +1084,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         fromlist=('setupStage'))
 
         cs.setupStage(self)
+        self.STAGECONFIG = cs
 
         # Add projectiles and game elements
         self.spheres = []
@@ -1838,13 +1839,29 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             elif tn not in actPlayers:
                 a["pv"].pos[:] = -10.
             else:
-                a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0])
+                a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0]) \
+                              - a['animOffset'] + np.array([0,a['legIKoffset'],0])
                 a["Energy"] += 0.05 * self.frameTime
                 a["Energy"] = min(1, a["Energy"])
 
         self.frameProfile('Ghost/Energy')
 
         self.w.stepWorld(self.frameTime, checkColl=(self.frameNum & vf == 0))
+
+        for a in self.players:
+            if self.getHealth(a['id']) <= 0:
+                continue
+            if a['jump'] > 0:
+                a["b1"].offset[:3] = a["pv"].pos + np.array([0,0.5,0]) \
+                                     + a['animOffset'] - np.array([0,a['legIKoffset'],0])
+                try:
+                    if a['pv'].colDir[1] < -0.2:
+                        a['jump'] = -a['jump']
+                        self.setYOffset(a)
+                except AttributeError:
+                    pass
+            try: del a['pv'].colDir
+            except: pass
 
         self.frameProfile('Physics')
 
@@ -1973,7 +1990,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
                 a["b1"].offset[1] += dx * 1.2
                 a["vertVel"] -= self.frameTime * 9.81
-                ih = self.terrain.getHeight(*(a["b1"].offset[::2] - a['animOffset'][::2]))
+                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
@@ -2016,7 +2033,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     bx *= fact; by *= fact
 
                 ax, ay = a["b1"].offset[::2] - a['animOffset'][::2]
-                ih = self.terrain.getHeight(ax + bx, ay + by) + a["cheight"]
+                ih = self.STAGECONFIG.getHeight(self,
+                        np.array([ax + bx, a['b1'].offset[1], ay + by])) + a["cheight"]
 
                 navheight = a["b1"].offset[1] + a['legIKoffset']
                 slopeOk = (ih - navheight) < (hvel*self.frameTime * maxSlope)

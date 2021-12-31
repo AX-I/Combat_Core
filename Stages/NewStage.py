@@ -10,6 +10,8 @@ from PIL import Image
 
 import Phys
 
+def getHeight(self, pos):
+    return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
     ox, oz = 15, 20

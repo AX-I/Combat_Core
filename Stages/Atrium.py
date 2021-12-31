@@ -10,6 +10,8 @@ from PIL import Image
 
 import Phys
 
+def getHeight(self, pos):
+    return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
     self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),

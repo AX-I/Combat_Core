@@ -9,6 +9,8 @@ from TexObjects import TexSkyBox
 
 import Phys
 
+def getHeight(self, pos):
+    return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
     self.addVertObject(VertTerrain, [-10, 0, -10],
