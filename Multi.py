@@ -1482,6 +1482,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 #"hf": a["isHit"]
                 'vh': a['vh']
                 }
+            if 'vr' in a:
+                dat[a['num']]['vr'] = float(a['cheight'])
         dat[self.selchar]['vh'] = float(self.vv[1])
         dat[self.selchar]['fCam'] = self.fCam
 
@@ -1528,6 +1530,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             "jp": a["jump"],
             'fCam': self.fCam
             }
+        if self.VRMode:
+            dat[a['num']]['vr'] = float(a['cheight'])
 
         adat = {"players":dat, "time":self.frameNum,
                 'restPlayer':self.restPlayer}
@@ -1568,12 +1572,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.lastTimes[a[0]] = int(b["time"])
 
                 for pn in k:
-                    sc = self.players[int(pn)]
+                    pM = int(pn)
+                    sc = self.players[pM]
                     a = k[pn]
                     if "hc" in a:
                         for i in range(len(a["hc"])):
                             sc["pv"].colliders[i].hc = a["hc"][i]
-                    if int(pn) == self.selchar: continue
+                    if pM == self.selchar: continue
                     sc["b1"].offset[:3] = a["r1"][:3]
                     sc["moving"] = a["m1"]
                     sc["cr"] = a["c1"]
@@ -1583,10 +1588,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     if "ee" in a: sc["Energy"] = a["ee"]
                     if "fire" in a:
                         if a["fire"]:
-                            self.fire(a["fire"], int(pn), a["vh"])
+                            self.fire(a["fire"], pM, a["vh"])
                     if "fire2" in a:
                         if a["fire2"]:
-                            self.fire(a["fire2"], int(pn), a["vh"])
+                            self.fire(a["fire2"], pM, a["vh"])
 
                     if 'throwAnim' in a: # IMPLIES 'fireColor' in a
                         #print(pn, a['throwAnim'])
@@ -1598,14 +1603,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             sc['poseThrow'] = self.throwKF[0][0]
 
                     if a["gg"] is not None:
-                        if self.players[int(pn)]["gestNum"] != a["gg"]:
-                            if self.players[int(pn)]["gestId"] != a["gi"]:
-                                self.gesture(int(pn), a["gg"], a["gi"])
+                        if self.players[pM]["gestNum"] != a["gg"]:
+                            if self.players[pM]["gestId"] != a["gi"]:
+                                self.gesture(pM, a["gg"], a["gi"])
 
                     if a["jp"] > 0:
-                        if self.players[int(pn)]["jump"] < 0:
-                            if a["jp"] != -self.players[int(pn)]["jump"]:
-                                self.jump(int(pn))
+                        if self.players[pM]["jump"] < 0:
+                            if a["jp"] != -self.players[pM]["jump"]:
+                                self.jump(pM)
+
+                    if 'vr' in a:
+                        self.players[pM]['vr'] = a['vr']
+                        self.players[pM]['cheight'] = a['vr']
 
                     #if "hf" in a:
                     #    self.players[int(pn)]["isHit"] = a["hf"]
@@ -1707,7 +1716,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if self.VRMode: self.frameUpdateVR()
 
-        vf = 3 if self.VRMode else 1
+        vf = 1
 
         if self.frameNum == 0:
             self.waitFinished = False
@@ -1990,6 +1999,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         break
 
         self.frameProfile('Pickup')
+
+        p = self.players[sc]
+        if self.cam1P and self.VRMode and self.frameNum > 1:
+            p['cr'] = atan2(self.vv[2], self.vv[0])
+            p['b1'].offset[:3] += self.VRpos - self.oldVRpos
+            p['cheight'] += self.VRpos[1] - self.oldVRpos[1]
+            p['vr'] = p['cheight']
 
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
