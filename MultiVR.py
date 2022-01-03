@@ -67,6 +67,7 @@ class CombatVR(Multi.CombatApp):
         self.ov.setOverlayTransformTrackedDeviceRelative(self.vrBuf2, HMD_id, y)
 
         self.VRMode = True
+        self.VRpos = np.array([0,0,0])
 
     def frameUpdateVR(self):
         if self.frameNum == 0:
@@ -81,9 +82,14 @@ class CombatVR(Multi.CombatApp):
         HMD_pose = self.VRposes[openvr.k_unTrackedDeviceIndex_Hmd]
 
         mat = np.array(HMD_pose.mDeviceToAbsoluteTracking.m)
-        
+
+        self.oldVRpos = np.array(self.VRpos)
+
         self.pos = mat[:,3] * scale
         self.pos[0] *= -1
+
+        self.VRpos = np.array(self.pos)
+
         self.pos[1] += -self.players[sc]["cheight"] + offY
         self.pos += self.players[sc]["b1"].offset[:3]
         
@@ -109,10 +115,14 @@ class CombatVR(Multi.CombatApp):
             vMat[:,1] *= -1
             vMat[:,2] *= -1
 
+            pos = mat[:,3] * scale
+            pos[0] *= -1
+            self.VRHandPos = pos
+
             forward = vMat[0]
 
             d = AI.follow(forward, np.zeros(3), 1, 1, 0)
-            if self.players[sc]["fCam"]:
+            if self.players[sc]["fCam"] and not self.cam1P:
                 self.players[sc]["cr"] = d[1]
             vh = d[2]
 
