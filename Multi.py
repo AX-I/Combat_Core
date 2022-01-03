@@ -50,7 +50,7 @@ import Anim
 
 from VertObjects import VertWater0
 
-from IK import doFullLegIK
+from IK import doFullLegIK, doArmIK
 
 PATH = OpsConv.PATH
 SWITCHABLE = True
@@ -1124,6 +1124,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            filename=PATH+'../Models/Rings.obj',
                            shadow='', useShaders={'add':0.5, 'noline':True})
         self.restRings = self.vertObjects[-1]
+
+        self.addVertObject(VertSphere, [0,0,0], scale=0.1,
+                           n=8, texture=PATH+"../Models/Strachan/Window.png",
+                           useShaders={'emissive':1})
+        self.testSphere = self.vertObjects[-1]
 
 
         fogParams = {2: (1.4,0.06,0),
@@ -2211,7 +2216,25 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             # Include throwing for leg IK
             if not a['moving'] and 'restAnim' not in a and a['animTrans'] < 0:
 
+                if a['id'] == sc:
+                    armU = a['b1'].children[0].children[0]
+                    armU.rotate((0,0,0))
+                    armU.children[0].rotate((0,0,0))
+
                 a["rig"].b0.getTransform()
+
+                if a['id'] == sc:
+                    test = np.array([0.5*sin(CURRTIME*0.6),
+                                     0.7 + 0.8*sin(CURRTIME*0.2),
+                                     0.5*cos(CURRTIME*0.6)
+                                     ])
+                    doArmIK(a['b1'].children[0].children[0],
+                            a['b1'].offset[:3] + test)
+                    ts = self.testSphere
+                    diff = a['b1'].offset[:3] + test - ts.coords
+                    self.draw.translate(diff, ts.cStart*3,
+                                        ts.cEnd*3, ts.texNum)
+                    ts.coords += diff
 
                 footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
                 try: ikR, ikL = a['legIKPos']

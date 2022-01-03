@@ -1,9 +1,49 @@
 # IK stuff
 
-from math import pi, acos, atan
+from math import pi, acos, atan, sqrt, atan2
 import numpy as np
 
 from Phys import eucLen
+
+def doArmIK(armU, target):
+    armD = armU.children[0]
+    hand = armD.children[0]
+
+    pos = armU.TM[3,:3]
+    rot = armU.TM[:3,:3] # is object->world rotation
+
+    targY = eucLen(target - pos)
+    d1 = eucLen(armD.offset)
+    d2 = eucLen(hand.offset)
+
+    # Possible float precision issues
+    if d1 + d2 < targY or d1 + targY < d2 or d2 + targY < d1:
+        U = 0
+        L = 0
+    else:
+        try:
+            U = -acos((d1**2 + targY**2 - d2**2) / (2*d1*targY))
+            L = pi - acos((d1**2 + d2**2 - targY**2) / (2*d1*d2))
+        except ValueError:
+            U = 0
+            L = 0
+
+    targLocal = (target - pos) @ np.transpose(rot)
+    P = -atan(targLocal[1] / sqrt(targLocal[0]**2 + targLocal[2]**2)) # pitch
+    R = pi - atan2(targLocal[0], targLocal[2])  # yaw
+
+    if (pi < R < pi*5/3): R = -pi/3  # behind
+    if (pi*2/3 < R < pi): R = pi*2/3 # other side
+    #R = max(-pi/3, min(pi*2/3, R))
+
+    # +X down, -X up
+    # +Y forward
+    # +Z tilt forward
+    # Elbow is entirely +Y
+    armU.rotate((P,U + R,0))
+    armD.rotate((0,L,0))
+    armD.children[0].rotate((0,0,-pi/2))
+
 
 def doFullLegIK(legU, target, root, footSize=0.2, interp=None):
     legD = legU.children[0]
@@ -33,7 +73,8 @@ def doFullLegIK(legU, target, root, footSize=0.2, interp=None):
     P = -atan(targLocal[0] / -targLocal[1]) # pitch
     R = atan(targLocal[2] / -targLocal[1])  # roll
 
-    #print('R {:.3f} P {:.3f} U {:.3f}'.format(R, P, U))
+    # Note: not correct because pitch will
+    # affect endpoint
 
     # -Z is UP, +Z is DOWN
     if interp is None:
