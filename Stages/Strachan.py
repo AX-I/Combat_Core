@@ -103,6 +103,8 @@ def setupStage(self):
     DInt = np.array([2.0,1.77,1.33])
     self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DInt})
     self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.2,0.15,0.1]})
+    self.directionalLights.append({"dir":[pi*2/3, 3.2], "i":[0.08,0.06,0.04]})
+
 
     fi = np.array((1,0.6,0.25)) * 30
     self.envPointLights.extend([
@@ -133,7 +135,7 @@ def setupStage(self):
 def movePillars(self):
     if self.buttonFullyLifted:
         self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
-                             (np.array((10,0,42)), 20, 8, True))})
+                             (np.array((10,0,42)), 4, 6, True))})
         self.buttonFullyLifted = False
 
     if self.showPillars == -1:
@@ -169,7 +171,7 @@ def frameUpdate(self):
     if not buttonPressed and self.buttonPos < 0:
         if self.buttonFullyPressed:
             self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
-                             (np.array((10,0,42)), 20, 8, True))})
+                             (np.array((10,0,42)), 4, 6, True))})
             self.buttonFullyPressed = False
         b = self.buttonGold
         self.buttonPos += mov
@@ -186,7 +188,7 @@ def frameUpdate(self):
         self.si.put({'Play':(SFX+'metal_hit4.wav', self.volmFX, False,
                              (np.array((20,-5,10)), 120, 8, True))})
         self.si.put({'Play':(SFX+'metal_hit6.wav', self.volmFX, False,
-                             (np.array((0,-5,10)), 120, 8, True))})
+                             (np.array((12,-5,10)), 160, 8, True))})
         return
 
     self.showPillars += mov
