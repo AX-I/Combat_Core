@@ -1125,7 +1125,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            shadow='', useShaders={'add':0.5, 'noline':True})
         self.restRings = self.vertObjects[-1]
 
-        self.addVertObject(VertSphere, [0,0,0], scale=0.1,
+        self.addVertObject(VertSphere, [0,0,0], scale=0.06,
                            n=8, texture=PATH+"../Models/Strachan/Window.png",
                            useShaders={'emissive':1})
         self.testSphere = self.vertObjects[-1]
@@ -1489,6 +1489,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 }
             if 'vr' in a:
                 dat[a['num']]['vr'] = float(a['cheight'])
+            if 'vrC' in a:
+                dat[a['num']]['vrC'] = a['vrC']
         dat[self.selchar]['vh'] = float(self.vv[1])
         dat[self.selchar]['fCam'] = self.fCam
 
@@ -1537,6 +1539,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             }
         if self.VRMode:
             dat[a['num']]['vr'] = float(a['cheight'])
+            if 'vrC' in a:
+                dat[a['num']]['vrC'] = a['vrC']
 
         adat = {"players":dat, "time":self.frameNum,
                 'restPlayer':self.restPlayer}
@@ -1620,6 +1624,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     if 'vr' in a:
                         self.players[pM]['vr'] = a['vr']
                         self.players[pM]['cheight'] = a['vr']
+                        if 'vrC' in a:
+                            self.players[pM]['vrC'] = a['vrC']
 
                     #if "hf" in a:
                     #    self.players[int(pn)]["isHit"] = a["hf"]
@@ -2216,25 +2222,33 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             # Include throwing for leg IK
             if not a['moving'] and 'restAnim' not in a and a['animTrans'] < 0:
 
-                if a['id'] == sc:
+                if 'vrC' in a:
                     armU = a['b1'].children[0].children[0]
                     armU.rotate((0,0,0))
                     armU.children[0].rotate((0,0,0))
 
                 a["rig"].b0.getTransform()
 
-                if a['id'] == sc:
-                    test = np.array([0.5*sin(CURRTIME*0.6),
-                                     0.7 + 0.8*sin(CURRTIME*0.2),
-                                     0.5*cos(CURRTIME*0.6)
-                                     ])
-                    doArmIK(a['b1'].children[0].children[0],
-                            a['b1'].offset[:3] + test)
+                if a['id'] == sc and self.cam1P \
+                   and self.VRMode and self.frameNum > 1:
+                    head = a['b1'].children[0].children[2]
+                    hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
+                    hpos -= a['b1'].offset[:3]
+                    test = self.VRHandPos - self.VRpos + hpos
+                    a['vrC'] = np.round(test, 3).tolist()
+
+                    # For debug
                     ts = self.testSphere
                     diff = a['b1'].offset[:3] + test - ts.coords
                     self.draw.translate(diff, ts.cStart*3,
                                         ts.cEnd*3, ts.texNum)
                     ts.coords += diff
+
+                if 'vrC' in a:
+                    test = np.array(a['vrC'])
+                    handLen = 0.7 if a['id'] == 0 else 0.1
+                    doArmIK(a['b1'].children[0].children[0],
+                            a['b1'].offset[:3] + test, handLen)
 
                 footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
                 try: ikR, ikL = a['legIKPos']

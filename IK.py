@@ -5,7 +5,7 @@ import numpy as np
 
 from Phys import eucLen
 
-def doArmIK(armU, target):
+def doArmIK(armU, target, handLen):
     armD = armU.children[0]
     hand = armD.children[0]
 
@@ -14,7 +14,7 @@ def doArmIK(armU, target):
 
     targY = eucLen(target - pos)
     d1 = eucLen(armD.offset)
-    d2 = eucLen(hand.offset)
+    d2 = eucLen(hand.offset) + handLen
 
     # Possible float precision issues
     if d1 + d2 < targY or d1 + targY < d2 or d2 + targY < d1:
@@ -33,8 +33,7 @@ def doArmIK(armU, target):
     R = pi - atan2(targLocal[0], targLocal[2])  # yaw
 
     if (pi < R < pi*5/3): R = -pi/3  # behind
-    if (pi*2/3 < R < pi): R = pi*2/3 # other side
-    #R = max(-pi/3, min(pi*2/3, R))
+    if (pi*3/4 < R < pi): R = pi*3/4 # other side
 
     # +X down, -X up
     # +Y forward
