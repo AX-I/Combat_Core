@@ -1,6 +1,6 @@
 # ======== ========
-# Copyright (C) 2020-2021 Louis Zhang
-# Copyright (C) 2020-2021 AgentX Industries
+# Copyright (C) 2020-2022 Louis Zhang
+# Copyright (C) 2020-2022 AgentX Industries
 #
 # This file (Menu.py) is part of AXI Combat.
 #
@@ -32,12 +32,14 @@ import requests
 import random
 import json
 import time
+import socket
+import multiprocessing as mp
 
 from PIL import Image, ImageTk, ImageFont
 
 import OpsConv
 
-HELPTEXT = """AXI Combat v1.2
+HELPTEXT = """AXI Combat v1.3
 ======= ======= ======= =======
 General Usage
 
@@ -70,15 +72,15 @@ H - toggle SSAO
 N - toggle AI navigation overlay
 
 ======= ======= ======= =======
-Copyright AgentX Industries 2020-2021
+Copyright AgentX Industries 2020-2022
 
 For more info see http://axi.x10.mx/Combat
 Contact us at http://axi.x10.mx/Contact.html
 """
 
-ABTTEXT = """AXI Combat v1.2
-Copyright © AgentX Industries 2020-2021
-Copyright © Louis Zhang 2020-2021
+ABTTEXT = """AXI Combat v1.3
+Copyright © AgentX Industries 2020-2022
+Copyright © Louis Zhang 2020-2022
 https://axi.x10.mx
 ======= ======= ======= =======
 The AXI Combat engine is licensed under the GNU General Public License v3 (GPLv3).
@@ -100,7 +102,7 @@ if getattr(sys, "frozen", False):
 else:
     PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-SERVER = "127.0.0.1:2980"
+SERVER = "https://axi.x10.mx/Combat/Serv.php"
 
 if PLATFORM == "darwin":
     _TIMESBD = "Times New Roman Bold.ttf"
@@ -186,13 +188,14 @@ class CombatMenu(Frame):
                                command=self.showExtras, font=g)
         self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
 
-        self.runMod = Button(self, text="Run Module", fg="#888", bg="#ddd",
-                               command=lambda: 0, font=g)
+        self.runMod = Button(self, text="Local Mode", fg="#000", bg="#ddd",
+                               command=self.mkRouter, font=g)
         self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 
         self.mkServer = Button(self, text="Start Server", fg="#a2a", bg="#ddd",
                                command=self.mkServ, font=g)
         self.mkServer.grid(row=4, column=2, sticky=N+S+E+W, pady=(15,0))
+        self.mkServer['state'] = 'disabled'
 
     def showExtras(self):
         state = 0
@@ -336,13 +339,15 @@ class CombatMenu(Frame):
         else:
             self.nextCreds()
 
+    def getIP(self):
+        try: return socket.gethostbyname(socket.getfqdn())
+        except: pass
+        try: return socket.gethostbyname(socket.gethostname())
+        except: return ''
+
     def mkServ(self, showWin=True, ip=""):
-        import socket
         if ip == "":
-            try: ip = socket.gethostbyname(socket.getfqdn())
-            except:
-                try: ip = socket.gethostbyname(socket.gethostname())
-                except: pass
+            ip = self.getIP()
         addr = (ip, 2980)
 
         try: self.servwin.destroy()
@@ -358,9 +363,20 @@ class CombatMenu(Frame):
             Label(self.servwin, text=st, font=g, padx=8, pady=8).pack()
 
         import NetServer
-        import multiprocessing as mp
         self.selfServe = mp.Process(target=NetServer.run, args=(addr,))
         self.selfServe.start()
+
+        return addr[0] + ':' + str(addr[1])
+
+    def mkRouter(self):
+        self.runMod['state'] = 'disabled'
+        ip = self.getIP()
+        addr = (ip, 4680)
+        import NetRouting
+        self.selfRoute = mp.Process(target=NetRouting.run, args=(addr,))
+        self.selfRoute.start()
+        self.hostname.delete(0, END)
+        self.hostname.insert(0, addr[0] + ':' + str(addr[1]))
 
     def runGame(self, *args):
         raise NotImplementedError
@@ -370,7 +386,11 @@ class CombatMenu(Frame):
         self.uname["bg"] = hb
         self.uh = not self.uh
 
-    def notConnected(self):
+    def notConnected(self, config=None):
+        if config == 'join':
+            self.jg['bg'] = '#fcc'
+            self.root.after(300, self.tgJV)
+
         self.hostname["bg"] = "#fcc"
         self.sh = True
         self.root.after(200, self.tgSV)
@@ -380,6 +400,8 @@ class CombatMenu(Frame):
         hb = "#f4fff4" if self.sh else "#fcc"
         self.hostname["bg"] = hb
         self.sh = not self.sh
+    def tgJV(self):
+        self.jg['bg'] = '#bfd'
 
     def removeMain(self, checkUser=True):
         p = OpsConv.getSettings(False)
@@ -523,8 +545,22 @@ class CombatMenu(Frame):
         if stage is not None:
             host = self.hostname.get()
             if "//" not in host: host = "http://" + host
-
             hname = self.uname.get()
+
+            localIP = self.mkServ(False)
+            time.sleep(0.1)
+            print(localIP)
+
+            p = {'local':localIP, "stage":self.loc[stage], "hname":hname}
+            try:
+                gd = requests.post(host, data=p, **TO)
+            except:
+                self.notConnected()
+                return
+
+            host = localIP
+            if "//" not in host: host = "http://" + host
+
             p = {"stage":self.loc[stage], "hname":hname}
             try:
                 gd = requests.get(host + "/NewGame", params=p, **TO)
@@ -570,24 +606,26 @@ class CombatMenu(Frame):
 
         uname = self.uname.get()
         try:
-            ag = requests.get(host + "/List", **TO)
+            ag = requests.get(host, **TO)
         except:
             self.notConnected()
             return
-        ag = json.loads(ag.text.replace("+", " "))
-        self.gameList = ag
+
+        ag = ag.text.split('\n')[:-1]
+        ag = [x.split('+') for x in ag] # IP, stage, username
 
         self.title["text"] = "Join Game"
 
         self.avls = Listbox(self, width=20, height=10, font=h)
         self.avls.bind("<<ListboxSelect>>", self.setGD)
         for d in ag:
-            et = d + " " * (20 - len(d))
-            et += "(" + ag[d]["Stage"] + ")" + " " * (10-len(ag[d]["Stage"]))
-            et += "/ " + ag[d]["Host"]
+            et = d[0] + " " * (20 - len(d[0]))
+            et += "(" + d[1] + ")" + " " * (10-len(d[1]))
+            et += "/ " + d[2]
             self.avls.insert(END, et)
         if len(ag) > 0:
             self.avls.config(width=0)
+
         self.avls.grid(row=2, column=0, rowspan=2)
 
         self.jg = Button(self, text="Join", fg="#008", bg="#bfd",
@@ -608,7 +646,7 @@ class CombatMenu(Frame):
             self.avls.grid_remove()
             self.jg.grid_remove()
 
-        self.title["text"] = "AXI Combat v1.2"
+        self.title["text"] = "AXI Combat v1.3"
         self.back.grid_remove()
 
         self.logo.grid()
@@ -630,11 +668,21 @@ class CombatMenu(Frame):
         return "".join([a[(a.index(x)-17) % len(a)] for x in t])
 
     def joinGame(self):
-        gi = " ".join(self.gd.split(" ")[:2])
         stage = self.loc.index(self.gd.split("(")[1].split(")")[0])
-        host = self.hostname.get()
+        host = self.gd.split(' ')[0]
         if "//" not in host: host = "http://" + host
         uname = self.uname.get()
+
+        try:
+            ag = requests.get(host + "/List", **TO)
+        except:
+            self.notConnected('join')
+            return
+
+        gi = json.loads(ag.text)
+        gi = list(gi)[-1]
+
+        self.gameList = {gi:[]}
 
         self.gameConfig = (stage, gi, host, uname, True)
         self.charMenu()
