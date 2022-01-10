@@ -132,6 +132,7 @@ class CombatMenu(Frame):
 
         self.loc = ["Desert", "CB Atrium", "Taiga",
                     "New Stage", "Forest", 'Strachan']
+        self.localIP = None
 
     def startMenu(self):
         self.grid(sticky=N+E+S+W)
@@ -368,13 +369,14 @@ class CombatMenu(Frame):
 
         return addr[0] + ':' + str(addr[1])
 
-    def mkRouter(self):
+    def mkRouter(self, mkProc=True):
         self.runMod['state'] = 'disabled'
         ip = self.getIP()
         addr = (ip, 4680)
-        import NetRouting
-        self.selfRoute = mp.Process(target=NetRouting.run, args=(addr,))
-        self.selfRoute.start()
+        if mkProc:
+            import NetRouting
+            self.selfRoute = mp.Process(target=NetRouting.run, args=(addr,))
+            self.selfRoute.start()
         self.hostname.delete(0, END)
         self.hostname.insert(0, addr[0] + ':' + str(addr[1]))
 
@@ -547,18 +549,14 @@ class CombatMenu(Frame):
             if "//" not in host: host = "http://" + host
             hname = self.uname.get()
 
-            localIP = self.mkServ(False)
-            time.sleep(0.1)
-            print(localIP)
-
-            p = {'local':localIP, "stage":self.loc[stage], "hname":hname}
+            p = {'local':self.localIP, "stage":self.loc[stage], "hname":hname}
             try:
                 gd = requests.post(host, data=p, **TO)
             except:
                 self.notConnected()
                 return
 
-            host = localIP
+            host = self.localIP
             if "//" not in host: host = "http://" + host
 
             p = {"stage":self.loc[stage], "hname":hname}
@@ -573,6 +571,10 @@ class CombatMenu(Frame):
             return
 
         if not self.removeMain(): return
+
+        if self.localIP is None:
+            self.localIP = self.mkServ(False)
+
         sl = ["Desert", "Atrium", "Taiga", "New Stage", "Forest", 'Strachan']
 
         self.title["text"] = "Select location"
