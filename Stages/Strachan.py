@@ -1,29 +1,44 @@
 # Strachan
 
 import numpy as np
-from math import pi
+from math import pi, sin
 from OpsConv import PATH
 
 from VertObjects import VertTerrain0, VertModel, VertSphere
 from TexObjects import TexSkyBox
 from PIL import Image
+import time
 
 import Phys
 
 SFX = '../Sound/Misc/'
 
+def getTexN(obj):
+    tn = [obj.texNum]
+    while obj.nextMtl is not None:
+        obj = obj.nextMtl
+        tn.append(obj.texNum)
+    return tn
+
+def getRenderMask(self, rm):
+    if not self.showPlatforms:
+        for i in self.platTexn:
+            rm[i] = True
+    return rm
+
 def setupStage(self):
     PX = 10
     PZ = 10
     PA = np.array([(PX,0,PZ)], 'float')
-    self.stagePlatforms = np.array([(0,1,16),
-                                    (0,2,19),
-                                    (1,3,21),
-                                    (0,5,23)]) + PA
+
+    self.stagePlatforms = np.array([(2, 5,   -4),
+                                    (0, 4.5, 0),
+                                    (-1,5.5, 3.5),
+                                    (-2,5,   7.5)]) + PA
 
 
     self.addVertObject(VertModel, [PX,0,PZ], rot=(0,0,0),
-                       filename="../Models/Strachan/Test8A.obj",
+                       filename="../Models/Strachan/T10.obj",
                        scale=1, mip=2,
                        useShaders={"cull":1},
                        shadow="CR")
@@ -36,8 +51,11 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['noline'] = True
             self.matShaders[self.vtNames[f]]['cull'] = 1
         if "Window" in f:
-            self.matShaders[self.vtNames[f]]['add'] = 1
-            self.matShaders[self.vtNames[f]]['noline'] = True
+            if "Fro" in f or "Sid" in f:
+                self.matShaders[self.vtNames[f]]['emissive'] = 4.0
+            else:
+                self.matShaders[self.vtNames[f]]['add'] = 1
+                self.matShaders[self.vtNames[f]]['noline'] = True
             self.vertObjects[self.vtNames[f]].castShadow = False
         if "Metal" in f:
             self.matShaders[self.vtNames[f]]['spec'] = 0.6
@@ -48,26 +66,49 @@ def setupStage(self):
         elif "Wood" in f:
             self.matShaders[self.vtNames[f]]['spec'] = 1
 
+        if "Silver" in f:
+            self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.4}
+        if "Transparent" in f:
+            self.matShaders[self.vtNames[f]]['add'] = 0.002
 
-    self.addVertObject(VertModel, [PX,0,PZ+32],
-                       filename="../Models/Strachan/Button.obj",
-                       useShaders={"cull":1},
-                       shadow='R')
+
+    self.buttons = []
+    for c in [(PX,0,PZ+32),(PX,5.02,PZ-17)]:
+        self.addVertObject(VertModel, c,
+                           filename="../Models/Strachan/Button.obj",
+                           useShaders={"cull":1},
+                           shadow='R')
+
+        self.buttons.append({
+            'obj': self.vertObjects[-1],
+            'pos': 0, 'fullyPressed': False, 'fullyLifted': True,
+        })
+
+    for p in self.stagePlatforms:
+        self.addVertObject(VertModel, p,
+                           scale=0.85,
+                           filename='../Models/Strachan/Floating2.obj',
+                           mip=2, useShaders={'cull':1},
+                           shadow='CR')
+        self.addVertObject(VertSphere, p, scale=0.4,
+                           n=8, texture="../Models/Strachan/Glass.png")
+        self.addVertObject(VertSphere, p, scale=0.3,
+                           n=6, texture="../Models/Strachan/Glass.png")
+
+    if len(self.stagePlatforms) > 0:
+        glass = self.vertObjects[-1].texNum
+        self.matShaders[glass]['add'] = 0.001
+        self.matShaders[glass]['noline'] = True
+        self.platGlass = glass
+
+        self.platTexn = getTexN(self.vertObjects[-3]) + [glass]
+
+    self.w.addCollider(Phys.PlaneCollider((PX, 5, PZ-16),
+                                          (0,0,3),(10,0,0)))
 
     for f in self.vtNames:
         if "Gold" in f:
             self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.5}
-        if "GoldB" in f:
-            self.buttonGold = self.vertObjects[self.vtNames[f]]
-    self.buttonPos = 0
-
-    for p in self.stagePlatforms:
-        self.addVertObject(VertSphere, p, scale=0.8,
-                           n=8, texture="../Models/Strachan/DullTurq1.png")
-        self.w.addCollider(Phys.CircleCollider(0.6, p))
-
-    self.w.addCollider(Phys.PlaneCollider((PX, 5, PZ-16),
-                                          (0,0,3),(10,0,0)))
 
     self.pillars = []
     for i in range(6):
@@ -76,12 +117,19 @@ def setupStage(self):
                            mip=2, useShaders={"cull":1},
                            shadow="CR")
         self.pillars.append(self.vertObjects[-1])
+        self.addVertObject(VertModel, [PX-5,0,PZ-10 + 5.8*i],
+                           filename="../Models/Strachan/TablePillar.obj",
+                           rot=(0,pi,0),
+                           mip=2, useShaders={"cull":1},
+                           shadow="CR")
+
+    for f in self.vtNames:
+        if "Wood066" in f and not "066P" in f:
+            self.matShaders[self.vtNames[f]]['SSR'] = 2
+
     self.pillars.reverse()
     pa = self.vertObjects[-1]
-    self.pillarTexn = [pa.texNum]
-    while pa.nextMtl is not None:
-        pa = pa.nextMtl
-        self.pillarTexn.append(pa.texNum)
+    self.pillarTexn = getTexN(pa)
 
     tsize = 512
     hscale = 56
@@ -108,12 +156,14 @@ def setupStage(self):
 
     fi = np.array((1,0.6,0.25)) * 30
     self.envPointLights.extend([
+        # Chandeliers
         {'i':fi, 'pos':(5+PX,7.5,-8+PZ)},
         {'i':fi, 'pos':(-5+PX,7.5,-8+PZ)},
         {'i':fi, 'pos':(5+PX,7.5,8+PZ)},
         {'i':fi, 'pos':(-5+PX,7.5,8+PZ)},
         {'i':fi, 'pos':(5+PX,7.5,24+PZ)},
         {'i':fi, 'pos':(-5+PX,7.5,24+PZ)},
+        # Kitchen
         {'i':fi/2, 'pos':(-14+PX,4,22+PZ)},
     ])
 
@@ -123,20 +173,26 @@ def setupStage(self):
     for i in range(7):
         self.spotLights.append({'i':si, 'pos':(10+PX, 9.5, 8*(i-2)+PZ),
                                 'vec':sv})
+    sv = np.array((0.8,-0.2,0))
+    sv /= Phys.eucLen(sv)
+    self.spotLights.append({'i':si*0.6, 'pos':(-26+PX, 2.5, 17+PZ),
+                            'vec':sv})
+    self.spotLights.append({'i':si*0.6, 'pos':(-26+PX, 2.5, 23+PZ),
+                            'vec':sv})
 
     self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     self.skyBox.created()
 
     self.showPillars = -1
-    self.buttonFullyPressed = False
-    self.buttonFullyLifted = True
+    self.showPlatforms = False
 
-def movePillars(self):
-    if self.buttonFullyLifted:
+def movePillars(self, i):
+    btn = self.buttons[i]
+    if btn['fullyLifted']:
         self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
                              (np.array((10,0,42)), 4, 6, True))})
-        self.buttonFullyLifted = False
+        btn['fullyLifted'] = False
 
     if self.showPillars == -1:
         self.si.put({'Play':(SFX+'chaingrind.wav', self.volmFX, False,
@@ -145,12 +201,48 @@ def movePillars(self):
     self.showPillars = max(0, self.showPillars)
 
     tr = np.array([0,-0.2*self.frameTime,0])
-    b = self.buttonGold
-    if self.buttonPos < -0.1:
-        self.buttonFullyPressed = True
+
+    if btn['pos'] < -0.1:
+        btn['fullyPressed'] = True
         return
-    self.buttonPos += tr[1]
+    btn['pos'] += tr[1]
+    b = btn['obj']
     self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+
+def showPlatforms(self):
+    if self.showPlatforms > 0:
+        return
+    for p in self.stagePlatforms:
+        self.w.addCollider(Phys.CircleCollider(0.6, p))
+    self.showPlatforms = time.time()
+
+    # restore materials after dissolve in
+    self.platMats = {i:self.matShaders[i] for i in self.platTexn}
+    self.platFullyAppeared = False
+
+def testPlatforms(self):
+    if self.showPlatforms == 0:
+        return
+
+    t = time.time() - self.showPlatforms
+
+    if t > 2.5:
+        if self.platFullyAppeared:
+            return
+        self.platFullyAppeared = True
+        for i in self.platTexn[:-1]:
+            self.matShaders[i] = self.platMats[i]
+            self.draw.changeShaderZ(i, {})
+            self.draw.changeShader(i, self.matShaders[i], stage=self.stage)
+        return
+
+    self.matShaders[self.platGlass]['add'] = 0.04 * min(1, (t / 2.5))
+
+    for i in self.platTexn[:-1]:
+        self.matShaders[i] = {
+            'dissolve':{'origin':(10,4,6), 'fact':np.float32(5*t)}}
+        self.draw.changeShaderZ(i, self.matShaders[i])
+
 
 
 def frameUpdate(self):
@@ -162,22 +254,30 @@ def frameUpdate(self):
         if self.isClient: break
         pos = self.players[p]['b1'].offset[:3]
         if Phys.eucDist(pos, (10, 1, 42)) < 0.8:
-            movePillars(self)
-            buttonPressed = True
+            movePillars(self, 0)
+            buttonPressed = 1
+        if Phys.eucDist(pos, (10, 6, -7)) < 0.8:
+            movePillars(self, 1)
+            showPlatforms(self)
+            buttonPressed = 2
+
+    testPlatforms(self)
 
     mov = 0.2 * self.frameTime
     tr = np.array([0,mov,0])
 
-    if not buttonPressed and self.buttonPos < 0:
-        if self.buttonFullyPressed:
-            self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
-                             (np.array((10,0,42)), 4, 6, True))})
-            self.buttonFullyPressed = False
-        b = self.buttonGold
-        self.buttonPos += mov
-        self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
-    if self.buttonPos >= 0:
-        self.buttonFullyLifted = True
+    for i in range(len(self.buttons)):
+        btn = self.buttons[i]
+        if not (buttonPressed - 1) == i and btn['pos'] < 0:
+            if btn['fullyPressed']:
+                self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
+                                 (np.array((10,0,42)), 4, 6, True))})
+                btn['fullyPressed'] = False
+            b = btn['obj']
+            btn['pos'] += mov
+            self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+        if btn['pos'] >= 0:
+            btn['fullyLifted'] = True
 
     if self.showPillars < 0:
         return
@@ -220,12 +320,13 @@ def frameUpdate(self):
 def getHeight(self, pos):
     r = 0.8
     R = r + 2
-    for p in self.stagePlatforms:
-        if Phys.eucDist(pos, p) < R:
-            if pos[1] > p[1]:
-                if Phys.eucLen((pos - p) * np.array([1,0,1])) < r:
-                    z = p[1] + r + 0.2
-                    return z
+    if self.showPlatforms:
+        for p in self.stagePlatforms:
+            if Phys.eucDist(pos, p) < R:
+                if pos[1] > p[1]:
+                    if Phys.eucLen((pos - p) * np.array([1,0,1])) < r:
+                        z = p[1] + r + 0.2
+                        return z
 
     if 0 < pos[0] < 20 and pos[1] > 5 and -10 < pos[2] < -2:
         return 5

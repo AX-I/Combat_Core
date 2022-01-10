@@ -438,8 +438,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def testRM(self, rm=None):
         if rm is None:
             rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
-        if self.stage != 4:
+        if self.stage < 4:
             return rm
+
+        if self.stage == 5:
+            return self.STAGECONFIG.getRenderMask(self, rm)
 
         try: t = time.time() - self.transStart
         except: t = 0
