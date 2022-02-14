@@ -277,6 +277,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.bindKey('o', self.lightTest)
         self.bindKey('i', self.respawnTest)
 
+        self.bindKey('b', self.testAniso)
+        self.aniso = 2
+
+    def testAniso(self):
+        self.aniso *= 2
+        if self.aniso > 8:
+            self.aniso = 1
+        self.draw.setAnisotropy(self.aniso)
+        print('Anisotropy', self.aniso)
+
     def printStuff(self):
         print('pos', self.pos,
               'charpos', self.players[self.selchar]['b1'].offset[:3])

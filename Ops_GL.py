@@ -603,6 +603,11 @@ class CLDraw:
         for draw in self.DRAW:
             draw['vmat'].write(self.vmat)
 
+    def setAnisotropy(self, a):
+        for tex in self.TEX:
+            if max(tex.size) > 128:
+                tex.anisotropy = a
+
     def addTextureGroup(self, xyz, uv, vn, r, g, b, shader=None, mip=None):
         texNum = len(self.TEX)
 
@@ -635,6 +640,9 @@ class CLDraw:
 
         tex = ctx.texture(rr.shape[::-1], 3, np.stack((rr,gg,bb), axis=-1),
                           dtype='f2')
+
+        if max(rr.shape) > 128:
+            tex.anisotropy = 2
 
         if mip is not None or 'mip' in shader:
             tex.build_mipmaps()
