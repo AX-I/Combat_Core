@@ -380,6 +380,35 @@ class VertWater(VertObject):
             self.hasSetup = True
         self.viewer.draw.updateWave(self.pS, self.stTime, self.texNum)
 
+class VertRing(VertObject):
+    def __init__(self, *args, n=32, radius=(1.0,1.5), z=0.2, uMult=1, **ex):
+        """radius = (inner, outer)"""
+        super().__init__(*args, **ex)
+
+        self.radius = radius
+        self.z = z
+        self.uMult = uMult
+        self.n = n
+        self.estWedges = n*2
+
+    def create(self):
+        pos = numpy.array(self.coords)
+        n = self.n
+        r = np.arange(32) / 32. * 2*3.1416
+        rx = np.cos(r)
+        ry = np.sin(r)
+        r1 = self.radius[0] * np.stack((rx, np.zeros_like(rx), ry)).T
+        r2 = self.radius[1] * np.stack((rx, self.z + np.zeros_like(rx), ry)).T
+        norm = np.array(3*[[0,-1.,0]])
+        for i in range(n):
+            t = np.array((r1[i], r2[i], r1[i-1]))
+            uv = np.array([(0,i/n),(1,i/n),(0,(i-1)/n)])
+            self.appendWedge(t, norm, uv)
+            t = np.array((r2[i], r2[i-1], r1[i-1]))
+            uv = np.array([(1,i/n),(1,(i-1)/n),(0,(i-1)/n)])
+            self.appendWedge(t, norm, uv)
+        self.v = np.array(self.v) * self.uMult
+
 class VertSphere(VertObject):
     def __init__(self, *args, n=16, size=1, **ex):
         super().__init__(*args, **ex)
@@ -389,7 +418,6 @@ class VertSphere(VertObject):
         self.estWedges = n * (n-1) * 2
 
     def create(self):
-        pos = numpy.array(self.coords)
         n = self.n
         self.pts = []
         

@@ -342,7 +342,9 @@ class CLDraw:
         except:
             ctx.point_size = 4
             draw = ctx.program(vertex_shader=trisetup,
-                               fragment_shader=drawSub)
+                               fragment_shader=drawSub,
+                               geometry_shader=makeProgram('ps.c'))
+            draw['size'] = 0.2
 
             draw['emPow'].write(np.float32(0.5))
 
@@ -357,7 +359,10 @@ class CLDraw:
         p = xyz
         vertices = np.stack((p[:,0], p[:,1], p[:,2]), axis=-1)
 
-        self.PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
+        try:
+            self.PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
+        except moderngl.error.Error:
+            return False
 
         self.PSvao = ctx.vertex_array(self.psProg, self.PSvbo, 'in_vert')
 

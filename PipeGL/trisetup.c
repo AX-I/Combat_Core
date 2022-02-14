@@ -33,6 +33,10 @@ uniform int stage;
 
 out float depth;
 
+out VS_OUT {
+  float depth;
+} vs_out;
+
 void main() {
 
     vec3 pos = vmat*(in_vert-vpos);
@@ -44,6 +48,7 @@ void main() {
 	}
 
 	depth = 1.0 / pos.z;
+	vs_out.depth = depth;
     v_pos = in_vert * depth;
     v_UV = tmp_UV * depth;
 	v_norm = in_norm * depth;
