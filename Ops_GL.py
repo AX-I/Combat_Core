@@ -72,6 +72,8 @@ gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
 bloom2 = makeProgram('Post/bloom2.c')
 
+lens = makeProgram('Post/lens.c')
+
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
 ctx.front_face = 'cw'
@@ -736,6 +738,9 @@ class CLDraw:
             if 'fogScatter' in shaders[i]:
                 draw['rscatter'].write(np.float32(shaders[i]['fogScatter']))
 
+        elif 'lens' in shaders[i]:
+            draw = ctx.program(vertex_shader=ts, fragment_shader=lens)
+
         elif 'SSR' in shaders[i]:
             if shaders[i]['SSR'] == '0':
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
@@ -835,7 +840,7 @@ class CLDraw:
 
         for i in range(len(self.VBO)):
             if mask[i]: continue
-            trans = {'add', 'border', 'SSR', 'sub', 'fog'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'lens'}
             if any(t in shaders[i] for t in trans): continue
 
             try: _ = self.DRAWZ[i]
@@ -884,7 +889,7 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque', 'lens'}
             if all(t not in shaders[i] for t in trans):
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
@@ -956,6 +961,13 @@ class CLDraw:
                 ctx.blend_equation = moderngl.FUNC_ADD
                 self.DBT.use(location=1)
                 self.DRAW[i]['SM'] = 4
+                self.DRAW[i]['db'] = 1
+                self.DRAW[i]['vmat'].write(self.rawVM)
+            elif 'lens' in shaders[i]:
+                ctx.blend_func = moderngl.ONE, moderngl.ONE
+                ctx.blend_equation = moderngl.FUNC_ADD
+                self.DRAW[i]['SM'] = 4
+                self.DRAW[i]['SM2'] = 5
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['vmat'].write(self.rawVM)
             else:

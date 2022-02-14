@@ -4,7 +4,7 @@ import numpy as np
 from math import pi
 from OpsConv import PATH
 
-from VertObjects import VertWater0, VertTerrain0, VertModel
+from VertObjects import VertWater0, VertTerrain0, VertModel, VertPlane
 from TexObjects import TexSkyBox
 from PIL import Image
 
@@ -86,6 +86,13 @@ def setupStage(self):
     # Sky light
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.12,0.18]})
     self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.4]})
+
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/Blank3.png',
+            useShaders={'2d':1, 'lens':1})
+
 
     fn = "../Skyboxes/approaching_storm_1k.ahdr"
     self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=16)

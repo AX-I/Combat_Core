@@ -4,7 +4,7 @@ import numpy as np
 from math import pi, sin
 from OpsConv import PATH
 
-from VertObjects import VertTerrain0, VertModel, VertSphere
+from VertObjects import VertTerrain0, VertModel, VertSphere, VertPlane, VertRing
 from TexObjects import TexSkyBox
 from PIL import Image
 import time
@@ -148,10 +148,12 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    DInt = np.array([2.0,1.77,1.33])
+    DInt = np.array([2.0,1.77,1.33]) * 1.2
+    RInt = np.array([0.2,0.15,0.1])
+    RInt2 = np.array([0.08,0.06,0.04])
     self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DInt})
-    self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.2,0.15,0.1]})
-    self.directionalLights.append({"dir":[pi*2/3, 3.2], "i":[0.08,0.06,0.04]})
+    self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":RInt})
+    self.directionalLights.append({"dir":[pi*2/3, -2.5], "i":RInt2})
 
 
     fi = np.array((1,0.6,0.25)) * 30
@@ -173,12 +175,21 @@ def setupStage(self):
     for i in range(7):
         self.spotLights.append({'i':si, 'pos':(10+PX, 9.5, 8*(i-2)+PZ),
                                 'vec':sv})
+
+    si = np.array((0.55,0.75,0.95)) * 50
     sv = np.array((0.8,-0.2,0))
     sv /= Phys.eucLen(sv)
-    self.spotLights.append({'i':si*0.6, 'pos':(-26+PX, 2.5, 17+PZ),
+    self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 16.8+PZ),
                             'vec':sv})
-    self.spotLights.append({'i':si*0.6, 'pos':(-26+PX, 2.5, 23+PZ),
+    self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ),
                             'vec':sv})
+
+
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/Blank3.png',
+            useShaders={'2d':1, 'lens':1})
+
 
     self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
