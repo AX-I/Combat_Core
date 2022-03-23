@@ -411,18 +411,24 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         if (len(uInfo) > 0) and self.drawUI:
             y1, y2 = 10, 30
-            
+            ym = (y2-y1)//2
+
+            yr = np.arange(2*ym)
+            grad = 1 - (yr-ym+0.5)*(yr-ym+0.5) / (ym*ym) * 0.6
+            grad = np.expand_dims(grad, 1)
+            grad = np.expand_dims(grad, 1)
+
             x1, x2 = 10, self.W2 - 10
             fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * np.array([0.5, 0.4, 0.4])
             
             xf = x1 + int((self.W2 - 20) * uInfo["Health"])
-            fr[y1:y2, x1:xf] += np.array([128, 0, 0], "uint16")
+            fr[y1:y2, x1:xf] += (grad * np.array([128., 0, 0])).astype("uint16")
 
             x1, x2 = self.W2 + 10, self.W - 10
             fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * np.array([0.4, 0.5, 0.4])
             
             xf = x2 - int((self.W2 - 20) * uInfo["Energy"])
-            fr[y1:y2, xf:x2] += np.array([0, 128, 0], "uint16")
+            fr[y1:y2, xf:x2] += (grad * np.array([0, 128., 0])).astype("uint16")
 
             if "End" in uInfo:
                 end = uInfo["End"]
