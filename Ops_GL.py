@@ -44,8 +44,8 @@ trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
 
 if True: #if sys.platform == 'darwin':
-    trisetup = trisetup.replace('[128]', '[8]')
-    trisetupAnim = trisetupAnim.replace('[128]', '[8]')
+    trisetup = trisetup.replace('[128]', '[12]')
+    trisetupAnim = trisetupAnim.replace('[128]', '[12]')
 
 drawBase = makeProgram("drawbase.c")
 drawSh = makeProgram("drawsh.c")
@@ -67,6 +67,8 @@ drawSSR = makeProgram('drawwater.c')
 drawGlass = makeProgram('drawglass.c')
 drawSSRopaque = makeProgram('drawSSRopaque.c')
 drawMetal = makeProgram('drawmetallic.c')
+
+drawSpecial = makeProgram('drawspecial.c')
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -240,7 +242,7 @@ class CLDraw:
             spotP = np.zeros((1,3))
             spotD = np.zeros((1,3))
 
-        ssize = 8 # if sys.platform == 'darwin' else 128
+        ssize = 12 # if sys.platform == 'darwin' else 128
 
         ls = min(ssize, spotP.shape[0])
 
@@ -706,7 +708,9 @@ class CLDraw:
             draw['vPow'].write(np.float32(shaders[i]['emissive']))
 
         elif 'add' in shaders[i]:
-            if 'add' in self.oldShaders[i]:
+            if 'special' in shaders[i]:
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSpecial)
+            elif 'add' in self.oldShaders[i]:
                 draw = self.DRAW[i]
             else:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
@@ -932,6 +936,9 @@ class CLDraw:
             if 'add' in shaders[i] or 'border' in shaders[i]:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
                 ctx.blend_equation = moderngl.FUNC_ADD
+                if 'special' in shaders[i]:
+                    self.DRAW[i]['VV'].write(self.rawVM[0])
+                    self.DRAW[i]['iTime'].write(np.float32(time.time() - self.stTime))
 
             elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
                 ctx.disable(moderngl.DEPTH_TEST)

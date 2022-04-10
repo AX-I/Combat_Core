@@ -25,6 +25,7 @@ def getRenderMask(self, rm):
     if not self.showPlatforms:
         for i in self.platTexn:
             rm[i] = True
+        rm[self.ringTest.texNum] = True
     return rm
 
 def setupStage(self):
@@ -32,10 +33,11 @@ def setupStage(self):
     PZ = 10
     PA = np.array([(PX,0,PZ)], 'float')
 
-    self.stagePlatforms = np.array([(2, 5,   -4),
-                                    (0, 4.5, 0),
-                                    (-1,5.5, 3.5),
-                                    (-2,5,   7.5)]) + PA
+    self.stagePlatforms = np.array([(-1, 5,   -4),
+                                    (0.5,4.5, 0),
+                                    (2,  5.5, 4),
+                                    (1.5,5,   8.5)]) + PA
+    self.stagePlatformPS = []
 
 
     self.addVertObject(VertModel, [PX,0,PZ], rot=(0,0,0),
@@ -47,6 +49,7 @@ def setupStage(self):
     for f in self.vtNames:
         if "Chandelier" in f:
             self.matShaders[self.vtNames[f]]['emissive'] = 4.0
+            self.chandelierMat = self.vtNames[f]
         if "Glass" in f:
             self.matShaders[self.vtNames[f]]['add'] = 0.04
             self.matShaders[self.vtNames[f]]['noline'] = True
@@ -91,21 +94,32 @@ def setupStage(self):
                            filename='../Models/Strachan/Floating2.obj',
                            mip=2, useShaders={'cull':1},
                            shadow='CR')
-        self.addVertObject(VertSphere, p, scale=0.4,
-                           n=8, texture="../Models/Strachan/Glass.png")
-        self.addVertObject(VertSphere, p, scale=0.3,
-                           n=6, texture="../Models/Strachan/Glass.png")
+        tg = "../Assets/Blob.png"
+        self.addVertObject(VertSphere, p, scale=0.7,
+                           n=16, texture=tg)
+        self.addVertObject(VertSphere, p, scale=-0.5,
+                           n=12, texture=tg)
 
     if len(self.stagePlatforms) > 0:
         glass = self.vertObjects[-1].texNum
-        self.matShaders[glass]['add'] = 0.001
+        self.matShaders[glass]['add'] = 0.1
         self.matShaders[glass]['noline'] = True
+        self.matShaders[glass]['special'] = True
         self.platGlass = glass
 
         self.platTexn = getTexN(self.vertObjects[-3]) + [glass]
 
     self.w.addCollider(Phys.PlaneCollider((PX, 5, PZ-16),
                                           (0,0,3),(10,0,0)))
+
+    self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.2,0]),
+                       scale=(-1,1,1), filename='../Models/Strachan/Ring.obj',
+                       useShaders={'add':4, 'noline':True})
+    self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.3,0]),
+                       scale=1.3, filename='../Models/Strachan/Ring.obj',
+                       rot=(0,pi/3,0),
+                       useShaders={'add':4, 'noline':True})
+    self.ringTest = self.vertObjects[-1]
 
     for f in self.vtNames:
         if "Gold" in f:
@@ -226,17 +240,39 @@ def showPlatforms(self):
         return
     for p in self.stagePlatforms:
         self.w.addCollider(Phys.CircleCollider(0.6, p))
+        ps = CentripetalParticleSystem(p, (0, 0),
+                                       nParticles=60, lifespan=1200,
+                                       randPos=0.08, vel=0.0, randVel=0.0,
+                                       size=0.1, opacity=0.05,
+                                       color=(0.2,0.2,0.2), randColor=0,
+                                       f=0.001, r=0.6, cc=1)
+        self.addParticleSystem(ps)
+        self.stagePlatformPS.append(ps)
+
     self.showPlatforms = time.time()
 
     # restore materials after dissolve in
     self.platMats = {i:self.matShaders[i] for i in self.platTexn}
     self.platFullyAppeared = False
 
+def toggleLights(self):
+    self.matShaders[self.chandelierMat]['emissive'] = 0.1
+    self.envPointLights = []
+    self.directionalLights[2]['i'] *= 4
+    FInt = np.array([0.5,0.3,0.1]) * 0.6
+    self.directionalLights.append({'dir':[pi*2/3,pi*0.6], 'i':FInt})
+    self.simpleShaderVert()
+    self.lightsToggled = True
+
 def testPlatforms(self):
     if self.showPlatforms == 0:
         return
 
     t = time.time() - self.showPlatforms
+
+    self.draw.setUVOff(self.ringTest.texNum, (0,0), (1,1),
+                       (0, t/3))
+    self.matShaders[self.ringTest.texNum]['add'] = 2 + 2 * sin(t*2)
 
     if t > 2.5:
         if self.platFullyAppeared:
