@@ -66,14 +66,22 @@ def setupStage(self):
         if "Wood066" in f:
             self.matShaders[self.vtNames[f]]['SSR'] = 2
         elif "Wood_Ceil" in f:
-            pass
+            self.matShaders[self.vtNames[f]]['noise'] = 1
         elif "Wood" in f:
-            self.matShaders[self.vtNames[f]]['spec'] = 1
+            self.matShaders[self.vtNames[f]]['spec'] = 0.5
+            self.matShaders[self.vtNames[f]]['noise'] = 1
+        elif 'Wtest' in f or 'Material' in f or 'GraySt' in f or 'Turq' in f:
+            self.matShaders[self.vtNames[f]]['noise'] = 1
+        if 'Wtest' in f:
+            self.vtextures[self.vtNames[f]] = (self.vtextures[self.vtNames[f]]*1.2).astype('uint16')
 
         if "Silver" in f:
             self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.4}
         if "Transparent" in f:
             self.matShaders[self.vtNames[f]]['add'] = 0.002
+
+        if 'floor' in f:
+            self.matShaders[self.vtNames[f]]['noise'] = 1
 
 
     self.buttons = []
@@ -131,20 +139,31 @@ def setupStage(self):
                            filename="../Models/Strachan/TablePillar.obj",
                            mip=2, useShaders={"cull":1},
                            shadow="CR")
-        self.pillars.append(self.vertObjects[-1])
-        self.addVertObject(VertModel, [PX-5,0,PZ-10 + 5.8*i],
+        self.addVertObject(VertModel, [PX-5,-0.01,PZ-10 + 5.8*i],
                            filename="../Models/Strachan/TablePillar.obj",
                            rot=(0,pi,0),
                            mip=2, useShaders={"cull":1},
                            shadow="CR")
+        self.pillars.append(self.vertObjects[-1])
 
     for f in self.vtNames:
         if "Wood066" in f and not "066P" in f:
             self.matShaders[self.vtNames[f]]['SSR'] = 2
+        if 'WoodT' in f:
+            self.matShaders[self.vtNames[f]]['noise'] = 1
 
     self.pillars.reverse()
     pa = self.vertObjects[-1]
     self.pillarTexn = getTexN(pa)
+
+
+
+    self.addVertObject(VertRing, [PX,0.5,PX], uMult=6,
+                       texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
+                       shadow="CR", useShaders={'add':0.4, 'noline':True})
+    self.fxTest = self.vertObjects[-1]
+
+
 
     tsize = 512
     hscale = 56

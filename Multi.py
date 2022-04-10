@@ -280,6 +280,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('b', self.testAniso)
         self.aniso = 2
 
+        self.iceEffect = False
+        self.bindKey('m', self.tgIce)
+
+    def tgIce(self):
+        self.iceEffect = not self.iceEffect
+
     def testAniso(self):
         self.aniso *= 2
         if self.aniso > 8:
@@ -2329,6 +2335,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["movingOld"] = a["moving"]
 
         self.frameProfile('PlayerMove')
+
+        nd = self.draw.noiseDist
+        if self.iceEffect:
+            self.draw.noiseDist = min(0.1, nd + 0.6*self.frameTime)
+            ppos = self.players[sc]['b1'].offset[:3]
+            self.pointLights.append({'i':(0.2,0.6,1.5),
+                                        'pos': ppos + 1.5*self.vVhorz() + np.array((0,1,0))})
+            self.pointLights.append({'i':(0.3,0.5,1.1),
+                                        'pos': ppos - 1.5*self.vVhorz() + np.array((0,1,0))})
+        else:
+            self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
 
         if not self.VRMode:
             sp = self.players[sc]
