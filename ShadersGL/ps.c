@@ -9,12 +9,14 @@ uniform float aspect;
 uniform float size;
 
 out vec2 v_UV;
+out float depth;
 
 in VS_OUT {
   float depth;
 } gs_in[];
 
 void main() {
+    depth = gs_in[0].depth;
     float dimy = size * gs_in[0].depth;
     float dimx = dimy * aspect;
 

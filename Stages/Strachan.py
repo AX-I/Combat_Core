@@ -8,6 +8,7 @@ from VertObjects import VertTerrain0, VertModel, VertSphere, VertPlane, VertRing
 from TexObjects import TexSkyBox
 from PIL import Image
 import time
+from ParticleSystem import CentripetalParticleSystem
 
 import Phys
 

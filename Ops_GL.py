@@ -346,14 +346,15 @@ class CLDraw:
             draw = ctx.program(vertex_shader=trisetup,
                                fragment_shader=drawSub,
                                geometry_shader=makeProgram('ps.c'))
-            draw['size'] = 0.2
 
-            draw['emPow'].write(np.float32(0.5))
-
-            draw['vscale'].write(self.sScale)
             draw['aspect'].write(np.float32(self.H/self.W))
 
             self.psProg = draw
+
+        self.psProg['vscale'].write(self.sScale)
+        self.psProg['size'] = size
+        self.psProg['emPow'].write(np.float32(1-opacity))
+        self.psProg['tColor'].write(np.array(color[0], 'float32').tobytes())
 
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)
@@ -362,11 +363,11 @@ class CLDraw:
         vertices = np.stack((p[:,0], p[:,1], p[:,2]), axis=-1)
 
         try:
-            self.PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
+            PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
         except moderngl.error.Error:
             return False
 
-        self.PSvao = ctx.vertex_array(self.psProg, self.PSvbo, 'in_vert')
+        self.PSvao = ctx.vertex_array(self.psProg, PSvbo, 'in_vert')
 
         self.fbo.use()
         self.fbo.depth_mask = True

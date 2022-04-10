@@ -1215,8 +1215,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                           nParticles=2400,
                                           randPos=0.2,
                                           lifespan=400,
-                                          size=24 * (self.W/960), opacity=0.4,
-                                          color=(0,0,0))
+                                          size=0.3, opacity=0.7,
+                                          color=(0,0,0), randColor=0)
             self.addParticleSystem(ps)
 
             self.blackHoles.append({"rb":self.srbs[-1], "ps":ps})
@@ -1238,8 +1238,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                           nParticles=2400,
                                           randPos=0.2,
                                           lifespan=1200,
-                                          size=32 * (self.W/960), opacity=0.4,
-                                          color=(0,0,0))
+                                          size=0.2, opacity=0.6,
+                                          color=(0,0,0), randColor=0)
             self.addParticleSystem(ps)
             self.players[i]["ghost"] = ps
 
@@ -1705,11 +1705,28 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({"Play":(PATH+"../Sound/Pickup.wav",
                              self.volmFX / 3, (i["pos"], 4, 1))})
 
+        if 'ps' in i:
+            i['ps'].reset()
+            i['ps'].changePos(pos)
+            i['ps'].opacity = 0.3
+            return
+
+        ps = ContinuousParticleSystem(pos, (0,-pi/2),
+                                      vel=0.02, randVel=0.0,
+                                      nParticles=40,
+                                      randPos=0.25,
+                                      lifespan=1200,
+                                      size=0.15, opacity=0.3,
+                                      color=(0.08,0.4,0.06), randColor=0)
+        self.addParticleSystem(ps)
+        i['ps'] = ps
+
     def resetPickup(self):
         i = self.pickups[0]
         cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
         self.draw.translate(-i["pos"], cs, ce, tn)
         i["pos"] = None
+        i['t'] = -self.frameNum
 
     def qq(self): self.doQuit = True
 
@@ -2016,6 +2033,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in self.pickups:
             if i["pos"] is not None:
                 self.pointLights.append({"i":(0,4.,0), "pos":i["pos"]})
+                i['ps'].step()
                 for a in self.players:
                     if a["id"] not in actPlayers: continue
                     if np.sum(np.abs(i["pos"] - a["b1"].offset[:3])) < 2:
@@ -2023,6 +2041,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["Energy"] = min(1, a["Energy"])
                         self.resetPickup()
                         break
+            if i['t'] < 0:
+                try:
+                    i['ps'].opacity *= 0.9
+                    if self.frameNum + i['t'] > 40:
+                        i['ps'].reset()
+                        i['t'] = 0
+                except: pass
 
         self.frameProfile('Pickup')
 

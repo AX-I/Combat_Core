@@ -122,7 +122,9 @@ class ContinuousParticleSystem(ParticleSystem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if (self.N % self.L) > 0:
+        if (self.L % self.N) == 0:
+            pass
+        elif (self.N % self.L) > 0:
             raise ValueError("# must be divisible by lifespan!")
 
     def setup(self):
@@ -140,12 +142,12 @@ class ContinuousParticleSystem(ParticleSystem):
 
     def step(self):
         self.started = True
-        self.pl += 1
+        self.pl += min(1, self.L/self.N)
         self.Rpc[self.pe] += self.Rpv[self.pe]
         self.Rpv[self.pe] *= (1-self.drag)
         self.Rpv[self.pe] += self.force
 
-        self.ll += 1
+        self.ll += min(1, self.L/self.N)
 
         self.pc = self.Rpc[self.pe]
         self.pv = self.Rpv[self.pe]
@@ -160,4 +162,54 @@ class ContinuousParticleSystem(ParticleSystem):
         self.pos[:] = newpos
     def reset(self):
         del self.pc, self.pv, self.pe, self.pl
+        self.setup()
+
+
+class CentripetalParticleSystem(ParticleSystem):
+    """Centripetal system, single emission
+f => centripetal force, r => distance from center, cc => 1 or -1"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.f = kwargs["f"]
+        self.r = kwargs["r"]
+        self.cc = kwargs["cc"]
+
+    def setup(self):
+        super().setup()
+        self.ll = 0
+        
+        self.pr = (0.5 - nr.randn(self.N)) * self.randPos + self.r
+        self.pa = nr.rand(self.N) * 2*pi
+        self.Rpc = np.stack((np.sin(self.pa), np.zeros((self.N,)), np.cos(self.pa))).T
+        self.Rpc = self.Rpc * np.expand_dims(self.pr, 0).T
+        
+        self.pc = self.Rpc @ rotMat2(self.emitDir[0], self.emitDir[1]) + self.pos
+
+        ta = self.pa + self.cc * pi/2
+        self.pv = np.stack((np.sin(ta), np.zeros((self.N,)), np.cos(ta))).T
+        self.pv = self.pv * np.sqrt(np.abs(self.f / np.expand_dims(self.pr, 0).T))
+        self.pv[:,1] += self.vel
+        
+    def step(self):
+        self.started = True
+        self.Rpc += self.pv
+
+        vn = self.Rpc
+        xz = np.stack((vn[:,0], vn[:,2]), axis=1)
+        di = np.linalg.norm(xz, axis=1)
+        vn[:,0] = xz[:,0] / di * self.pr
+        vn[:,2] = xz[:,1] / di * self.pr
+        
+        rm = np.array([[0, -1], [1, 0]]) * self.cc
+        ta = np.stack((vn[:,0], vn[:,2]), axis=1) @ rm
+
+        self.pv = ta * np.sqrt(np.abs(self.f / np.expand_dims(self.pr, 0).T))
+        self.pv = np.stack((self.pv[:,0], np.zeros((self.N,)).T, self.pv[:,1]), 1)
+        self.pv[:,1] = self.vel
+
+        self.Rpc = vn
+
+        self.pc = self.Rpc @ rotMat2(self.emitDir[0], self.emitDir[1]) + self.pos
+
+    def reset(self):
         self.setup()
