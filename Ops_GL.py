@@ -157,6 +157,17 @@ class CLDraw:
         self.doSSAO = False
 
         self.setupBlur()
+        self.setupNoise()
+        self.noiseDist = 0
+
+        self.stTime = time.time()
+
+    def setupNoise(self):
+        from PIL import Image
+        n = Image.open('../Assets/Noise/NoiseTest.png').convert('RGB')
+        n = (np.array(n)[:,:,0] / 256.).astype('float16')
+        tex = ctx.texture3d((16,16,16), 1, n, dtype='f2')
+        self.noiseTex = tex
 
     def setSkyTex(self, r, g, b, size):
         pass
@@ -168,6 +179,7 @@ class CLDraw:
     def addTexAlpha(self, tex):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
+        a.build_mipmaps(0, 2)
         self.TA.append(a)
 
     def addBoneWeights(self, tn, bw):
@@ -776,6 +788,7 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
+            draw['RAND'] = 2
 
         try:
             if 'stage' in kwargs:
@@ -902,6 +915,12 @@ class CLDraw:
                 if 'alpha' in shaders[i]:
                     sa = shaders[i]['alpha']
                     self.TA[sa].use(location=2)
+                elif 'noise' in shaders[i]:
+                    self.noiseTex.use(location=2)
+                    self.DRAW[i]['RAND'] = 2
+                    self.DRAW[i]['useNoise'] = 1
+                    self.DRAW[i]['noiseDist'] = self.noiseDist
+                    self.DRAW[i]['VV'].write(self.rawVM[0])
 
                 vao.render(moderngl.TRIANGLES)
 

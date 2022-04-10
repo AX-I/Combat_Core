@@ -50,6 +50,14 @@ uniform vec3 vpos;
 
 uniform float specular;
 
+uniform vec3 VV;
+uniform int useNoise;
+uniform float noiseDist;
+uniform sampler3D RAND;
+mat2 rot(float t) {
+  return mat2(cos(t),-sin(t),sin(t),cos(t));
+}
+
 void main() {
 	float tz = 1.0/depth;
 
@@ -72,8 +80,6 @@ void main() {
 	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
 	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
 	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
-
-
 
 
 	sxyz = SV2 * (v_pos*tz - SPos2);
@@ -130,6 +136,26 @@ void main() {
 
     light *= (1 + highMult);
 
-    vec3 rgb = texture(tex1, v_UV / depth).rgb * light + spec;
+    vec3 rgb = texture(tex1, v_UV / depth).rgb;
+    if (useNoise) {
+      float val = 0;
+      vec3 c = tz*v_pos * 0.1;
+      for (int i = 0; i < 6; i++) {
+        val += 1.f/float(1<<i) * texture(RAND, c).r;
+        c.xz = c.xz * rot(1.f); c *= 2;
+      }
+      val *= 0.5; // val is in [0,1) after this
+
+      val = val + noiseDist - 0.12*length(tz*v_pos - (vpos + 4 * VV));
+
+      val = max(0., val);
+      val *= 1.4;
+      val = min(1., val);
+      //if ((val < 0.2) && (val > 0)) {
+      //  val = (0.2 + 2*(0.2-val)) * float(val > 0.1);
+      //}
+      rgb = vec3(0.125) * val + rgb * (1-val);
+    }
+    rgb = rgb * light + spec;
     f_color = vec4(rgb, 0.5);
 }
