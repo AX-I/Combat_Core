@@ -189,7 +189,7 @@ class CombatMenu(Frame):
                                command=self.showExtras, font=g)
         self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
 
-        self.runMod = Button(self, text="Local Mode", fg="#000", bg="#ddd",
+        self.runMod = Button(self, text="Local Mode", fg="#a2a", bg="#ddd",
                                command=self.mkRouter, font=g)
         self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 

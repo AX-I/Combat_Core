@@ -351,9 +351,7 @@ class ThreeDBackend:
         for ps in self.particleSystems:
             if not ps.started: continue
             dist = np.linalg.norm(ps.pos - self.pos)
-            pv = (ps.pos - self.pos) / dist
-            if (pv @ self.vv) > (self.cullAngle - 0.2):
-                cc.append((ps, dist))
+            cc.append((ps, dist))
 
         cc = sorted(cc, key=lambda a: a[1], reverse=True)
 

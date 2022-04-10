@@ -175,7 +175,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
         self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav",
-                          "H8.wav", "Forest0a.wav", 'Forest0a.wav']
+                          "H8.wav", '', '']
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -1377,8 +1377,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def onStart(self):
         self.gameStarted = False
 
-        if self.stage >= 4:
+        if self.stage == 4:
             self.si.put({'Play':(PATH+'../Sound/NoiseOpen.wav', self.volmFX * 0.9, True)})
+        elif self.stage == 5:
+            pass
         elif self.isClient:
             snd = self.ENVTRACKS
             self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
@@ -2430,6 +2432,8 @@ def run():
                 with open(PATH+"lib/Stat.txt", "w") as f:
                     state = state | (1 << app.stage)
                     f.write(str(state))
+            fps = app.frameNum/app.totTime
+            print("avg fps:", fps)
             print("Closing network")
             app.qi.put(None)
             while not app.qo.empty():
@@ -2454,8 +2458,6 @@ def run():
         app.finish()
         print("Finished")
         if not app.proceed: break
-        fps = app.frameNum/app.totTime
-        print("avg fps:", fps)
 
 if __name__ == "__main__":
     mp.set_start_method('spawn')
