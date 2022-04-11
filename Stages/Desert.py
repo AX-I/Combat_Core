@@ -1,18 +1,23 @@
 # Desert
 
 import numpy as np
-from math import pi
+from math import pi,sin
 from OpsConv import PATH
+import time
 
-from VertObjects import VertTerrain
+from VertObjects import VertTerrain, VertPlane
 from TexObjects import TexSkyBox
 
 import Phys
+import PhysCloth
+
+VIEWER = None
 
 def getHeight(self, pos):
     return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
+
     self.addVertObject(VertTerrain, [-10, 0, -10],
                     heights=PATH+"../Assets/TerrainA.png",
                     texture=PATH+"../Assets/Sand.png",
@@ -22,6 +27,18 @@ def setupStage(self):
     self.terrain = self.vertObjects[-1]
 
     
+    nCloth = 4
+    self.nCloth = nCloth
+    self.addVertObject(VertPlane, [20,7,20],
+                       n=nCloth, h2=[2,0,1.5], h1=[0.2,-2,0.1],
+                       texture=PATH+'../Assets/Preview_Forest.png')
+    self.cloth = self.vertObjects[-1]
+    self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
+                                          self.cloth.getEdges(), 800,
+                                          np.ones((nCloth+1)**2),
+                                          np.array([0,nCloth]), 1/20)
+    self.clothI = self.cloth.getIndices()
+
 
     self.t2 = Phys.TerrainCollider([-10,0,-10], self.terrain.size[0],
                                    self.terrain.heights, 0.375)
@@ -36,3 +53,31 @@ def setupStage(self):
     self.skyBox.created()
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
+def frameUpdate(self):
+##    if self.frameNum == 1:
+##        self.bindKey('j', self.STAGECONFIG.updateCloth)
+##        global VIEWER
+##        VIEWER = self
+    updateCloth(self)
+
+def updateCloth(self):
+##    global VIEWER
+##    self = VIEWER
+
+    g = np.repeat(np.array([[0,-1,0.2 * sin(time.time())]]), (self.nCloth+1)**2, 0)
+    self.clothSim.step(g)
+
+    tn = self.cloth.texNum
+    cStart, cEnd = self.cloth.cStart*3, self.cloth.cEnd*3
+
+    size = 8*4
+    raw = self.draw.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
+    dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
+
+    U = self.clothSim.Ucur
+
+    dat[:,:3] = U[self.clothI]
+
+    self.draw.VBO[tn].write(dat, offset=cStart*size)
+
