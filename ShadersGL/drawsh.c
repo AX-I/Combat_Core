@@ -53,6 +53,7 @@ uniform float specular;
 uniform vec3 VV;
 uniform int useNoise;
 uniform float noiseDist;
+uniform vec3 noisePos;
 uniform sampler3D RAND;
 mat2 rot(float t) {
   return mat2(cos(t),-sin(t),sin(t),cos(t));
@@ -146,7 +147,7 @@ void main() {
       }
       val *= 0.5; // val is in [0,1) after this
 
-      val = val + noiseDist - 0.12*length(tz*v_pos - (vpos + 4 * VV));
+      val = val + noiseDist - 0.12*length(tz*v_pos - noisePos);
 
       val = max(0., val);
       val *= 1.4;

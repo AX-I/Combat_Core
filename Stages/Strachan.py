@@ -333,6 +333,19 @@ def frameUpdate(self):
         return
 
 
+    if self.isClient:
+        try:
+            self.showPillars = self.stageFlags['showPillars']
+            self.showPlatforms = self.stageFlags['showPlatforms']
+            self.iceEffect = self.stageFlags['iceEffect']
+        except: pass
+    else:
+        self.stageFlags['showPillars'] = self.showPillars
+        self.stageFlags['showPlatforms'] = self.showPlatforms
+        self.stageFlags['iceEffect'] = self.iceEffect
+
+
+
     CURRTIME = time.time()
 
     if self.showPlatforms > 0:

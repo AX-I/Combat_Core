@@ -921,7 +921,7 @@ class CLDraw:
                     self.DRAW[i]['RAND'] = 2
                     self.DRAW[i]['useNoise'] = 1
                     self.DRAW[i]['noiseDist'] = self.noiseDist
-                    self.DRAW[i]['VV'].write(self.rawVM[0])
+                    self.DRAW[i]['noisePos'].write(self.noisePos.astype('float32'))
 
                 vao.render(moderngl.TRIANGLES)
 

@@ -220,6 +220,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.cam1P = False
         self.envPointLights = []
 
+        self.stageFlags = {}
+
     def waitMenu(self):
         # server, gameId, stage, name, isClient
         wait = True
@@ -284,7 +286,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('m', self.tgIce)
 
     def tgIce(self):
-        self.iceEffect = not self.iceEffect
+        if self.iceEffect is False:
+            self.iceEffect = (True, self.selchar)
+        elif self.iceEffect[1] == self.selchar:
+            self.iceEffect = False
 
     def testAniso(self):
         self.aniso *= 2
@@ -1537,6 +1542,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try: adat['trans'] = self.transStart
         except: pass
 
+        adat['STAGEFLAGS'] = self.stageFlags
+
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
@@ -1688,6 +1695,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     except AttributeError:
                         self.lightTest()
                         self.transSync = b['trans']
+
+                if 'STAGEFLAGS' in b:
+                    self.stageFlags = b['STAGEFLAGS']
 
             except queue.Empty: pass
             except KeyError:
@@ -2339,13 +2349,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         nd = self.draw.noiseDist
         if self.iceEffect:
             self.draw.noiseDist = min(0.1, nd + 0.6*self.frameTime)
-            ppos = self.players[sc]['b1'].offset[:3]
+            ppos = self.players[self.iceEffect[1]]['b1'].offset[:3]
+            self.draw.noisePos = ppos
             self.pointLights.append({'i':(0.2,0.6,1.5),
                                         'pos': ppos + 1.5*self.vVhorz() + np.array((0,1,0))})
             self.pointLights.append({'i':(0.3,0.5,1.1),
                                         'pos': ppos - 1.5*self.vVhorz() + np.array((0,1,0))})
         else:
             self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
+            self.draw.noisePos = np.zeros((3,), 'float32')
 
         if not self.VRMode:
             sp = self.players[sc]
