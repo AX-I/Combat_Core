@@ -369,6 +369,7 @@ class CLDraw:
         self.psProg['size'] = size
         self.psProg['emPow'].write(np.float32(1-opacity))
         self.psProg['tColor'].write(np.array(color[0], 'float32').tobytes())
+        self.psProg['fadeUV'].write(np.int32(1))
 
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)

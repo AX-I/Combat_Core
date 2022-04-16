@@ -182,7 +182,7 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    DInt = np.array([2.0,1.77,1.33]) * 1.2
+    DInt = np.array([2.0,1.77,1.33])
     RInt = np.array([0.2,0.15,0.1])
     RInt2 = np.array([0.08,0.06,0.04])
     self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DInt})
@@ -190,7 +190,7 @@ def setupStage(self):
     self.directionalLights.append({"dir":[pi*2/3, -2.5], "i":RInt2})
 
 
-    fi = np.array((1,0.6,0.25)) * 30
+    fi = np.array((1,0.6,0.25)) * 20
     self.envPointLights.extend([
         # Chandeliers
         {'i':fi, 'pos':(5+PX,7.5,-8+PZ)},
@@ -231,6 +231,10 @@ def setupStage(self):
 
     self.showPillars = -1
     self.showPlatforms = False
+    self.lightsToggled = False
+
+    self.trackTime = -1
+    self.pillarTrackTime = -1
 
 def movePillars(self, i):
     btn = self.buttons[i]
@@ -242,6 +246,11 @@ def movePillars(self, i):
     if self.showPillars == -1:
         self.si.put({'Play':(SFX+'chaingrind.wav', self.volmFX, False,
                              (np.array((12,-2,10)), 80, 8, True))})
+
+        if time.time() - self.trackTime > 84:
+            self.si.put({'Play':(SFX+'Sac_a.wav', self.volm, False)})
+            self.pillarTrackTime = time.time()
+
 
     self.showPillars = max(0, self.showPillars)
 
@@ -293,6 +302,13 @@ def testPlatforms(self):
                        (0, t/3))
     self.matShaders[self.ringTest.texNum]['add'] = 2 + 2 * sin(t*2)
 
+##    if not self.lightsToggled:
+##        for p in self.actPlayers:
+##            if Phys.eucDist(self.players[p]['b1'].offset[:3],
+##                            self.stagePlatforms[-1] + np.array([0,2,0])) < 1:
+##                toggleLights(self)
+
+
     if t > 2.5:
         if self.platFullyAppeared:
             return
@@ -315,6 +331,28 @@ def testPlatforms(self):
 def frameUpdate(self):
     if self.frameNum < 2:
         return
+
+
+    CURRTIME = time.time()
+
+    if self.showPlatforms > 0:
+        for ps in self.stagePlatformPS:
+            ps.step()
+
+    if self.frameNum == 4:
+        self.si.put({'Play':('../Sound/StrachanLoop.wav', self.volm*0.6, True)})
+
+    if self.frameNum == 10:
+        #showPlatforms(self)
+        self.si.put({'Play':(SFX+'F_3c.wav', self.volm*0.9, False)})
+        self.trackTime = CURRTIME
+
+    if self.showPillars == 1000 and self.trackTime > 0 \
+      and CURRTIME - self.trackTime > 84 \
+      and CURRTIME - self.pillarTrackTime > 18:
+        self.si.put({'Play':(SFX+'FE2a.wav', self.volm*0.42, False)})
+        self.trackTime = -1
+
 
     buttonPressed = False
     for p in self.actPlayers:
