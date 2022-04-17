@@ -1477,6 +1477,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     requests.post(host + "/SelChar", data=p, **TO)
                 except: pass
 
+        self.draw.noisePos = np.zeros((3,), 'float32')
+
     def shadowChar(self):
         sc = self.shadowCams[1]
         sc["dir"] = self.directionalLights[0]["dir"]
@@ -2357,7 +2359,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                         'pos': ppos - 1.5*self.vVhorz() + np.array((0,1,0))})
         else:
             self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
-            self.draw.noisePos = np.zeros((3,), 'float32')
 
         if not self.VRMode:
             sp = self.players[sc]
