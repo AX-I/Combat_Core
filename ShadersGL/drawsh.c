@@ -138,7 +138,7 @@ void main() {
     light *= (1 + highMult);
 
     vec3 rgb = texture(tex1, v_UV / depth).rgb;
-    if (useNoise) {
+    if (useNoise != 0) {
       float val = 0;
       vec3 c = tz*v_pos * 0.1;
       for (int i = 0; i < 6; i++) {
