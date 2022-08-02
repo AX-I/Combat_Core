@@ -43,7 +43,9 @@ from math import sin
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
-import ImgUtils
+#import ImgUtils
+import ImgUtilsCL as ImgUtils
+from ImgUtilsCL import CLObject
 
 import OpsConv
 BLOCK_SIZE = 128
@@ -135,8 +137,6 @@ TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 import pyopencl as cl
 mf = cl.mem_flags
 
-def makeProgram(s: str):
-    return cl.Program(ctx, s).build()
 
 class CombatMenu(Frame, ImgUtils.NPCanvas):
     def __init__(self, root=None):
@@ -181,33 +181,21 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         print("Using", d.name)
         self.cq = cl.CommandQueue(self.ctx)
 
+        self.prog = cl.Program(self.ctx, open('Shaders/menu.py').read()).build()
+
         self.menuInit()
 
         self.menuLoop()
 
 
     def menuInit(self):
-##        self.cbuf = np.zeros((self.H, self.W, 4), 'float32')
-##        self.buf = cl.Buffer(ctx, mf.WRITE_ONLY, size=self.cbuf.nbytes)
-##
-##        cl.enqueue_copy(self.cq, self.cbuf, self.buf)
-##
-##        prog.test(cq, (S*S//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
-##              outBuf, rand,
-##              np.int32(S), np.float32(scale),
-##              np.float32(xpos), np.float32(ypos),
-##              g_times_l=True)
-
-
-
-
+        self.W = np.int32(self.W)
+        self.H = np.int32(self.H)
 
         self.tFont = ImageFont.truetype(_TIMESBD, int(72 * (self.H / 600)))
         self.bFont = ImageFont.truetype(_TIMESBD, int(48 * (self.H / 600)))
         self.cFont = ImageFont.truetype(_TIMES, int(24 * (self.H / 600)))
         self.eFont = ImageFont.truetype(_COURIERBD, int(18 * (self.H / 600)))
-
-
 
         i = self.openImageCover('../Assets/Forest.png')
         #i = self.openImageCover('../Assets/MenuTemple2a.png')
@@ -216,29 +204,36 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.bg = np.array(i)
         self.bg = (self.bg / 255.)*self.bg
 
+        self.bg = self.makeCL('Bg', self.bg)
 
         n = self.openImageCover('../Assets/Noise/Test5w.png')
         n = n.rotate(-90)
         nm = np.expand_dims(np.array(n), -1)
         nm = nm / 255.
-        nm *= nm
+        nm *= nm * 255.
         diff = n.size[1] - self.H
         nm = nm[diff//2:-diff//2]
 
-        self.nmask = np.clip(nm * 3, None, 1)
-        self.nmask2 = np.clip(nm * 3 - 1, 0, None) * 80.
-        self.nmask2 *= 1/np.max(self.nmask2)
+##        self.nmask = np.clip(nm * 3, None, 1)
+##        self.nmask2 = np.clip(nm * 3 - 1, 0, None) * 80.
+##        self.nmask2 *= 1/np.max(self.nmask2)
+        self.bgNoise = self.makeCL('BgNoise', nm)
 
 
         d = Image.open('../Assets/Noise/Test4.png')
         d = d.resize((self.H*4//5,self.H*4//5), Image.BILINEAR).convert('RGB')
-        d = np.array(d)
+        d = np.array(d) * 1.2
         d = d / 255. * d
         self.circle = d * (np.array([[[1, 0.74, 0.43]]])**2)
+        self.circle = np.minimum(self.circle, 255)
+
+        self.circle = self.makeCL('Circle', self.circle)
 
 
         self.cursor = np.array(Image.open('../Assets/Cursor.png'), 'float32')
         self.cursor[:,:,:3] = self.cursor[:,:,:3] / 255. * self.cursor[:,:,:3]
+
+        self.cursor = self.makeCL('Cursor', self.cursor)
 
 
         imgs = ['MenuButton.png',
@@ -254,17 +249,39 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             b[:,:,:3] = b[:,:,:3] / 255. * b[:,:,:3]
             b[:,:,3] = np.clip(b[:,:,3] * 1.2, None, 255)
 
-            # For CL
-##            buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=b.nbytes)
-##            cl.enqueue_copy(self.cq, buf, b)
-##            b = {'buf': buf, 'shape': np.array(b.shape, 'float32')}
+            b = self.makeCL(f, b)
+
 
             aName = f.split('.')[0]
             aName = aName[0].lower() + aName[1:]
             self.__setattr__(aName, b)
 
 
+
+        f = np.ones((33, 96, 4)) * np.array([[[80,160,240,30]]])
+        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
+        self.userHL = self.makeCL('User', f)
+
+        f = np.ones((33, 96, 4)) * np.array([[[80,240,80,30]]])
+        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
+        self.servHL = self.makeCL('User', f)
+
         self.st = time.time()
+        self.frameNum = 0
+
+
+        #self.frameBuf = np.zeros((self.H, self.W, 3), dtype='uint8')
+        f = np.zeros((self.H, self.W, 3), dtype='uint8')
+        self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
+        self.frameHost = f
+
+
+    def makeCL(self, name: str, x: np.array) -> CLObject:
+        """Converts np array into CLObject"""
+        x = x.astype('uint8')
+        buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=x.nbytes)
+        cl.enqueue_copy(self.cq, buf, x)
+        return CLObject(name, buf, np.array(x.shape, 'float32'))
 
 
     def blendCursor(self, frame: np.array) -> None:
@@ -275,21 +292,19 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
     def menuLoop(self):
-        frame = np.zeros((self.H, self.W, 3), dtype='uint8')
+        if self.frameNum == 0:
+            self.tgFullScreen()
 
-        self.blend(frame, np.array(self.bg),
+        frame = self.frameBuf
+
+        xt = time.perf_counter()
+
+        self.blend(frame, self.bg,
                    (self.W2, self.H2), 'replace')
-
-        r = np.roll(self.nmask, int((time.time() - self.st)*30), axis=1)
-        r2 = np.roll(self.nmask2, int((time.time() - self.st)*30), axis=1)
-        # Approximately 'hard light'
-        frame = frame * r
-        frame = frame.astype('float32') * (1-r2) + 255 * r2
-
-
-        self.blend(frame, self.circle * 1.4,
+        self.blend(frame, self.bgNoise,
+                   (self.W2, self.H2), 'hard light')
+        self.blend(frame, self.circle,
                    (self.W2, self.H2), 'add')
-
 
 
         bBlur = 1
@@ -365,14 +380,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.blend(frame, self.menuLights[6:9],
                    (self.W2 + 144, yc +23), 'alpha')
 
-        f = np.ones((33, 96, 4)) * np.array([[[80,160,240,30]]])
-        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
-        self.blend(frame, f,
+        self.blend(frame, self.userHL,
                    (self.W2 + offset2 + 120*sin(time.time() - self.st), self.H*0.7), 'alpha')
 
-        f = np.ones((33, 96, 4)) * np.array([[[80,240,80,30]]])
-        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
-        self.blend(frame, f,
+        self.blend(frame, self.servHL,
                    (self.W2 + offset2 - 120*sin(time.time() - self.st), self.H*0.7+65), 'alpha')
 
 
@@ -386,11 +397,24 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.drawText(frame, "AXI Combat v1.4", (255,255,255), self.tFont,
                       (-self.H//3,0), blur=3, bFill=(180,180,180), method='gauss')
 
+        self.gamma(frame)
 
-        frame = np.sqrt(frame / 255.) * 255.
+        cl.enqueue_copy(self.cq, self.frameHost, frame)
+        frame = self.frameHost
+
+        et = time.perf_counter() - xt
+        print('Blend', et)
+        xt = time.perf_counter()
+
         self._render(frame)
+
+        et = time.perf_counter() - xt
+        print('Push', et)
+
         #Image.fromarray(frame.astype('uint8')).save('MenuTest.png')
-        self.after(10, self.menuLoop)
+        self.after(4, self.menuLoop)
+
+        self.frameNum += 1
         return
 
 
