@@ -33,7 +33,7 @@ def mainMenuSetup(self):
     #s = "RAGE.TTF"
     #self.sFont = ImageFont.truetype(sFont, int(48 * resScale))
 
-    self.tFont = ImageFont.truetype(sFont, int(88 * resScale))
+    self.tFont = ImageFont.truetype(sFont, int(96 * resScale))
 
     self.aFont = ImageFont.truetype(sFont, int(68 * resScale))
 
@@ -258,17 +258,22 @@ def mainMenuLayout(self):
                   blur=blurs[3], bFill=yellowBG, method='gauss')
 
 
+    self.blend(frame, self.menuTitle,
+               (self.W2, self.H*0.27), 'alpha')
+
 
     self.blendCursor(frame)
+
 
     whiteFG = (255,255,255)
     whiteBG = (180,180,180)
     self.drawText(frame, "AXI Combat", whiteFG, self.tFont,
-                  (-self.H//3,0), blur=2, bFill=whiteBG,
+                  (-self.H*0.34,0), blur=2, bFill=whiteBG,
                   method='gauss', blurWidth=bWidth)
     self.drawText(frame, "v1.4", whiteFG, self.c2Font,
-                  (-self.H//3+22*resScale,self.H*0.475), bFill=whiteBG,
+                  (-self.H*0.34 + 24*resScale,self.H*0.515), bFill=whiteBG,
                   blur=2, blurWidth=bWidth, method='gauss')
+
 
 ##    self.drawText(frame, "Test", whiteFG, self.sFont,
 ##                  (-self.H//3 + 84*resScale, 0), blur=2, bFill=whiteBG,
