@@ -2,6 +2,31 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 
+class NPTextDraw:
+    def drawTextNP(self, fr: np.array, dText: str, dFill: tuple, dFont,
+                   coords: tuple, fOpacity=1,
+                   blur=2, bFill=(0,0,0), method='box') -> None:
+        """Draw text onto fr
+        coords => offset from center (y, x)
+        """
+        coords = (int(coords[0]), int(coords[1]))
+
+        if dText not in self.UItexts:
+            b = self.imgText(dText, dFill, dFont, blur, bFill, method)
+            self.UItexts[dText] = b
+        else:
+            b = self.UItexts[dText]
+
+        s = b.shape
+        opacity = np.expand_dims(b[:,:,3], 2) / 255. * fOpacity
+
+        y1, y2 = self.H2 - (s[0]//2) + coords[0], self.H2 + (s[0]//2) + coords[0]
+        x1, x2 = self.W2 - (s[1]//2) + coords[1], self.W2 + (s[1]//2) + coords[1]
+
+        fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity) + \
+                           b[:,:,:3] * opacity
+
+
 class NPCanvas:
 
     def imgText(self, dText: str, dFill: tuple, dFont,
