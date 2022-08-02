@@ -18,8 +18,12 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-#from tkinter import *
 from tkinter import Frame, Tk, N, E, S, W
+from tkinter import (
+    TclError, Toplevel, Label, Text, Button, Listbox, Entry, Checkbutton,
+    IntVar, Scale,
+    WORD, X, Y, LEFT, BOTTOM, DISABLED, END, HORIZONTAL,
+)
 
 import os, sys
 
@@ -44,13 +48,12 @@ from math import sin
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
-#import ImgUtils
 import ImgUtilsCL as ImgUtils
 
 import OpsConv
 BLOCK_SIZE = 128
 
-HELPTEXT = """AXI Combat v1.3
+HELPTEXT = """AXI Combat v1.4
 ======= ======= ======= =======
 General Usage
 
@@ -85,11 +88,10 @@ N - toggle AI navigation overlay
 ======= ======= ======= =======
 Copyright AgentX Industries 2020-2022
 
-For more info see http://axi.x10.mx/Combat
-Contact us at http://axi.x10.mx/Contact.html
+For more info see https://axi.x10.mx/Combat
 """
 
-ABTTEXT = """AXI Combat v1.3
+ABTTEXT = """AXI Combat v1.4
 Copyright © AgentX Industries 2020-2022
 Copyright © Louis Zhang 2020-2022
 https://axi.x10.mx
@@ -113,7 +115,9 @@ if getattr(sys, "frozen", False):
 else:
     PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-SERVER = "https://axi.x10.mx/Combat/Serv.php"
+#SERVER = "https://axi.x10.mx/Combat/Serv.php"
+SERVER = "127.0.0.1:4680"
+
 
 if PLATFORM == "darwin":
     _TIMES = "Times New Roman.ttf"
@@ -127,6 +131,7 @@ elif "win" in PLATFORM:
     _TIMES = "times.ttf"
     _TIMESBD = "timesbd.ttf"
     _COURIERBD = "courbd.ttf"
+
 e = ("Times", 18)
 f = ("Times", 15)
 g = ("Times", 12)
@@ -138,6 +143,15 @@ import pyopencl as cl
 mf = cl.mem_flags
 
 from ImgUtilsCL import CLObject
+
+from MenuLayout import (
+    mainMenuLayout, mainHandleMouse, mainMenuSetup,
+    stageSelectLayout, stageSelectSetup, stageHandleMouse,
+    joinSetup, joinLayout, joinHandleMouse,
+    charLayout, charHandleMouse
+)
+
+import string
 
 from Sound import SoundManager
 
@@ -202,7 +216,17 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.menuInit()
         self.d.bind("<F2>", self.screenshot)
+        self.d.bind("<Button-1>", self.handleClick)
+        self.d.bind("<Key>", self.handleKey)
+        self.d.bind("<BackSpace>", self.handleBackspace)
+
+        self.MENUSCREEN = 'MAIN'
+
         self.d.focus_set()
+
+        #self.tgFullScreen()
+
+        print("Ready", time.time())
 
         self.menuLoop()
 
@@ -212,31 +236,27 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         resScale = self.H / 600
 
-        self.tFont = ImageFont.truetype(_TIMESBD, int(72 * resScale))
+        perf = time.perf_counter()
+
+        self.tFont = ImageFont.truetype(_TIMESBD, int(84 * resScale))
+        self.aFont = ImageFont.truetype(_TIMESBD, int(64 * resScale))
         self.bFont = ImageFont.truetype(_TIMESBD, int(48 * resScale))
-        self.cFont = ImageFont.truetype(_TIMES, int(24 * resScale))
+        self.c2Font = ImageFont.truetype(_TIMES, int(36 * resScale))
+        self.cFont  = ImageFont.truetype(_TIMES, int(24 * resScale))
         self.eFont = ImageFont.truetype(_COURIERBD, int(18 * resScale))
 
-        i = self.openImageCover('../Assets/Forest.png')
-        #i = self.openImageCover('../Assets/MenuTemple2a.png')
-
-        i = i.filter(ImageFilter.BoxBlur(8))
-        self.bg = np.array(i)
-        self.bg = (self.bg / 255.)*self.bg
-
-        self.bg = self.makeCL('Bg', self.bg)
+        #i = self.openImageCover('../Assets/Tree.jpeg')
+        #i = self.openImageCover('../Models/Temple/wood_planks_dirt_diff_1k.jpg')
 
         n = self.openImageCover('../Assets/Noise/Test5w.png')
         n = n.rotate(-90)
         nm = np.expand_dims(np.array(n), -1)
         nm = nm / 255.
         nm *= nm * 255.
+        nm = nm * 0.7 + 0.1
         diff = n.size[1] - self.H
         nm = nm[diff//2:-diff//2]
 
-##        self.nmask = np.clip(nm * 3, None, 1)
-##        self.nmask2 = np.clip(nm * 3 - 1, 0, None) * 80.
-##        self.nmask2 *= 1/np.max(self.nmask2)
         self.bgNoise = self.makeCL('BgNoise', nm)
 
 
@@ -263,16 +283,36 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                 'MenuBulb2.png',
                 'MenuEntry.png',
                 'MenuHighlight.png',
-                'MenuRingsW.png']
+                'MenuRingsW.png',
+                'MenuEntryHighlight.png',
+                'MenuFrame.png',
+                'MenuEntryHighlightRed.png',
+                'MenuOrnamentLine.png',
+                'MenuButtonHighlight.png',
+                'MenuEntryOutline.png',
+                'MenuTitle.png'
+                ]
 
         for f in imgs:
             b = Image.open('../Assets/' + f)
             sw = int(b.size[0] * resScale)
             sh = int(b.size[1] * resScale)
+            if 'Ornament' in f:
+                sw = int(78 * resScale)
+                sh = int(112 * resScale)
             if f == 'MenuLights.png':
                 sh = b.size[1]
             b = b.resize((sw,sh), Image.BILINEAR)
             b = np.array(b, 'float32')
+
+            if f == 'MenuHighlight.png':
+                b = b * np.array([[[1., 0.9, 0.7, 1.]]])
+            if f == 'MenuEntryHighlight.png':
+                b = b * 0.8 * np.array([[[1., 0.9, 0.7, 1.]]])
+            if f == 'MenuEntryHighlightRed.png':
+                b = b * 0.8 * np.array([[[1., 0.4, 0.3, 1.]]])
+                
+
             b[:,:,:3] = b[:,:,:3] / 255. * b[:,:,:3]
             if f == 'MenuRingsW.png':
                 b[:,:,3] = b[:,:,3] * 0.2
@@ -287,25 +327,49 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.__setattr__(aName, b)
 
 
-
-        f = np.ones((int(33*resScale), 96, 4)) * np.array([[[80,160,240,30]]])
+        blueBG = [80,160,240,30]
+        greenBG = [80,240,80,30]
+        yellowBG = (255,130,70,30.)
+        f = np.ones((int(33*resScale), 96, 4)) * np.array([[blueBG]])
         f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
-        self.userHL = self.makeCL('User', f)
+        self.entryHL = self.makeCL('User', f)
 
-        f = np.ones((int(33*resScale), 96, 4)) * np.array([[[80,240,80,30]]])
-        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
-        self.servHL = self.makeCL('User', f)
 
         self.st = time.time()
         self.frameNum = 0
 
 
-        #self.frameBuf = np.zeros((self.H, self.W, 3), dtype='uint8')
         f = np.zeros((self.H, self.W, 3), dtype='uint8')
         self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
         self.frameHost = f
 
         self.buttonSelect = False
+
+
+
+        # Username
+        self.uname = Entry(self, font=h, width=10, highlightthickness=2,
+                           bg="#f2f2ff", highlightbackground="#00D")
+
+        a = OpsConv.getSettings(False)
+        if a["Uname"] is 0:
+            un = "User" + str(random.randint(0, 1000))
+        else: un = a["Uname"]
+        self.lSet = a
+
+        self.uname.insert(0, un)
+
+        self.unameDisplay = self.uname.get()
+
+        # Hostname
+        self.hostname = Entry(self, font=h, width=10, highlightthickness=2,
+                              bg="#f4fff4", highlightbackground="#0A0")
+        self.hostname.insert(0, SERVER)
+        self.servDisplay = SERVER
+
+        print("menuInit", time.perf_counter() - perf)
+
+        mainMenuSetup(self)
 
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
@@ -324,134 +388,23 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
     def menuLoop(self):        
-        if self.frameNum == 0:
-            self.tgFullScreen()
+##        if self.frameNum == 0:
+##            self.tgFullScreen()
 
-        resScale = self.H / 600
-
-        frame = self.frameBuf
-
+        
         xt = time.perf_counter()
 
-        sTime = time.time() - self.st
-
-        self.blend(frame, self.bg,
-                   (self.W2, self.H2), 'replace')
-        self.blend(frame, self.bgNoise,
-                   (self.W2, self.H2), 'hard light',
-                   effect='roll', effectArg=30*sTime)
-        self.blend(frame, self.circle,
-                   (self.W2, self.H2), 'add',
-                   effect='rot', effectArg=0.2*sTime + 1)
-        self.blend(frame, self.circle,
-                   (self.W2, self.H2), 'add',
-                   effect='rot', effectArg=-0.3*sTime)
+        if self.MENUSCREEN == 'MAIN':
+            mainMenuLayout(self)
+        elif self.MENUSCREEN == 'STAGE':
+            stageSelectLayout(self)
+        elif self.MENUSCREEN == 'JOIN':
+            joinLayout(self)
+        elif self.MENUSCREEN == 'CHAR':
+            charLayout(self)
 
 
-        bBlur = 1
-        bWidth = 5*resScale
-        offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
-
-        # Start button
-        self.blend(frame, self.menuButton,
-                   (self.W//4, self.H2), 'alpha')
-        self.blend(frame, self.menuOrnament,
-                   (self.W//4 - offset, self.H2), 'alpha')
-
-        # Join button
-        self.blend(frame, self.menuButton,
-                   (self.W2, self.H2), 'alpha')
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2, self.H2 - 50*resScale), 'alpha')
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2, self.H2 + 48*resScale), 'alpha')
-
-        # Settings button
-        self.blend(frame, self.menuButton,
-                   (self.W*3//4, self.H2), 'alpha')
-        self.blend(frame, self.menuLights[3:6],
-                   (self.W*3//4, self.H2 - 50*resScale), 'alpha')
-        self.blend(frame, self.menuLights[3:6],
-                   (self.W*3//4, self.H2 + 48*resScale), 'alpha')
-
-
-        self.blend(frame, self.menuOrnament[:,::-1],
-                   (self.W*3//4 + offset, self.H2), 'alpha')
-        bulbOffset = self.menuButton.shape[1]/2 \
-                     + self.menuOrnament.shape[1]*0.22
-        self.blend(frame, self.menuBulb,
-                   (self.W*3//4 + bulbOffset, self.H2 - 3), 'alpha')
-
-
-        # About Controls button
-        yc = self.H*0.7533
-
-        self.blend(frame, self.menuButton,
-                   (self.W//4, yc), 'alpha')
-        self.blend(frame, self.menuLights[0:3],
-                   (self.W//4, yc - 50*resScale), 'alpha')
-        self.blend(frame, self.menuLights[0:3],
-                   (self.W//4, yc + 48*resScale), 'alpha')
-        self.blend(frame, self.menuLights[0:3],
-                   (self.W//4, yc), 'alpha')
-        self.blend(frame, self.menuOrnament,
-                   (self.W//4 - offset, yc), 'alpha')
-        self.blend(frame, self.menuBulb2,
-                   (self.W//4 - bulbOffset + 2, yc - 3), 'alpha')
-
-        offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
-        self.blend(frame, self.menuEntry,
-                   (self.W2 + offset2, self.H*0.7), 'alpha')
-        self.blend(frame, self.menuEntry,
-                   (self.W2 + offset2, self.H*0.7+65*resScale), 'alpha')
-
-        yc = self.H*0.7+65*resScale
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2, yc -23*resScale), 'alpha')
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2 + 144*resScale, yc -23*resScale), 'alpha')
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2, yc +23*resScale), 'alpha')
-        self.blend(frame, self.menuLights[6:9],
-                   (self.W2 + 144*resScale, yc +23*resScale), 'alpha')
-
-        self.blend(frame, self.userHL,
-                   (self.W2 + offset2 + 120*resScale*sin(time.time() - self.st), self.H*0.7), 'alpha')
-
-        self.blend(frame, self.servHL,
-                   (self.W2 + offset2 - 120*resScale*sin(time.time() - self.st), self.H*0.7+65*resScale), 'alpha')
-
-
-        self.drawText(frame, 'User999', (255,255,255), self.eFont,
-                      (self.H*0.2 -2, offset2), blur=0)
-        self.drawText(frame, 'https://axi.x10.mx/Combat', (255,255,255), self.eFont,
-                      (yc-self.H2 -2, offset2), blur=0)
-
-
-
-        self.handleMouse(frame)
-
-        self.drawText(frame, 'Start', (200,230,255), self.bFont,
-                      (-6,-self.W//4), blur=bBlur, bFill=(70,130,255),
-                      method='gauss', blurWidth=bWidth)
-        self.drawText(frame, 'Join', (200,255,200), self.bFont,
-                      (-6,0), blur=bBlur, bFill=(60,210,60),
-                      method='gauss', blurWidth=bWidth)
-        self.drawText(frame, 'Settings', (255,230,200), self.bFont,
-                      (-2,self.W//4), blur=bBlur, bFill=(255,130,70),
-                      method='gauss', blurWidth=bWidth)
-        yc = self.H*0.7533
-        self.drawText(frame, 'About', (255,200,200), self.cFont,
-                      (yc-self.H2-3 -24*resScale,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
-        self.drawText(frame, 'Controls', (255,200,200), self.cFont,
-                      (yc-self.H2-3 +24*resScale,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
-
-
-
-        self.blendCursor(frame)
-        self.drawText(frame, "AXI Combat v1.4", (255,255,255), self.tFont,
-                      (-self.H//3,0), blur=3, bFill=(180,180,180),
-                      method='gauss', blurWidth=bWidth)
+        frame = self.frameBuf
 
         self.gamma(frame)
 
@@ -467,97 +420,69 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         et = time.perf_counter() - xt
         #print('Push', et)
 
-        #Image.fromarray(frame.astype('uint8')).save('MenuTest.png')
-        self.after(4, self.menuLoop)
+        if self.MENUSCREEN != '':
+            self.after(4, self.menuLoop)
 
-        self.frameNum += 1
+            self.frameNum += 1
+
         return
 
 
 
+##        self.extras = Button(self, text="Credits", fg="#000", bg="#ddd",
+##                               command=self.showExtras, font=g)
+##        self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
+##
+##        self.runMod = Button(self, text="Local Mode", fg="#a2a", bg="#ddd",
+##                               command=self.mkRouter, font=g)
+##        self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 
 
+    def handleKey(self, e=None):
+        if self.MENUSCREEN != 'MAIN':
+            return
 
-        self.newG = Button(self, text="Start Game", fg="#008", bg="#bdf",
-                           command=self.goStart, font=f)
-        self.newG.grid(row=2, column=0, sticky=N+S+E+W, ipadx=4, ipady=2)
-        self.curG = Button(self, text="Join Game", fg="#008", bg="#bfd",
-                           command=self.goJoin, font=f)
-        self.curG.grid(row=2, column=1, sticky=N+S+E+W, ipadx=4, ipady=2)
-        self.gset = Button(self, text="Settings", fg="#808", bg="#fd0",
-                           command=self.gSettings, font=f)
-        self.gset.grid(row=2, column=2, sticky=N+S+E+W, ipadx=4, ipady=2)
+        extra = ""
+        if self.textEntry == 'User':
+            entry = self.uname
+            display = 'unameDisplay'
+        elif self.textEntry == 'Serv':
+            entry = self.hostname
+            display = 'servDisplay'
+            extra = ":/."
 
-        self.ahfr = Frame(self)
-        self.ahfr.grid(row=3, column=0)
-        self.abt = Button(self.ahfr, text="About", fg="#080",
-                           command=self.about, font=g)
-        self.abt.grid(row=0, column=0, sticky=N+S, pady=(15,0))
-        self.help = Button(self.ahfr, text="Controls", fg="#800",
-                           command=self.gethelp, font=g)
-        self.help.grid(row=0, column=1, sticky=N+S, pady=(15,0))
+        if e.char in (string.ascii_letters + string.digits + extra):
+            entry.insert(999, e.char)
+            self.__setattr__(display, entry.get())
+        else:
+            # pass
+            print('Key', e.char)
 
-        self.hostname = Entry(self, font=h, width=10, highlightthickness=2,
-                              bg="#f4fff4", highlightbackground="#0A0")
-        self.hostname.insert(0, SERVER)
-        self.hostname.grid(row=3, column=1, sticky=N+S+E+W, pady=(15,0))
+    def handleBackspace(self, e=None):
+        if self.MENUSCREEN == 'MAIN':
 
-        self.uname = Entry(self, font=h, width=10, highlightthickness=2,
-                           bg="#f2f2ff", highlightbackground="#00D")
+            if self.textEntry == 'User':
+                entry = self.uname
+                display = 'unameDisplay'
+            elif self.textEntry == 'Serv':
+                entry = self.hostname
+                display = 'servDisplay'
+            
+            u = entry.get()[:-1]
+            entry.delete(0,999)
+            entry.insert(0,u)
+            self.__setattr__(display, u)
 
-        a = OpsConv.getSettings(False)
-        if a["Uname"] is 0:
-            un = "User" + str(random.randint(0, 1000))
-        else: un = a["Uname"]
-        self.lSet = a
+    def handleClick(self, e=None):
+        if self.MENUSCREEN == 'MAIN':
+            mainHandleMouse(self, None, True)
+        elif self.MENUSCREEN == 'STAGE':
+            stageHandleMouse(self, None, True)
+        elif self.MENUSCREEN == 'JOIN':
+            joinHandleMouse(self, None, True)
+        elif self.MENUSCREEN == 'CHAR':
+            charHandleMouse(self, None, True)
 
-        self.uname.insert(0, un)
-        self.uname.grid(row=3, column=2, sticky=N+S+E+W, pady=(15,0))
-
-        self.extras = Button(self, text="Credits", fg="#000", bg="#ddd",
-                               command=self.showExtras, font=g)
-        self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
-
-        self.runMod = Button(self, text="Local Mode", fg="#a2a", bg="#ddd",
-                               command=self.mkRouter, font=g)
-        self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
-
-
-    def handleMouse(self, frame):
-        mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
-        my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
-
-        # LRUD
-        h = self.menuButton.shape[0]
-        w = self.menuButton.shape[1]
-
-        buttonCenters = [(self.H2, self.W//4),
-                         (self.H2, self.W2),
-                         (self.H2, self.W*3//4),
-                         (self.H*0.7533, self.W//4)]
-
-        bSel = 0
-        for i in range(len(buttonCenters)):
-            c = buttonCenters[i]
-            ey = (c[0] - h//2, c[0] + h//2)
-            ex = (c[1] - w//2, c[1] + w//2)
-
-            if (ey[0] < my < ey[1]) and (ex[0] < mx < ex[1]):
-                bSel = i + 1
-
-
-                self.blend(frame, self.menuHighlight,
-                           c[::-1], 'add')
-                self.blend(frame, self.menuRingsW,
-                           c[::-1], 'alpha',
-                           effect='roll', effectArg=-20*(time.time()-self.st))
-
-                break
-
-        if bSel and (bSel != self.buttonSelect):
-            self.si.put({'Play':(PATH+'../Sound/Misc/MenuClickT.wav',
-                                 self.volmFX*0.5, False)})
-        self.buttonSelect = bSel
 
     def showExtras(self):
         try: self.credInfo.destroy()
@@ -569,97 +494,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         ct = "Win a game in each of the 4 stages\nto unlock the credits."
         Label(self.credInfo, text=ct, font=f, padx=12, pady=12).pack()
 
-
-
-    def nextCreds(self):
-        for x in self.cScreen: self.d.delete(x)
-        curScreen = self.creds[self.sc]
-        self.sc += 1
-        self.cScreen = []
-        self.cY = self.H//5
-        self.bgImg = None
-        self.txts = []
-        for c in curScreen["Contents"]:
-            if "title" in c:
-                self.cScreen.append(self.d.create_text((self.W2, self.cY),
-                                        text=c["title"],
-                                        justify="center", anchor="n",
-                                        fill="#FFF", font=("Times", int(24*self.RS))))
-                self.cY += int(45*self.RS)
-            elif "text" in c:
-                if self.bgImg is None:
-                    self.cScreen.append(self.d.create_text((self.W2, self.cY),
-                                        text=c["text"],
-                                        justify="center", anchor="n",
-                                        fill="#FFF", font=("Times", int(16*self.RS))))
-                else:
-                    font = ImageFont.truetype(_TIMESBD, int(24*self.RS))
-                    ti = self.imgText(c["text"], (255,255,255), font)
-                    self.txts.append(ImageTk.PhotoImage(ti))
-                    self.cScreen.append(self.d.create_image(self.W2, self.H*3//4, image=self.txts[-1]))
-                self.cY += int((20 * (len(c["text"].split("\n")) + 1) + 25) * self.RS)
-            elif "bg" in c:
-                d = max(self.W, self.H * 16/9)
-                a = Image.open(PATH+c["bg"]).resize((int(d), int(d*9/16)), Image.BILINEAR)
-                self.bgImg = ImageTk.PhotoImage(a)
-                self.cScreen.append(self.d.create_image(self.W2, self.H2, image=self.bgImg))
-            elif "img" in c:
-                a = Image.open(PATH+c["img"])
-                a = a.resize((int(a.size[0]*self.RS), int(a.size[1]*self.RS)))
-                self.sImg = ImageTk.PhotoImage(a)
-                self.cScreen.append(self.d.create_image(self.W2, self.cY, anchor="n", image=self.sImg))
-
-        if curScreen["Transition"] == "Fade":
-            self.startFade()
-            self.d.after(4400, self.nextCreds)
-        elif curScreen["Transition"] == "Scroll":
-            self.startScroll()
-        elif curScreen["Transition"] == "Fade2":
-            self.startFade2()
-
-    def startFade(self):
-        self.fb = ImageTk.PhotoImage(Image.new("RGBA", (self.W, self.H), (0,0,0,255)))
-        self.fstart = time.time()
-        self.cScreen.append(self.d.create_image(self.W2, self.H2, image=self.fb))
-        self.d.after_idle(self.fade1)
-    def fade1(self):
-        t = 2.1
-        ftrans = (time.time() - self.fstart - t)**2 * (455/(t*t)) - 200
-        self.fb = ImageTk.PhotoImage(Image.new("RGBA", (self.W, self.H),
-                                               (0,0,0,max(0, int(ftrans)))))
-        self.d.itemconfigure(self.cScreen[-1], image=self.fb)
-        if ftrans < 256: self.d.after(20, self.fade1)
-    def startFade2(self):
-        self.fb = ImageTk.PhotoImage(Image.new("RGBA", (self.W, self.H), (0,0,0,255)))
-        self.fstart = time.time()
-        self.cScreen.append(self.d.create_image(self.W2, self.H2, image=self.fb))
-        self.d.after_idle(self.fade2)
-    def fade2(self):
-        t = 1.8
-        ftrans = (time.time() - self.fstart - t)**2 * (300/(t*t)) - 50
-        self.fb = ImageTk.PhotoImage(Image.new("RGBA", (self.W, self.H), (0,0,0,max(0, int(ftrans)))))
-        self.d.itemconfigure(self.cScreen[-1], image=self.fb)
-        if time.time() - self.fstart - t < 0: self.d.after(20, self.fade2)
-
-    def startScroll(self):
-        self.fstart = time.time()
-        for x in self.cScreen:
-            c = self.d.coords(x)
-            self.d.coords(x, (c[0], c[1] + self.H * 9/10))
-        self.d.after_idle(self.scroll1)
-
-    def scroll1(self):
-        fy = time.time() - self.fstart
-        for x in self.cScreen:
-            c = self.d.coords(x)
-            self.d.coords(x, (c[0], c[1] - (self.H/9.6)*fy))
-
-        self.fstart = time.time()
-        m = max([self.d.coords(x)[1] for x in self.cScreen])
-        if m > -(self.H/6):
-            self.d.after(20, self.scroll1)
-        else:
-            self.nextCreds()
 
     def getIP(self):
         try: return socket.gethostbyname(socket.getfqdn())
@@ -711,18 +545,20 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def notConnected(self, config=None):
         if config == 'join':
-            self.jg['bg'] = '#fcc'
-            self.root.after(300, self.tgJV)
+            pass
+##            self.jg['bg'] = '#fcc'
+##            self.root.after(300, self.tgJV)
 
         self.hostname["bg"] = "#fcc"
         self.sh = True
-        self.root.after(200, self.tgSV)
-        self.root.after(400, self.tgSV)
-        self.root.after(600, self.tgSV)
+        for i in range(1,5):
+            self.root.after(200*i, self.tgSV)
+
     def tgSV(self):
-        hb = "#f4fff4" if self.sh else "#fcc"
-        self.hostname["bg"] = hb
-        self.sh = not self.sh
+        self.notConnectedTG = 1 - self.notConnectedTG
+##        hb = "#f4fff4" if self.sh else "#fcc"
+##        self.hostname["bg"] = hb
+##        self.sh = not self.sh
     def tgJV(self):
         self.jg['bg'] = '#bfd'
 
@@ -753,32 +589,32 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.activeFS = p["AutoRes"]
         OpsConv.writeSettings(p)
 
-        self.logo.grid_remove()
-        self.newG.grid_remove()
-        self.curG.grid_remove()
-        self.uname.grid_remove()
-        self.hostname.grid_remove()
-        self.ahfr.grid_remove()
-        self.gset.grid_remove()
-        self.extras.grid_remove()
-        self.runMod.grid_remove()
-        self.mkServer.grid_remove()
+##        self.logo.grid_remove()
+##        self.newG.grid_remove()
+##        self.curG.grid_remove()
+##        self.uname.grid_remove()
+##        self.hostname.grid_remove()
+##        self.ahfr.grid_remove()
+##        self.gset.grid_remove()
+##        self.extras.grid_remove()
+##        self.runMod.grid_remove()
+##        self.mkServer.grid_remove()
 
         return True
 
     def charMenu(self):
-        self.title["text"] = "Select character"
-        self.back.grid_remove()
+        #self.title["text"] = "Select character"
+        #self.back.grid_remove()
+        self.MENUSCREEN = 'CHAR'
 
         gd = self.gameConfig[1]
 
         if self.gameConfig[-1]:
-            self.jg.grid_remove()
-            self.avls.grid_remove()
+            pass
+##            self.jg.grid_remove()
+##            self.avls.grid_remove()
         else:
             self.gameList = {gd:[]}
-            for x in self.stb: x.grid_remove()
-            for x in self.stp: x[0].grid_remove()
 
         self.charNames = ["Samus", "Zelda BotW",   "Link BotW",
                           "Louis", "Zelda TP",     "Link TP",
@@ -796,17 +632,17 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                                    fg="#008", bg="#bdf",
                                    command=cmds[i], font=g))
 
-            self.stb[-1].grid(row=2 + i//3, column=i%3, sticky=N+S+E+W,
-                              ipadx=6, ipady=6)
+##            self.stb[-1].grid(row=2 + i//3, column=i%3, sticky=N+S+E+W,
+##                              ipadx=6, ipady=6)
 
-        self.columnconfigure(0, uniform="x")
-        self.columnconfigure(1, uniform="x")
-        self.columnconfigure(2, uniform="x")
+##        self.columnconfigure(0, uniform="x")
+##        self.columnconfigure(1, uniform="x")
+##        self.columnconfigure(2, uniform="x")
 
         if not self.gameConfig[4]:
             self.addAI = Button(self, text="Add AI", bg="#f94",
                                 command=self.tgAI, font=g)
-            self.addAI.grid(row=5, column=0, sticky=N+S+E+W, ipadx=6, ipady=6)
+##            self.addAI.grid(row=5, column=0, sticky=N+S+E+W, ipadx=6, ipady=6)
 
         self.aiNums = []
         self.chooseAI = False
@@ -854,7 +690,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.exitAI()
             return
 
-        self.title.grid_remove()
+        #self.title.grid_remove()
         if not self.gameConfig[4]:
             self.addAI.grid_remove()
         for x in self.stb: x.grid_remove()
@@ -862,6 +698,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.columnconfigure(0, uniform=0)
         self.columnconfigure(1, uniform=1)
         self.columnconfigure(2, uniform=2)
+
+        self.MENUSCREEN = ''
+        self.d.delete(self.finalRender)
         self.runGame(*self.gameConfig, i, self.aiNums)
 
     def goStart(self, stage=None):
@@ -896,26 +735,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         if self.localIP is None:
             self.localIP = self.mkServ(False)
 
-        sl = ["Desert", "Atrium", "Taiga", "New Stage", "Forest", 'Strachan']
 
-        self.title["text"] = "Select location"
-
-        self.stb = []
-        self.stp = []
-        cmds = [lambda: self.goStart(0), lambda: self.goStart(1),
-                lambda: self.goStart(2), lambda: self.goStart(3),
-                lambda: self.goStart(4), lambda: self.goStart(5)]
-        for i in range(len(self.loc)):
-            self.stb.append(Button(self, text=self.loc[i], fg="#008", bg="#bdf",
-                                   command=cmds[i], font=f))
-            self.stb[-1].grid(row=2+i//2*2, column=i%2, sticky=N+S+E+W, ipadx=4, ipady=2)
-            img = ImageTk.PhotoImage(Image.open(PATH+"../Assets/Preview_"+sl[i]+".png"))
-            self.stp.append((Label(self, image=img), img))
-            self.stp[-1][0].grid(row=3+i//2*2, column=i%2, sticky=N+S+E+W)
-
-        self.back = Button(self, text="Back",
-                           command=lambda: self.goBack(0), font=g)
-        self.back.grid(row=2 + (len(sl)+1)//2 * 2, column=0, sticky=E+W, ipadx=4, ipady=2)
+        self.MENUSCREEN = 'STAGE'
+        stageSelectSetup(self)
 
     def setGD(self, e):
         try: self.gd = self.avls.get(self.avls.curselection())
@@ -937,57 +759,31 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         ag = ag.text.split('\n')[:-1]
         ag = [x.split('+') for x in ag] # IP, stage, username
 
-        self.title["text"] = "Join Game"
+        #self.title["text"] = "Join Game"
+        self.MENUSCREEN = 'JOIN'
 
         self.avls = Listbox(self, width=20, height=10, font=h)
         self.avls.bind("<<ListboxSelect>>", self.setGD)
         for d in ag:
+            stage = ' '.join(d[1:-1])
             et = d[0] + " " * (20 - len(d[0]))
-            et += "(" + d[1] + ")" + " " * (10-len(d[1]))
-            et += "/ " + d[2]
+            et += "(" + stage + ")" + " " * 2*(12-len(stage))
+            et += "/ " + d[-1]
             self.avls.insert(END, et)
-        if len(ag) > 0:
-            self.avls.config(width=0)
-
-        self.avls.grid(row=2, column=0, rowspan=2)
-
-        self.jg = Button(self, text="Join", fg="#008", bg="#bfd",
-                         command=self.joinGame, font=f)
-        self.jg.grid(row=2, column=1, sticky=E+W, ipadx=4, ipady=4)
-
-        self.back = Button(self, text="Back",
-                           command=lambda: self.goBack(1), font=g)
-        self.back.grid(row=3, column=1, sticky=E+W, ipadx=4, ipady=4)
 
         self.columnconfigure(1, weight=1, uniform="c")
 
     def goBack(self, e):
-        if e == 0:
-            for x in self.stb: x.grid_remove()
-            for x in self.stp: x[0].grid_remove()
-        elif e == 1:
-            self.avls.grid_remove()
-            self.jg.grid_remove()
-
-        self.title["text"] = "AXI Combat v1.3"
-        self.back.grid_remove()
-
-        self.logo.grid()
-        self.newG.grid()
-        self.curG.grid()
-        self.uname.grid()
-        self.hostname.grid()
-        self.ahfr.grid()
-        self.gset.grid()
-        self.extras.grid()
-        self.runMod.grid()
-        self.mkServer.grid()
-
+        self.MENUSCREEN = 'MAIN'
+        return
 
 
 
     def joinGame(self):
         stage = self.loc.index(self.gd.split("(")[1].split(")")[0])
+
+        self.selectedStage = stage
+
         host = self.gd.split(' ')[0]
         if "//" not in host: host = "http://" + host
         uname = self.uname.get()
@@ -999,7 +795,12 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             return
 
         gi = json.loads(ag.text)
-        gi = list(gi)[-1]
+        try:
+            gi = list(gi)[-1]
+        except IndexError:
+            # Games list is stale
+            self.goBack()
+            return
 
         self.gameList = {gi:[]}
 
@@ -1007,6 +808,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.charMenu()
 
     def gSettings(self):
+        if self.fs:
+            self.tgFullScreen()
+
         try: self.prefwin.destroy()
         except (AttributeError, TclError): pass
         self.prefwin = Toplevel()
@@ -1222,6 +1026,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.prefwin.destroy()
 
     def about(self):
+        if self.fs:
+            self.tgFullScreen()
+
         try:
             self.abtwin.destroy()
         except (AttributeError, TclError):
