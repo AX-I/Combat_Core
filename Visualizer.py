@@ -257,6 +257,8 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         if PLATFORM != "win32": return
         if not self.activeFS: return
+        print('Active FS')
+        return
         
         if self.fs:
             res = sorted(self.getResolutions())
@@ -495,7 +497,10 @@ class ThreeDVisualizer(CombatMenu, Frame):
 
         if self.recVideo:
             self.VIDOUT.write(fr.astype("uint8")[:,:,::-1])
-        
+
+        self._render(fr)
+
+    def _render(self, fr):
         self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
 
         if PLATFORM == 'win32' and self.fs:
@@ -527,50 +532,6 @@ class ThreeDVisualizer(CombatMenu, Frame):
         opacity = np.expand_dims(b, 2) / 255.
         fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity)
 
-    def drawText(self, fr, dText, dFill, dFont, coords, fOpacity=1, blur=2, bFill=(0,0,0)):
-        """coords => offset from center (y, x)"""
-        if dText not in self.UItexts:
-            pad = 4 + blur * 14
-
-            s = self.textSize.textsize(dText, font=dFont)
-            a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
-                          color=(*bFill,0))
-
-            for ix in range(blur):
-                d = ImageDraw.Draw(a)
-                d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont)
-                a = a.filter(ImageFilter.BoxBlur(6))
-
-            d = ImageDraw.Draw(a)
-            d.text((pad//2,pad//2), dText, fill=dFill, font=dFont)
-
-            b = np.array(a, "uint16")
-            self.UItexts[dText] = b
-        else:
-            b = self.UItexts[dText]
-        
-        s = b.shape
-        opacity = np.expand_dims(b[:,:,3], 2) / 255. * fOpacity
-        
-        y1, y2 = self.H2 - (s[0]//2) + coords[0], self.H2 + (s[0]//2) + coords[0]
-        x1, x2 = self.W2 - (s[1]//2) + coords[1], self.W2 + (s[1]//2) + coords[1]
-
-        fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity) + \
-                           b[:,:,:3] * opacity
-
-    def imgText(self, dText, dFill, dFont, blur=4, bFill=(0,0,0)):
-        pad = 4 + blur * 14
-        
-        s = self.textSize.textsize(dText, font=dFont)
-        a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
-                      color=(*bFill,0))
-        for ix in range(blur):
-            d = ImageDraw.Draw(a)
-            d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont, align="center")
-            a = a.filter(ImageFilter.BoxBlur(6))
-        d = ImageDraw.Draw(a)
-        d.text((pad//2,pad//2), dText, fill=dFill, font=dFont, align="center")
-        return a
     
     def drawSelect(self, e):
         self.xyselect = np.array((e.x, e.y))

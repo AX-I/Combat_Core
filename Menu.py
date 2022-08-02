@@ -28,16 +28,25 @@ if PLATFORM == "darwin":
     import base64, io
     #import _sysconfigdatam_darwin_darwin # for freezing
 
+if PLATFORM == "win32":
+    import win32gui
+    from PIL.ImageWin import Dib, HWND
+
 import requests
 import random
 import json
 import time
 import socket
 import multiprocessing as mp
+import numpy as np
+from math import sin
 
-from PIL import Image, ImageTk, ImageFont
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
+
+import ImgUtils
 
 import OpsConv
+BLOCK_SIZE = 128
 
 HELPTEXT = """AXI Combat v1.3
 ======= ======= ======= =======
@@ -105,18 +114,31 @@ else:
 SERVER = "https://axi.x10.mx/Combat/Serv.php"
 
 if PLATFORM == "darwin":
+    _TIMES = "Times New Roman.ttf"
     _TIMESBD = "Times New Roman Bold.ttf"
+    _COURIERBD = "Courier New Bold.ttf"
 elif PLATFORM == "linux":
+    _TIMES = "LiberationSerif.ttf"
     _TIMESBD = "LiberationSerif-Bold.ttf"
+    _COURIERBD = "LiberationSans-Bold.ttf"
 elif "win" in PLATFORM:
+    _TIMES = "times.ttf"
     _TIMESBD = "timesbd.ttf"
+    _COURIERBD = "courbd.ttf"
 e = ("Times", 18)
 f = ("Times", 15)
 g = ("Times", 12)
 h = ("Courier", 10)
 TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 
-class CombatMenu(Frame):
+
+import pyopencl as cl
+mf = cl.mem_flags
+
+def makeProgram(s: str):
+    return cl.Program(ctx, s).build()
+
+class CombatMenu(Frame, ImgUtils.NPCanvas):
     def __init__(self, root=None):
 
         if root is None: root = Tk()
@@ -134,20 +156,247 @@ class CombatMenu(Frame):
                     "New Stage", "Forest", 'Strachan']
         self.localIP = None
 
+
+
+    def openImageCover(self, fn):
+        """opens filename and scales it to cover (self.W, self.H)"""
+        i = Image.open(fn)
+        fac = max(self.W / i.size[0], self.H / i.size[1])
+        i = i.resize((int(i.size[0] * fac), int(i.size[1] * fac)), Image.BILINEAR)
+        return i
+
     def startMenu(self):
         self.grid(sticky=N+E+S+W)
 
-        self.title = Label(self, text="Welcome to AXI Combat v1.3 !", font=e)
-        self.title.grid(row=0, column=0, columnspan=4, padx=10, pady=10)
+        self.createCoreWidgets()
 
-        i = Image.open(PATH+"lib/Combat.png")
+        self.finalRender = self.d.create_image((self.W/2, self.H/2))
 
-        self.logoImg = ImageTk.PhotoImage(i.resize((192,170), Image.BILINEAR))
-        self.logo = Label(self, image=self.logoImg)
-        self.logo.grid(row=1, column=0, columnspan=3, padx=10, pady=(0,10))
+        if PLATFORM == "win32":
+            self.DC = win32gui.GetDC(0)
 
-        self.columnconfigure(0, weight=1, uniform="b")
-        self.columnconfigure(1, weight=1, uniform="b")
+        self.ctx = OpsConv.getContext_CL()
+
+        d = self.ctx.devices[0]
+        print("Using", d.name)
+        self.cq = cl.CommandQueue(self.ctx)
+
+        self.menuInit()
+
+        self.menuLoop()
+
+
+    def menuInit(self):
+##        self.cbuf = np.zeros((self.H, self.W, 4), 'float32')
+##        self.buf = cl.Buffer(ctx, mf.WRITE_ONLY, size=self.cbuf.nbytes)
+##
+##        cl.enqueue_copy(self.cq, self.cbuf, self.buf)
+##
+##        prog.test(cq, (S*S//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
+##              outBuf, rand,
+##              np.int32(S), np.float32(scale),
+##              np.float32(xpos), np.float32(ypos),
+##              g_times_l=True)
+
+
+
+
+
+        self.tFont = ImageFont.truetype(_TIMESBD, int(72 * (self.H / 600)))
+        self.bFont = ImageFont.truetype(_TIMESBD, int(48 * (self.H / 600)))
+        self.cFont = ImageFont.truetype(_TIMES, int(24 * (self.H / 600)))
+        self.eFont = ImageFont.truetype(_COURIERBD, int(18 * (self.H / 600)))
+
+
+
+        i = self.openImageCover('../Assets/Forest.png')
+        #i = self.openImageCover('../Assets/MenuTemple2a.png')
+
+        i = i.filter(ImageFilter.BoxBlur(8))
+        self.bg = np.array(i)
+        self.bg = (self.bg / 255.)*self.bg
+
+
+        n = self.openImageCover('../Assets/Noise/Test5w.png')
+        n = n.rotate(-90)
+        nm = np.expand_dims(np.array(n), -1)
+        nm = nm / 255.
+        nm *= nm
+        diff = n.size[1] - self.H
+        nm = nm[diff//2:-diff//2]
+
+        self.nmask = np.clip(nm * 3, None, 1)
+        self.nmask2 = np.clip(nm * 3 - 1, 0, None) * 80.
+        self.nmask2 *= 1/np.max(self.nmask2)
+
+
+        d = Image.open('../Assets/Noise/Test4.png')
+        d = d.resize((self.H*4//5,self.H*4//5), Image.BILINEAR).convert('RGB')
+        d = np.array(d)
+        d = d / 255. * d
+        self.circle = d * (np.array([[[1, 0.74, 0.43]]])**2)
+
+
+        self.cursor = np.array(Image.open('../Assets/Cursor.png'), 'float32')
+        self.cursor[:,:,:3] = self.cursor[:,:,:3] / 255. * self.cursor[:,:,:3]
+
+
+        imgs = ['MenuButton.png',
+                'MenuOrnament.png',
+                'MenuLights.png',
+                'MenuBulb.png',
+                'MenuBulb2.png',
+                'MenuEntry.png']
+
+        for f in imgs:
+            b = Image.open('../Assets/' + f)
+            b = np.array(b, 'float32')
+            b[:,:,:3] = b[:,:,:3] / 255. * b[:,:,:3]
+            b[:,:,3] = np.clip(b[:,:,3] * 1.2, None, 255)
+
+            # For CL
+##            buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=b.nbytes)
+##            cl.enqueue_copy(self.cq, buf, b)
+##            b = {'buf': buf, 'shape': np.array(b.shape, 'float32')}
+
+            aName = f.split('.')[0]
+            aName = aName[0].lower() + aName[1:]
+            self.__setattr__(aName, b)
+
+
+        self.st = time.time()
+
+
+    def blendCursor(self, frame: np.array) -> None:
+        """Blends cursor image onto frame"""
+        mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
+        my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
+        self.blend(frame, self.cursor, (mx + 20, my + 20), 'alpha')
+
+
+    def menuLoop(self):
+        frame = np.zeros((self.H, self.W, 3), dtype='uint8')
+
+        self.blend(frame, np.array(self.bg),
+                   (self.W2, self.H2), 'replace')
+
+        r = np.roll(self.nmask, int((time.time() - self.st)*30), axis=1)
+        r2 = np.roll(self.nmask2, int((time.time() - self.st)*30), axis=1)
+        # Approximately 'hard light'
+        frame = frame * r
+        frame = frame.astype('float32') * (1-r2) + 255 * r2
+
+
+        self.blend(frame, self.circle * 1.4,
+                   (self.W2, self.H2), 'add')
+
+
+
+        bBlur = 1
+        offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
+
+        self.blend(frame, self.menuButton,
+                   (self.W//4, self.H2), 'alpha')
+        self.drawText(frame, 'Start', (200,230,255), self.bFont,
+                      (-6,-self.W//4), blur=bBlur, bFill=(70,130,255), method='gauss')
+
+        self.blend(frame, self.menuOrnament,
+                   (self.W//4 - offset, self.H2), 'alpha')
+
+
+        self.blend(frame, self.menuButton,
+                   (self.W2, self.H2), 'alpha')
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2, self.H2 - 50), 'alpha')
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2, self.H2 + 48), 'alpha')
+        self.drawText(frame, 'Join', (200,255,200), self.bFont,
+                      (-6,0), blur=bBlur, bFill=(60,210,60), method='gauss')
+
+
+        self.blend(frame, self.menuButton,
+                   (self.W*3//4, self.H2), 'alpha')
+        self.blend(frame, self.menuLights[3:6],
+                   (self.W*3//4, self.H2 - 50), 'alpha')
+        self.blend(frame, self.menuLights[3:6],
+                   (self.W*3//4, self.H2 + 48), 'alpha')
+        self.drawText(frame, 'Settings', (255,230,200), self.bFont,
+                      (-2,self.W//4), blur=bBlur, bFill=(255,130,70), method='gauss')
+
+
+        self.blend(frame, self.menuOrnament[:,::-1],
+                   (self.W*3//4 + offset, self.H2), 'alpha')
+        self.blend(frame, self.menuBulb,
+                   (self.W*3//4 + 115, self.H2 - 3), 'alpha')
+
+
+        yc = self.H*0.7+32
+
+        self.blend(frame, self.menuButton,
+                   (self.W//4, yc), 'alpha')
+        self.blend(frame, self.menuLights[0:3],
+                   (self.W//4, yc - 50), 'alpha')
+        self.blend(frame, self.menuLights[0:3],
+                   (self.W//4, yc + 48), 'alpha')
+        self.blend(frame, self.menuLights[0:3],
+                   (self.W//4, yc), 'alpha')
+        self.drawText(frame, 'About', (255,200,200), self.cFont,
+                      (yc-self.H2-3 -24,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
+        self.drawText(frame, 'Controls', (255,200,200), self.cFont,
+                      (yc-self.H2-3 +24,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
+        self.blend(frame, self.menuOrnament,
+                   (self.W//4 - offset, yc), 'alpha')
+        self.blend(frame, self.menuBulb2,
+                   (self.W//4 - 114, yc - 3), 'alpha')
+
+        offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
+        self.blend(frame, self.menuEntry,
+                   (self.W2 + offset2, self.H*0.7), 'alpha')
+        self.blend(frame, self.menuEntry,
+                   (self.W2 + offset2, self.H*0.7+65), 'alpha')
+
+        yc = self.H*0.7+65
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2, yc -23), 'alpha')
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2 + 144, yc -23), 'alpha')
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2, yc +23), 'alpha')
+        self.blend(frame, self.menuLights[6:9],
+                   (self.W2 + 144, yc +23), 'alpha')
+
+        f = np.ones((33, 96, 4)) * np.array([[[80,160,240,30]]])
+        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
+        self.blend(frame, f,
+                   (self.W2 + offset2 + 120*sin(time.time() - self.st), self.H*0.7), 'alpha')
+
+        f = np.ones((33, 96, 4)) * np.array([[[80,240,80,30]]])
+        f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
+        self.blend(frame, f,
+                   (self.W2 + offset2 - 120*sin(time.time() - self.st), self.H*0.7+65), 'alpha')
+
+
+        self.drawText(frame, 'User999', (255,255,255), self.eFont,
+                      (self.H*0.2 -2, offset2), blur=0)
+        self.drawText(frame, 'https://axi.x10.mx/Combat', (255,255,255), self.eFont,
+                      (yc-self.H2 -2, offset2), blur=0)
+
+
+        self.blendCursor(frame)
+        self.drawText(frame, "AXI Combat v1.4", (255,255,255), self.tFont,
+                      (-self.H//3,0), blur=3, bFill=(180,180,180), method='gauss')
+
+
+        frame = np.sqrt(frame / 255.) * 255.
+        self._render(frame)
+        #Image.fromarray(frame.astype('uint8')).save('MenuTest.png')
+        self.after(10, self.menuLoop)
+        return
+
+
+
+
+
 
         self.newG = Button(self, text="Start Game", fg="#008", bg="#bdf",
                            command=self.goStart, font=f)
@@ -193,62 +442,18 @@ class CombatMenu(Frame):
                                command=self.mkRouter, font=g)
         self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 
-        self.mkServer = Button(self, text="Start Server", fg="#a2a", bg="#ddd",
-                               command=self.mkServ, font=g)
-        self.mkServer.grid(row=4, column=2, sticky=N+S+E+W, pady=(15,0))
-        self.mkServer['state'] = 'disabled'
 
     def showExtras(self):
-        state = 0
-        try:
-            with open(PATH+"lib/Stat.txt") as sf:
-                state = int(sf.read())
-        except: pass
-        if state != 15:
-            try: self.credInfo.destroy()
-            except (AttributeError, TclError): pass
-            self.credInfo = Toplevel()
-            self.credInfo.title("Credits")
-            try: self.credInfo.iconbitmap(PATH+"lib/Combat.ico")
-            except FileNotFoundError: pass
-            ct = "Win a game in each of the 4 stages\nto unlock the credits."
-            Label(self.credInfo, text=ct, font=f, padx=12, pady=12).pack()
-            return
+        try: self.credInfo.destroy()
+        except (AttributeError, TclError): pass
+        self.credInfo = Toplevel()
+        self.credInfo.title("Credits")
+        try: self.credInfo.iconbitmap(PATH+"lib/Combat.ico")
+        except FileNotFoundError: pass
+        ct = "Win a game in each of the 4 stages\nto unlock the credits."
+        Label(self.credInfo, text=ct, font=f, padx=12, pady=12).pack()
 
-        self.removeMain(False)
 
-        if self.H < 270:
-            self.W = int(self.W / self.H * 270)
-            self.H = 270
-            self.setWH(self.W, self.H)
-
-        self.createCoreWidgets()
-
-        self.evtQ.put({"Fade":0, "FadeTime":0.5})
-
-        self.creds = json.loads(open(PATH+"lib/Credits.dat").read())
-        self.d.after_idle(self.startCreds)
-        self.credI = 0
-        self.dt1 = time.time()
-        self.d.after(800, self.playCredMusic)
-
-    def playCredMusic(self):
-        volm = float(OpsConv.getSettings(False)["Volume"])
-        self.evtQ.put({"Play":(PATH + "../Sound/Credits.wav", 1.66*volm, False)})
-        self.d.after(20000, self.decrVol)
-        self.vCount = 0
-
-    def decrVol(self):
-        self.evtQ.put({"Cresc":0.98})
-        self.vCount += 1
-        if self.vCount < 25:
-            self.d.after(500, self.decrVol)
-
-    def startCreds(self):
-        self.RS = self.H/440
-        self.sc = 0
-        self.cScreen = []
-        self.d.after(10, self.nextCreds)
 
     def nextCreds(self):
         for x in self.cScreen: self.d.delete(x)
@@ -662,12 +867,8 @@ class CombatMenu(Frame):
         self.runMod.grid()
         self.mkServer.grid()
 
-    def scramble(self, t):
-        a = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ "
-        return "".join([a[(a.index(x)+17) % len(a)] for x in t])
-    def descramble(self, t):
-        a = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ "
-        return "".join([a[(a.index(x)-17) % len(a)] for x in t])
+
+
 
     def joinGame(self):
         stage = self.loc.index(self.gd.split("(")[1].split(")")[0])
