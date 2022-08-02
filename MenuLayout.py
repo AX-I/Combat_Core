@@ -303,8 +303,10 @@ def mainHandleMouse(self, frame, click=False):
     h2 = self.H*0.52
 
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
-    buttonCenters = [(self.H*0.7, self.W2 + offset2),
-                     (self.H*0.8083, self.W2 + offset2)]
+
+    buttonCenters = [(h2 + self.H*0.2, self.W2 + offset2),
+                     (h2 + self.H*0.3083, self.W2 + offset2)]
+
     bSel = 0
     for i in range(len(buttonCenters)):
         c = buttonCenters[i]
