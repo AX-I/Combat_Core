@@ -248,7 +248,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #i = self.openImageCover('../Assets/Tree.jpeg')
         #i = self.openImageCover('../Models/Temple/wood_planks_dirt_diff_1k.jpg')
 
-        n = self.openImageCover('../Assets/Noise/Test5w.png')
+        n = self.openImageCover('../Assets/Noise5w.png')
         n = n.rotate(-90)
         nm = np.expand_dims(np.array(n), -1)
         nm = nm / 255.
@@ -258,16 +258,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         nm = nm[diff//2:-diff//2]
 
         self.bgNoise = self.makeCL('BgNoise', nm)
-
-
-        d = Image.open('../Assets/Noise/Test4.png')
-        d = d.resize((self.H*4//5,self.H*4//5), Image.BILINEAR).convert('RGB')
-        d = np.array(d) * 1.2 * 0.7
-        d = d / 255. * d
-        self.circle = d * (np.array([[[1, 0.74, 0.43]]])**2)
-        self.circle = np.minimum(self.circle, 255)
-
-        self.circle = self.makeCL('Circle', self.circle)
 
 
         self.cursor = np.array(Image.open('../Assets/Cursor.png'), 'float32')
