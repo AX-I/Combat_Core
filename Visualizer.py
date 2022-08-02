@@ -65,8 +65,11 @@ else:
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
-    
-class ThreeDVisualizer(CombatMenu, Frame):
+
+from ImgUtils import NPTextDraw
+
+
+class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
     def __init__(self, pipe, eq, infQ,
                  width, height,
                  mouseSensitivity=20,
@@ -123,8 +126,8 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.startMenu()
 
     def setWH(self, w, h):
-        self.W = w
-        self.H = h
+        self.W = np.int32(w)
+        self.H = np.int32(h)
         self.W2 = w//2
         self.H2 = h//2
 
@@ -154,7 +157,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         self.d.focus_set()
 
         self.finalRender = self.d.create_image((self.W/2, self.H/2))
-        
+
         self.evtQ.put(["ready"])
         
         self.pipeLoop = self.d.after_idle(self.checkPipe)
@@ -170,10 +173,9 @@ class ThreeDVisualizer(CombatMenu, Frame):
 
     def runGame(self, *args):
         self.evtQ.put({"Run":args})
-        
-        self.title.grid_remove()
 
-        self.createCoreWidgets()
+        #self.title.grid_remove()
+        #self.createCoreWidgets()
         
         self.mtext = self.d.create_text((self.W2, self.H2 - 50),
                                         text="Loading...", fill="#FFF",
@@ -228,6 +230,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
                         highlightthickness=0, highlightbackground="black")
         self.d.grid(row=0, column=0, rowspan=10, sticky=N+E+S+W)
         self.d.config(cursor="none", background="#000")
+        self.root.config(cursor="none", background="#000")
         
     def getResolutions(self):
         if PLATFORM != "win32": return set()
@@ -257,6 +260,7 @@ class ThreeDVisualizer(CombatMenu, Frame):
         
         if PLATFORM != "win32": return
         if not self.activeFS: return
+
         print('Active FS')
         return
         
@@ -273,8 +277,10 @@ class ThreeDVisualizer(CombatMenu, Frame):
             dm.PelsHeight = h
             dm.Fields = win32con.DM_PELSWIDTH | win32con.DM_PELSHEIGHT
             win32api.ChangeDisplaySettings(dm, 0)
+            self.root.attributes('-topmost', True)
         else:
             win32api.ChangeDisplaySettings(None, 0)
+            self.root.attributes('-topmost', False)
         
     
     def tgUI(self, e=None):
@@ -376,8 +382,8 @@ class ThreeDVisualizer(CombatMenu, Frame):
     def screenshot(self, e=None):
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
         i = PngImagePlugin.PngInfo()
-        i.add_text("pos", " ".join([str(round(x, 3)) for x in self.pos]))
-        i.add_text("dir", " ".join([str(round(x, 3)) for x in self.vv]))
+        #i.add_text("pos", " ".join([str(round(x, 3)) for x in self.pos]))
+        #i.add_text("dir", " ".join([str(round(x, 3)) for x in self.vv]))
         self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".png", pnginfo=i)
 
     def sendKey(self, key):
@@ -441,58 +447,58 @@ class ThreeDVisualizer(CombatMenu, Frame):
                 
                 endFont = ImageFont.truetype(_ARIAL, 48)
 
-                self.drawText(fr, end[0], end[1], endFont, (0,0), f)
+                self.drawTextNP(fr, end[0], end[1], endFont, (0,0), f)
 
                 if "Quit" in uInfo:
                     qt = uInfo["Quit"]
                     endFont = ImageFont.truetype(_ARIAL, 24)
-                    self.drawText(fr, qt, (255,240,230,255), endFont, (48,0), f)
+                    self.drawTextNP(fr, qt, (255,240,230,255), endFont, (48,0), f)
 
             if "nameTag" in uInfo:
                 nt = uInfo["nameTag"]
                 nFont = ImageFont.truetype(_ARIALBD, 16)
-                self.drawText(fr, nt, (255,240,230,255), nFont, (-20, 0), 1, 1)
+                self.drawTextNP(fr, nt, (255,240,230,255), nFont, (-20, 0), 1, 1)
 
         if self.drawControls:
             self.drawKey(fr, (self.H-60, 30), "A")
             self.drawKey(fr, (self.H-60, 60), "S")
             self.drawKey(fr, (self.H-60, 90), "D")
             self.drawKey(fr, (self.H-90, 60), "W")
-            self.drawText(fr, "Move", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Move", (0,0,0), self.cFont,
                           (self.H2-60, -self.W2+125), blur=0)
 
             self.drawKey(fr, (self.H-30, 72), "")
             self.drawKey(fr, (self.H-30, 96), "")
             self.drawKey(fr, (self.H-30, 120), "")
-            self.drawText(fr, "Jump", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Jump", (0,0,0), self.cFont,
                           (self.H2-30, -self.W2+155), blur=0)
                         
             self.drawKey(fr, (self.H-105, 100), "E")
-            self.drawText(fr, "Toggle Mouse Aim /\nFree Look", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Toggle Mouse Aim /\nFree Look", (0,0,0), self.cFont,
                           (self.H2-105, -self.W2+175), blur=0)
             
             self.drawKey(fr, (self.H-105, 20), "Q")
-            self.drawText(fr, "Release/Capture\nMouse", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Release/Capture\nMouse", (0,0,0), self.cFont,
                           (self.H2-135, -self.W2+55), blur=0)
             
             fi = "ZXCV"
             for i in range(4):
                 self.drawKey(fr, (self.H-30, self.W2+30*(i-1)), fi[i])
-            self.drawText(fr, "Fire", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Fire", (0,0,0), self.cFont,
                           (self.H2-52, 0), blur=0)
 
             self.drawKey(fr, (60, 40), "F1")
-            self.drawText(fr, "Show/hide controls", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Show/hide controls", (0,0,0), self.cFont,
                           (-self.H2 + 80, -self.W2 + 70), blur=0)
             
             for i in range(1,5):
                 self.drawKey(fr, (110, 30*i), str(i))
-            self.drawText(fr, "Gesture", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Gesture", (0,0,0), self.cFont,
                           (-self.H2 + 130, -self.W2 + 70), blur=0)
 
             self.drawKey(fr, (self.H-60, self.W-90), "↑")
             self.drawKey(fr, (self.H-30, self.W-90), "↓")
-            self.drawText(fr, "Zoom", (0,0,0), self.cFont,
+            self.drawTextNP(fr, "Zoom", (0,0,0), self.cFont,
                           (self.H2-45, self.W2-55), blur=0)
 
         if self.recVideo:
@@ -579,6 +585,7 @@ def runGUI(P, *args):
         if PLATFORM == "win32": win32api.ChangeDisplaySettings(None, 0)
         time.sleep(0.2)
         app.finish()
+        print('Menu spf: ' + str((time.time() - app.st) / app.frameNum))
     except Exception as e:
         logError(e, "main")
         raise
@@ -586,6 +593,8 @@ def runGUI(P, *args):
         print("UI closed")
         if hasattr(app, "selfServe"):
             app.selfServe.terminate()
+        if hasattr(app, "SM"):
+            app.SM.terminate()
 
 def logError(e, message):
     if __name__ == "__main__": raise e
