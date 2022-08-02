@@ -22,8 +22,8 @@ float2 rot(float2 xy, float t) {
 
 
 __kernel void blend(
-    __global uchar *DST, const int W, const int H,
-    __global uchar *SRC, const float sh, const float sw, const float sc,
+    __global ushort *DST, const int W, const int H,
+    __global ushort *SRC, const float sh, const float sw, const float sc,
     const int ox, const int oy,
     const int method,
     const int effect,
@@ -82,18 +82,18 @@ __kernel void blend(
 
 
 
-        int pix = SRC[samplecoord];
-        int pixdst = DST[3 * ((ty * W) + tx) + c];
+        float pix = SRC[samplecoord] / 256.f;
+        float pixdst = DST[3 * ((ty * W) + tx) + c] / 256.f;
 
         pix = pix * mult;
 
         if (method == BLEND_ALPHA) {
-            float alpha = SRC[samplecoord - c + 3] / 255.f;
+            float alpha = SRC[samplecoord - c + 3] / 256.f / 255.f;
             pix = pix * alpha + pixdst * (1-alpha);
         }
         if (method == BLEND_ADD) {
             pix += pixdst;
-            pix = min(pix, 255);
+            pix = min(pix, 255.f);
         }
         if (method == BLEND_SCREEN) {
             pix = 255 - (255 - pixdst) * (255 - pix) / 255;
@@ -110,12 +110,12 @@ __kernel void blend(
         if (method == BLEND_REPLACE) {
         }
 
-        DST[3 * ((ty * W) + tx) + c] = pix;
+        DST[3 * ((ty * W) + tx) + c] = pix * 256.f;
       }
     }
 }
 
-__kernel void gamma(__global uchar *DST, const int W, const int H) {
+__kernel void gamma(__global ushort *DST, const int W, const int H) {
     int bi = get_group_id(0);
     int ti = get_local_id(0);
     int tc = bi * BS + ti;
@@ -125,9 +125,9 @@ __kernel void gamma(__global uchar *DST, const int W, const int H) {
     //float bias = 0.5f * ((tx & 1) ^ (ty & 1)) + 0.25f * (ty & 1);
     float bias = 0;
 
-    DST[3*tc  ] = sqrt((DST[3*tc  ] + bias) / 255.f) * 255;
-    DST[3*tc+1] = sqrt((DST[3*tc+1] + bias) / 255.f) * 255;
-    DST[3*tc+2] = sqrt((DST[3*tc+2] + bias) / 255.f) * 255;
+    DST[3*tc  ] = sqrt(DST[3*tc  ] + bias);
+    DST[3*tc+1] = sqrt(DST[3*tc+1] + bias);
+    DST[3*tc+2] = sqrt(DST[3*tc+2] + bias);
 }
 
 
