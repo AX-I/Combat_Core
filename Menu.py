@@ -329,7 +329,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.frameNum = 0
 
 
-        f = np.zeros((self.H, self.W, 3), dtype='uint8')
+        f = np.zeros((self.H, self.W, 3), dtype='uint16')
         self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
         self.frameHost = f
 
@@ -364,7 +364,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
-        x = x.astype('uint8')
+        x = (x * 256).astype('uint16')
         buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=x.nbytes)
         cl.enqueue_copy(self.cq, buf, x)
         return CLObject(name, buf, np.array(x.shape, 'float32'))

@@ -70,6 +70,8 @@ class NPCanvas:
             b = self.imgText(dText, dFill, dFont, blur, bFill,
                              method, blurWidth)
 
+            b = (b*256).astype('uint16')
+
             buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=b.nbytes)
             cl.enqueue_copy(self.cq, buf, b)
             self.UItexts[dText] = {'buf': buf, 'shape': np.array(b.shape, 'float32')}
