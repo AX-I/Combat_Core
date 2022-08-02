@@ -18,7 +18,8 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-from tkinter import *
+#from tkinter import *
+from tkinter import Frame, Tk, N, E, S, W
 
 import os, sys
 
@@ -45,7 +46,6 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
 #import ImgUtils
 import ImgUtilsCL as ImgUtils
-from ImgUtilsCL import CLObject
 
 import OpsConv
 BLOCK_SIZE = 128
@@ -137,6 +137,13 @@ TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 import pyopencl as cl
 mf = cl.mem_flags
 
+from ImgUtilsCL import CLObject
+
+from Sound import SoundManager
+
+def playSound(si):
+    a = SoundManager(si)
+    a.run()
 
 class CombatMenu(Frame, ImgUtils.NPCanvas):
     def __init__(self, root=None):
@@ -181,21 +188,34 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         print("Using", d.name)
         self.cq = cl.CommandQueue(self.ctx)
 
-        self.prog = cl.Program(self.ctx, open('Shaders/menu.py').read()).build()
+        resScale = self.H / 600
+        shader = open('Shaders/menu.py').read()
+        self.prog = cl.Program(self.ctx, shader).build()
+
+        self.si = mp.Queue(64)
+        self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
+        self.SM.start()
+        
+        kwargs = OpsConv.getSettings()
+        volmFX = float(kwargs["VolumeFX"])
+        self.volmFX = np.array((volmFX, volmFX))
 
         self.menuInit()
+        self.d.bind("<F2>", self.screenshot)
+        self.d.focus_set()
 
         self.menuLoop()
-
 
     def menuInit(self):
         self.W = np.int32(self.W)
         self.H = np.int32(self.H)
 
-        self.tFont = ImageFont.truetype(_TIMESBD, int(72 * (self.H / 600)))
-        self.bFont = ImageFont.truetype(_TIMESBD, int(48 * (self.H / 600)))
-        self.cFont = ImageFont.truetype(_TIMES, int(24 * (self.H / 600)))
-        self.eFont = ImageFont.truetype(_COURIERBD, int(18 * (self.H / 600)))
+        resScale = self.H / 600
+
+        self.tFont = ImageFont.truetype(_TIMESBD, int(72 * resScale))
+        self.bFont = ImageFont.truetype(_TIMESBD, int(48 * resScale))
+        self.cFont = ImageFont.truetype(_TIMES, int(24 * resScale))
+        self.eFont = ImageFont.truetype(_COURIERBD, int(18 * resScale))
 
         i = self.openImageCover('../Assets/Forest.png')
         #i = self.openImageCover('../Assets/MenuTemple2a.png')
@@ -222,7 +242,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         d = Image.open('../Assets/Noise/Test4.png')
         d = d.resize((self.H*4//5,self.H*4//5), Image.BILINEAR).convert('RGB')
-        d = np.array(d) * 1.2
+        d = np.array(d) * 1.2 * 0.7
         d = d / 255. * d
         self.circle = d * (np.array([[[1, 0.74, 0.43]]])**2)
         self.circle = np.minimum(self.circle, 255)
@@ -241,13 +261,23 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                 'MenuLights.png',
                 'MenuBulb.png',
                 'MenuBulb2.png',
-                'MenuEntry.png']
+                'MenuEntry.png',
+                'MenuHighlight.png',
+                'MenuRingsW.png']
 
         for f in imgs:
             b = Image.open('../Assets/' + f)
+            sw = int(b.size[0] * resScale)
+            sh = int(b.size[1] * resScale)
+            if f == 'MenuLights.png':
+                sh = b.size[1]
+            b = b.resize((sw,sh), Image.BILINEAR)
             b = np.array(b, 'float32')
             b[:,:,:3] = b[:,:,:3] / 255. * b[:,:,:3]
-            b[:,:,3] = np.clip(b[:,:,3] * 1.2, None, 255)
+            if f == 'MenuRingsW.png':
+                b[:,:,3] = b[:,:,3] * 0.2
+            else:
+                b[:,:,3] = np.clip(b[:,:,3] * 1.2, None, 255)
 
             b = self.makeCL(f, b)
 
@@ -258,11 +288,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
 
-        f = np.ones((33, 96, 4)) * np.array([[[80,160,240,30]]])
+        f = np.ones((int(33*resScale), 96, 4)) * np.array([[[80,160,240,30]]])
         f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
         self.userHL = self.makeCL('User', f)
 
-        f = np.ones((33, 96, 4)) * np.array([[[80,240,80,30]]])
+        f = np.ones((int(33*resScale), 96, 4)) * np.array([[[80,240,80,30]]])
         f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
         self.servHL = self.makeCL('User', f)
 
@@ -274,6 +304,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         f = np.zeros((self.H, self.W, 3), dtype='uint8')
         self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
         self.frameHost = f
+
+        self.buttonSelect = False
 
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
@@ -291,100 +323,103 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.blend(frame, self.cursor, (mx + 20, my + 20), 'alpha')
 
 
-    def menuLoop(self):
+    def menuLoop(self):        
         if self.frameNum == 0:
             self.tgFullScreen()
+
+        resScale = self.H / 600
 
         frame = self.frameBuf
 
         xt = time.perf_counter()
 
+        sTime = time.time() - self.st
+
         self.blend(frame, self.bg,
                    (self.W2, self.H2), 'replace')
         self.blend(frame, self.bgNoise,
-                   (self.W2, self.H2), 'hard light')
+                   (self.W2, self.H2), 'hard light',
+                   effect='roll', effectArg=30*sTime)
         self.blend(frame, self.circle,
-                   (self.W2, self.H2), 'add')
+                   (self.W2, self.H2), 'add',
+                   effect='rot', effectArg=0.2*sTime + 1)
+        self.blend(frame, self.circle,
+                   (self.W2, self.H2), 'add',
+                   effect='rot', effectArg=-0.3*sTime)
 
 
         bBlur = 1
+        bWidth = 5*resScale
         offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
 
+        # Start button
         self.blend(frame, self.menuButton,
                    (self.W//4, self.H2), 'alpha')
-        self.drawText(frame, 'Start', (200,230,255), self.bFont,
-                      (-6,-self.W//4), blur=bBlur, bFill=(70,130,255), method='gauss')
-
         self.blend(frame, self.menuOrnament,
                    (self.W//4 - offset, self.H2), 'alpha')
 
-
+        # Join button
         self.blend(frame, self.menuButton,
                    (self.W2, self.H2), 'alpha')
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2, self.H2 - 50), 'alpha')
+                   (self.W2, self.H2 - 50*resScale), 'alpha')
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2, self.H2 + 48), 'alpha')
-        self.drawText(frame, 'Join', (200,255,200), self.bFont,
-                      (-6,0), blur=bBlur, bFill=(60,210,60), method='gauss')
+                   (self.W2, self.H2 + 48*resScale), 'alpha')
 
-
+        # Settings button
         self.blend(frame, self.menuButton,
                    (self.W*3//4, self.H2), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (self.W*3//4, self.H2 - 50), 'alpha')
+                   (self.W*3//4, self.H2 - 50*resScale), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (self.W*3//4, self.H2 + 48), 'alpha')
-        self.drawText(frame, 'Settings', (255,230,200), self.bFont,
-                      (-2,self.W//4), blur=bBlur, bFill=(255,130,70), method='gauss')
+                   (self.W*3//4, self.H2 + 48*resScale), 'alpha')
 
 
         self.blend(frame, self.menuOrnament[:,::-1],
                    (self.W*3//4 + offset, self.H2), 'alpha')
+        bulbOffset = self.menuButton.shape[1]/2 \
+                     + self.menuOrnament.shape[1]*0.22
         self.blend(frame, self.menuBulb,
-                   (self.W*3//4 + 115, self.H2 - 3), 'alpha')
+                   (self.W*3//4 + bulbOffset, self.H2 - 3), 'alpha')
 
 
-        yc = self.H*0.7+32
+        # About Controls button
+        yc = self.H*0.7533
 
         self.blend(frame, self.menuButton,
                    (self.W//4, yc), 'alpha')
         self.blend(frame, self.menuLights[0:3],
-                   (self.W//4, yc - 50), 'alpha')
+                   (self.W//4, yc - 50*resScale), 'alpha')
         self.blend(frame, self.menuLights[0:3],
-                   (self.W//4, yc + 48), 'alpha')
+                   (self.W//4, yc + 48*resScale), 'alpha')
         self.blend(frame, self.menuLights[0:3],
                    (self.W//4, yc), 'alpha')
-        self.drawText(frame, 'About', (255,200,200), self.cFont,
-                      (yc-self.H2-3 -24,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
-        self.drawText(frame, 'Controls', (255,200,200), self.cFont,
-                      (yc-self.H2-3 +24,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
         self.blend(frame, self.menuOrnament,
                    (self.W//4 - offset, yc), 'alpha')
         self.blend(frame, self.menuBulb2,
-                   (self.W//4 - 114, yc - 3), 'alpha')
+                   (self.W//4 - bulbOffset + 2, yc - 3), 'alpha')
 
         offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
         self.blend(frame, self.menuEntry,
                    (self.W2 + offset2, self.H*0.7), 'alpha')
         self.blend(frame, self.menuEntry,
-                   (self.W2 + offset2, self.H*0.7+65), 'alpha')
+                   (self.W2 + offset2, self.H*0.7+65*resScale), 'alpha')
 
-        yc = self.H*0.7+65
+        yc = self.H*0.7+65*resScale
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2, yc -23), 'alpha')
+                   (self.W2, yc -23*resScale), 'alpha')
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2 + 144, yc -23), 'alpha')
+                   (self.W2 + 144*resScale, yc -23*resScale), 'alpha')
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2, yc +23), 'alpha')
+                   (self.W2, yc +23*resScale), 'alpha')
         self.blend(frame, self.menuLights[6:9],
-                   (self.W2 + 144, yc +23), 'alpha')
+                   (self.W2 + 144*resScale, yc +23*resScale), 'alpha')
 
         self.blend(frame, self.userHL,
-                   (self.W2 + offset2 + 120*sin(time.time() - self.st), self.H*0.7), 'alpha')
+                   (self.W2 + offset2 + 120*resScale*sin(time.time() - self.st), self.H*0.7), 'alpha')
 
         self.blend(frame, self.servHL,
-                   (self.W2 + offset2 - 120*sin(time.time() - self.st), self.H*0.7+65), 'alpha')
+                   (self.W2 + offset2 - 120*resScale*sin(time.time() - self.st), self.H*0.7+65*resScale), 'alpha')
 
 
         self.drawText(frame, 'User999', (255,255,255), self.eFont,
@@ -393,9 +428,30 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                       (yc-self.H2 -2, offset2), blur=0)
 
 
+
+        self.handleMouse(frame)
+
+        self.drawText(frame, 'Start', (200,230,255), self.bFont,
+                      (-6,-self.W//4), blur=bBlur, bFill=(70,130,255),
+                      method='gauss', blurWidth=bWidth)
+        self.drawText(frame, 'Join', (200,255,200), self.bFont,
+                      (-6,0), blur=bBlur, bFill=(60,210,60),
+                      method='gauss', blurWidth=bWidth)
+        self.drawText(frame, 'Settings', (255,230,200), self.bFont,
+                      (-2,self.W//4), blur=bBlur, bFill=(255,130,70),
+                      method='gauss', blurWidth=bWidth)
+        yc = self.H*0.7533
+        self.drawText(frame, 'About', (255,200,200), self.cFont,
+                      (yc-self.H2-3 -24*resScale,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
+        self.drawText(frame, 'Controls', (255,200,200), self.cFont,
+                      (yc-self.H2-3 +24*resScale,-self.W//4), blur=bBlur, bFill=(255,70,70), method='gauss')
+
+
+
         self.blendCursor(frame)
         self.drawText(frame, "AXI Combat v1.4", (255,255,255), self.tFont,
-                      (-self.H//3,0), blur=3, bFill=(180,180,180), method='gauss')
+                      (-self.H//3,0), blur=3, bFill=(180,180,180),
+                      method='gauss', blurWidth=bWidth)
 
         self.gamma(frame)
 
@@ -403,13 +459,13 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         frame = self.frameHost
 
         et = time.perf_counter() - xt
-        print('Blend', et)
+        #print('Blend', et)
         xt = time.perf_counter()
 
         self._render(frame)
 
         et = time.perf_counter() - xt
-        print('Push', et)
+        #print('Push', et)
 
         #Image.fromarray(frame.astype('uint8')).save('MenuTest.png')
         self.after(4, self.menuLoop)
@@ -466,6 +522,42 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                                command=self.mkRouter, font=g)
         self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 
+
+    def handleMouse(self, frame):
+        mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
+        my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
+
+        # LRUD
+        h = self.menuButton.shape[0]
+        w = self.menuButton.shape[1]
+
+        buttonCenters = [(self.H2, self.W//4),
+                         (self.H2, self.W2),
+                         (self.H2, self.W*3//4),
+                         (self.H*0.7533, self.W//4)]
+
+        bSel = 0
+        for i in range(len(buttonCenters)):
+            c = buttonCenters[i]
+            ey = (c[0] - h//2, c[0] + h//2)
+            ex = (c[1] - w//2, c[1] + w//2)
+
+            if (ey[0] < my < ey[1]) and (ex[0] < mx < ex[1]):
+                bSel = i + 1
+
+
+                self.blend(frame, self.menuHighlight,
+                           c[::-1], 'add')
+                self.blend(frame, self.menuRingsW,
+                           c[::-1], 'alpha',
+                           effect='roll', effectArg=-20*(time.time()-self.st))
+
+                break
+
+        if bSel and (bSel != self.buttonSelect):
+            self.si.put({'Play':(PATH+'../Sound/Misc/MenuClickT.wav',
+                                 self.volmFX*0.5, False)})
+        self.buttonSelect = bSel
 
     def showExtras(self):
         try: self.credInfo.destroy()
