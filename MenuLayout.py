@@ -105,7 +105,7 @@ def mainMenuLayout(self):
     bWidth = 5*resScale
     offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
 
-    h2 = self.H * 0.52
+    h2 = self.H * 0.54
 
     # For About/Controls
     yc = h2 + self.H*0.2533
@@ -214,9 +214,9 @@ def mainMenuLayout(self):
                    (self.W2 + offset2, self.H*0.8283), 'add')
 
     self.drawText(frame, self.unameDisplay, (255,255,255), self.eFont,
-                  (self.H*0.22 -2, offset2), blur=0)
+                  (self.H*0.24 -2, offset2), blur=0)
     self.drawText(frame, self.servDisplay, (255,255,255), self.eFont,
-                  (self.H*0.3283 -2, offset2), blur=0)
+                  (self.H*0.3483 -2, offset2), blur=0)
 
 
 
@@ -233,7 +233,7 @@ def mainMenuLayout(self):
             blurs[i] = 0
 
 
-    h0 = self.H*0.02
+    h0 = h2 - self.H2
 
     self.drawText(frame, 'Start', fills[0], self.bFont,
                   (h0 -6 - 2*resScale,-self.W//4), blur=blurs[0], bFill=yellowBG,
@@ -245,7 +245,7 @@ def mainMenuLayout(self):
                   (h0 -2,self.W//4), blur=blurs[2], bFill=yellowBG,
                   method='gauss', blurWidth=bWidth)
 
-    yc = self.H*0.7733
+    yc = self.H*0.2533 + h2
     self.drawText(frame, 'About', fills[3], self.cFont,
                   (yc-self.H2-3 -22*resScale,-self.W//4),
                   blur=blurs[3], bFill=yellowBG, method='gauss')
@@ -255,7 +255,7 @@ def mainMenuLayout(self):
 
 
     self.blend(frame, self.menuTitle,
-               (self.W2, self.H*0.27), 'alpha')
+               (self.W2, self.H*0.28), 'alpha')
 
 
     self.blendCursor(frame)
@@ -264,10 +264,10 @@ def mainMenuLayout(self):
     whiteFG = (255,255,255)
     whiteBG = (180,180,180)
     self.drawText(frame, "AXI Combat", whiteFG, self.tFont,
-                  (-self.H*0.34, -14*resScale), blur=2, bFill=whiteBG,
+                  (-self.H*0.33, -14*resScale), blur=2, bFill=whiteBG,
                   method='gauss', blurWidth=bWidth)
     self.drawText(frame, "v1.4", whiteFG, self.c2Font,
-                  (-self.H*0.34 + 24*resScale,self.H*0.51), bFill=whiteBG,
+                  (-self.H*0.33 + 24*resScale,self.H*0.51), bFill=whiteBG,
                   blur=2, blurWidth=bWidth, method='gauss')
 
 
@@ -292,7 +292,7 @@ def mainHandleMouse(self, frame, click=False):
 
     h = self.menuEntry.shape[0]
     w = self.menuEntry.shape[1]
-    h2 = self.H*0.52
+    h2 = self.H*0.54
 
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
 
@@ -306,8 +306,6 @@ def mainHandleMouse(self, frame, click=False):
         ex = (c[1] - w//2, c[1] + w//2)
 
         if (ey[0] < my < ey[1]) and (ex[0] < mx < ex[1]):
-            bSel = i + 1
-
             if click:
                 self.textEntry = ('User', 'Serv')[i]
 
