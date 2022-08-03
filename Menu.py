@@ -248,12 +248,12 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #i = self.openImageCover('../Assets/Tree.jpeg')
         #i = self.openImageCover('../Models/Temple/wood_planks_dirt_diff_1k.jpg')
 
-        n = self.openImageCover('../Assets/Noise5w.png')
-        n = n.rotate(-90)
-        nm = np.expand_dims(np.array(n), -1)
-        nm = nm / 255.
-        nm *= nm * 255.
-        nm = nm * 0.7 + 0.1
+        n = self.openImageCover('../Assets/Noise5wa.png')
+        nm = np.array(n.rotate(-90))
+        a = nm[:,:,3]
+        a = (a / 255.) * a
+        a = a * (210/255) + 40
+        nm[:,:,3] = np.minimum(a, 255)
         diff = n.size[1] - self.H
         nm = nm[diff//2:-diff//2]
 

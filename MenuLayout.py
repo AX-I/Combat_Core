@@ -51,7 +51,7 @@ def mainMenuSetup(self):
     perf = time.perf_counter()
 
     i = self.openImageCover('../Assets/Forest.png')
-    i = i.filter(ImageFilter.BoxBlur(5*resScale))
+    i = i.filter(ImageFilter.BoxBlur(4*resScale))
 
     gray = i.convert('L').convert('RGB')
     gray = np.array(gray)
@@ -65,7 +65,7 @@ def mainMenuSetup(self):
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
 
-    self.bg = self.bg * 0.8 + gray * 0.2
+    self.bg = self.bg * 0.9 + gray * 0.1
 
     self.bg = self.makeCL('Bg', self.bg)
 
@@ -77,6 +77,12 @@ def mainMenuSetup(self):
         im = (im / 255.) * im * 0.4
         im = self.makeCL(f'Bg{i}', im)
         self.stageBgs.append(im)
+
+
+    i = self.openImageCover('../Assets/TitleLeaves.png')
+    i = np.array(i)
+    i = (i/255.) * i
+    self.titleLeaves = self.makeCL('Leaves', i)
 
     self.notConnectedTG = 0
 
@@ -97,15 +103,14 @@ def mainMenuLayout(self):
 
     self.blend(frame, self.bg,
                (self.W2, self.H2), 'replace')
+
+    self.blend(frame, self.titleLeaves,
+               (self.W2, self.H2), 'alpha')
+
     self.blend(frame, self.bgNoise,
-               (self.W2, self.H2), 'hard light',
+               (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
-##    self.blend(frame, self.circle,
-##               (self.W2, self.H2), 'add',
-##               effect='rot', effectArg=0.1*sTime + 1)
-##    self.blend(frame, self.circle,
-##               (self.W2, self.H2), 'add',
-##               effect='rot', effectArg=-0.15*sTime)
+
 
     bBlur = 1
     bWidth = 5*resScale
