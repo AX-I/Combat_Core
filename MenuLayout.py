@@ -75,7 +75,7 @@ def mainMenuSetup(self):
 
     self.notConnectedTG = 0
 
-    icons = ["IconWeb.png", "IconHome.png"]
+    icons = ["IconHome.png", "IconWeb.png"]
     self.icons = []
     for i in icons:
         b = Image.open('../Assets/' + i)
@@ -116,15 +116,16 @@ def mainMenuLayout(self):
 
     h2 = self.H * 0.54
 
-    # For About/Controls
-    yc = h2 + self.H*0.2533
+
+
+    xpos = self.W*0.8
+
+    buttonCenters = [(self.H*(0.18 + 0.22*i), xpos) for i in range(4)]
+    self.menuButtonCenters = buttonCenters
+
+    yc = buttonCenters[-1][0]
 
     if 0 < self.buttonSelect <= 4:
-        buttonCenters = [(h2, self.W//4),
-                         (h2, self.W2),
-                         (h2, self.W*3//4),
-                         (yc, self.W//4)]
-
         c = buttonCenters[self.buttonSelect - 1]
         self.blend(frame, self.menuButtonHighlight,
                    c[::-1], 'add',
@@ -132,86 +133,58 @@ def mainMenuLayout(self):
 
 
 
-    self.blend(frame, self.menuOrnamentLine,
-               (self.W*3//8, h2), 'alpha')
-    self.blend(frame, self.menuOrnamentLine,
-               (self.W*5//8, h2), 'alpha')
-
     # Start button
-    self.blend(frame, self.menuButton,
-               (self.W//4, h2), 'alpha')
-    self.blend(frame, self.menuOrnament,
-               (self.W//4 - offset, h2), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W//4, h2 - 50*resScale), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W//4, h2 + 48*resScale), 'alpha')
+    for i in range(3):
+        ypos = buttonCenters[i][0]
+        self.blend(frame, self.menuButton,
+                   (xpos, ypos), 'alpha')
+        self.blend(frame, self.menuOrnament[:,::-1],
+                   (xpos + offset, ypos), 'alpha')
+        self.blend(frame, self.menuLights[3:6],
+                   (xpos, ypos - 50*resScale), 'alpha')
+        self.blend(frame, self.menuLights[3:6],
+                   (xpos, ypos + 48*resScale), 'alpha')
 
-    # Join button
-    self.blend(frame, self.menuButton,
-               (self.W2, h2), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W2, h2 - 50*resScale), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W2, h2 + 48*resScale), 'alpha')
-
-
-    # Settings button
-    self.blend(frame, self.menuButton,
-               (self.W*3//4, h2), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W*3//4, h2 - 50*resScale), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
-               (self.W*3//4, h2 + 48*resScale), 'alpha')
-
-
-    self.blend(frame, self.menuOrnament[:,::-1],
-               (self.W*3//4 + offset, h2), 'alpha')
-    bulbOffset = self.menuButton.shape[1]/2 \
-                 + self.menuOrnament.shape[1]*0.22
-##    self.blend(frame, self.menuBulb,
-##               (self.W*3//4 + bulbOffset, h2 - 3), 'alpha')
 
 
     # About Controls button
 
     self.blend(frame, self.menuOrnamentLine,
-               (self.W*3//8, yc), 'alpha')
+               (xpos - self.H*0.2, yc), 'alpha')
     self.blend(frame, self.menuButton,
-               (self.W//4, yc), 'alpha')
+               (xpos, yc), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W//4, yc - 50*resScale), 'alpha')
+               (xpos, yc - 50*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W//4, yc + 48*resScale), 'alpha')
+               (xpos, yc + 48*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W//4, yc), 'alpha')
-    self.blend(frame, self.menuOrnament,
-               (self.W//4 - offset, yc), 'alpha')
-##    self.blend(frame, self.menuBulb,
-##               (self.W//4 - bulbOffset + 2, yc - 3), 'alpha')
+               (xpos, yc), 'alpha')
+    self.blend(frame, self.menuOrnament[:,::-1],
+               (xpos + offset, yc), 'alpha')
+
 
 
     # Username Server
-
+    yc = buttonCenters[-1][0] - 32*resScale
+    xc = xpos - self.H*0.6
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
     self.blend(frame, self.menuEntry,
-               (self.W2 + offset2, h2 + self.H*0.2), 'alpha')
+               (xc + offset2, yc), 'alpha')
     self.blend(frame, self.menuEntry,
-               (self.W2 + offset2, h2 + self.H*0.2+65*resScale), 'alpha')
+               (xc + offset2, yc+65*resScale), 'alpha')
 
-    yc = h2 + self.H*0.2
     if self.textEntry == 'User':
         # yc += 65*resScale
         yc += self.H*0.1083
 
     self.blend(frame, self.menuLights[3:6],
-               (self.W2, yc -23*resScale), 'alpha')
+               (xc, yc -23*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W2 + 144*resScale, yc -23*resScale), 'alpha')
+               (xc + 144*resScale, yc -23*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W2, yc +23*resScale), 'alpha')
+               (xc, yc +23*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W2 + 144*resScale, yc +23*resScale), 'alpha')
+               (xc + 144*resScale, yc +23*resScale), 'alpha')
 
 ##    self.blend(frame, self.entryHL,
 ##               (self.W2 + offset2 + 120*resScale*sin(time.time() - self.st),
@@ -220,19 +193,21 @@ def mainMenuLayout(self):
 
     if self.notConnectedTG:
         self.blend(frame, self.menuEntryHighlightRed,
-                   (self.W2 + offset2, h2 + self.H*0.3083), 'add')
+                   (xc + offset2, h2 + self.H*0.3083), 'add')
 
+    yc = buttonCenters[-1][0] - 32*resScale
     self.drawText(frame, self.unameDisplay, (255,255,255), self.eFont,
-                  (self.H*0.24 -2, offset2), blur=0)
+                  (yc-self.H2 -2, xc-self.W2 + offset2), blur=0)
     self.drawText(frame, self.servDisplay, (255,255,255), self.eFont,
-                  (self.H*0.3483 -2, offset2), blur=0)
+                  (yc-self.H2 + self.H*0.1083 -2, xc-self.W2 + offset2), blur=0)
 
 
     # Web/Local icons
+    self.iconsPos = (xpos - self.H*0.9, yc + self.H*0.1083)
     for i in range(len(self.icons)):
-        s = i ^ (self.runMod['state'] != 'disabled')
+        s = i ^ (self.runMod['state'] == 'disabled')
         self.blend(frame, self.icons[i],
-                   (self.W*0.77 + 50*i*resScale, h2 + self.H*0.3083), 'add',
+                   (self.iconsPos[0] + 50*i*resScale, self.iconsPos[1]), 'add',
                    effect='mult', effectArg=0.1 + 0.6*s)
 
 
@@ -250,29 +225,35 @@ def mainMenuLayout(self):
             blurs[i] = 0
 
 
-    h0 = h2 - self.H2
+    offsets = [(-6 - 2*resScale, 0),
+               (-6 + 4*resScale, 4*resScale),
+               (-2, 0)]
+    texts = 'Start Join Settings'.split(' ')
 
-    self.drawText(frame, 'Start', fills[0], self.bFont,
-                  (h0 -6 - 2*resScale,-self.W//4), blur=blurs[0], bFill=yellowBG,
-                  method='gauss', blurWidth=bWidth)
-    self.drawText(frame, 'Join', fills[1], self.bFont,
-                  (h0 -6 + 4*resScale, 4*resScale), blur=blurs[1], bFill=yellowBG,
-                  method='gauss', blurWidth=bWidth)
-    self.drawText(frame, 'Settings', fills[2], self.bFont,
-                  (h0 -2,self.W//4), blur=blurs[2], bFill=yellowBG,
-                  method='gauss', blurWidth=bWidth)
+    for i in range(len(texts)):
+        self.drawText(frame, texts[i], fills[i], self.bFont,
+                      (buttonCenters[i][0]-self.H2 + offsets[i][0],
+                       xpos-self.W2 + offsets[i][1]),
+                      blur=blurs[i], bFill=yellowBG,
+                      method='gauss', blurWidth=bWidth)
 
-    yc = self.H*0.2533 + h2
+
+    yc = buttonCenters[-1][0]
     self.drawText(frame, 'About', fills[3], self.cFont,
-                  (yc-self.H2-3 -22*resScale,-self.W//4),
+                  (yc-self.H2-3 -22*resScale, xpos-self.W2),
                   blur=blurs[3], bFill=yellowBG, method='gauss')
     self.drawText(frame, 'Controls', fills[3], self.cFont,
-                  (yc-self.H2-3 +25*resScale,-self.W//4),
+                  (yc-self.H2-3 +25*resScale, xpos-self.W2),
                   blur=blurs[3], bFill=yellowBG, method='gauss')
 
 
+
+
+    titleX = self.W*0.35
+    titleY = self.H*0.4
+
     self.blend(frame, self.menuTitle,
-               (self.W2, self.H*0.28), 'alpha')
+               (titleX, titleY + self.H*0.11), 'alpha')
 
 
     self.blendCursor(frame)
@@ -281,10 +262,12 @@ def mainMenuLayout(self):
     whiteFG = (255,255,255)
     whiteBG = (180,180,180)
     self.drawText(frame, "AXI Combat", whiteFG, self.tFont,
-                  (-self.H*0.33, -14*resScale), blur=2, bFill=whiteBG,
+                  (titleY-self.H2, titleX-self.W2 -14*resScale),
+                  blur=2, bFill=whiteBG,
                   method='gauss', blurWidth=bWidth)
     self.drawText(frame, "v1.4", whiteFG, self.c2Font,
-                  (-self.H*0.33 + 24*resScale,self.H*0.51), bFill=whiteBG,
+                  (titleY-self.H2 + 84*resScale, titleX-self.W2 + self.H*0.37),
+                  bFill=whiteBG,
                   blur=2, blurWidth=bWidth, method='gauss')
 
 
@@ -306,7 +289,7 @@ def mainHandleMouse(self, frame, click=False):
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
 
 
-    c = (self.H*0.8483, self.W*0.77)
+    c = self.iconsPos[::-1]
     h = self.H//10
     w = self.W//10
     ey = (c[0] - h//2, c[0] + h//2)
@@ -322,10 +305,12 @@ def mainHandleMouse(self, frame, click=False):
     w = self.menuEntry.shape[1]
     h2 = self.H*0.54
 
+    xc = self.W*0.45
+    yc = self.menuButtonCenters[-1][0] - 0.053*self.H
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
 
-    buttonCenters = [(h2 + self.H*0.2, self.W2 + offset2),
-                     (h2 + self.H*0.3083, self.W2 + offset2)]
+    buttonCenters = [(yc, xc + offset2),
+                     (yc + self.H*0.1083, xc + offset2)]
 
     bSel = 0
     for i in range(len(buttonCenters)):
@@ -343,10 +328,8 @@ def mainHandleMouse(self, frame, click=False):
 
     h = self.menuButton.shape[0]
     w = self.menuButton.shape[1]
-    buttonCenters = [(h2, self.W//4),
-                     (h2, self.W2),
-                     (h2, self.W*3//4),
-                     (h2+self.H*0.2533, self.W//4)]
+
+    buttonCenters = self.menuButtonCenters
 
     buttonCmds = [self.goStart, self.goJoin, self.gSettings, self.about]
 
