@@ -31,7 +31,7 @@ def mainMenuSetup(self):
     #s = "FrankRuehlCLM-Medium.ttf ITCBLKAD.TTF PARCHM.TTF RAGE.TTF"
     #self.sFont = ImageFont.truetype(sFont, int(48 * resScale))
 
-    self.tFont = ImageFont.truetype(sFont, int(96 * resScale))
+    self.tFont = ImageFont.truetype(sFont, int(97 * resScale))
 
     self.aFont = ImageFont.truetype(sFont, int(68 * resScale))
 
@@ -54,7 +54,7 @@ def mainMenuSetup(self):
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
 
-    self.bg = self.bg * 0.9 + gray * 0.1
+    self.bg = self.bg * 0.8 + gray * 0.1
 
     self.bg = self.makeCL('Bg', self.bg)
 
@@ -220,7 +220,7 @@ def mainMenuLayout(self):
 
     if self.notConnectedTG:
         self.blend(frame, self.menuEntryHighlightRed,
-                   (self.W2 + offset2, self.H*0.8283), 'add')
+                   (self.W2 + offset2, h2 + self.H*0.3083), 'add')
 
     self.drawText(frame, self.unameDisplay, (255,255,255), self.eFont,
                   (self.H*0.24 -2, offset2), blur=0)
@@ -233,7 +233,7 @@ def mainMenuLayout(self):
         s = i ^ (self.runMod['state'] != 'disabled')
         self.blend(frame, self.icons[i],
                    (self.W*0.77 + 50*i*resScale, h2 + self.H*0.3083), 'add',
-                   effect='mult', effectArg=0.2 + 0.6*s)
+                   effect='mult', effectArg=0.1 + 0.6*s)
 
 
 
