@@ -243,7 +243,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.bFont = ImageFont.truetype(_TIMESBD, int(48 * resScale))
         self.c2Font = ImageFont.truetype(_TIMES, int(36 * resScale))
         self.cFont  = ImageFont.truetype(_TIMES, int(24 * resScale))
-        self.eFont = ImageFont.truetype(_COURIERBD, int(18 * resScale))
+        self.eFont = ImageFont.truetype(_COURIERBD, int(17 * resScale))
 
 
         n = self.openImageCover('../Assets/Noise5wa.png')
@@ -354,6 +354,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.hostname.insert(0, SERVER)
         self.servDisplay = SERVER
 
+        self.runMod = Button(self, text="Local Mode", fg="#a2a", bg="#ddd",
+                             command=self.mkRouter)
+
+
         print("menuInit", time.perf_counter() - perf)
 
         mainMenuSetup(self)
@@ -419,10 +423,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 ##        self.extras = Button(self, text="Credits", fg="#000", bg="#ddd",
 ##                               command=self.showExtras, font=g)
 ##        self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
-##
-##        self.runMod = Button(self, text="Local Mode", fg="#a2a", bg="#ddd",
-##                               command=self.mkRouter, font=g)
-##        self.runMod.grid(row=4, column=1, sticky=N+S+E+W, pady=(15,0))
 
 
     def handleKey(self, e=None):
