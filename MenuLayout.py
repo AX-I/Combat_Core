@@ -75,8 +75,17 @@ def mainMenuSetup(self):
 
     self.notConnectedTG = 0
 
-    #icons = ["IconHome.png", "IconWeb.png"]
-    #self.icons = ["../Asets/{}"]
+    icons = ["IconWeb.png", "IconHome.png"]
+    self.icons = []
+    for i in icons:
+        b = Image.open('../Assets/' + i)
+        sw = int(b.size[0]*0.45 * resScale)
+        sh = int(b.size[1]*0.45 * resScale)
+        b = b.resize((sw,sh), Image.BILINEAR)
+        b = np.array(b)
+        b[:,:,:3] = b[:,:,3:4]
+        self.icons.append(self.makeCL(i, b))
+
 
     self.textEntry = 'User'
 
@@ -219,6 +228,14 @@ def mainMenuLayout(self):
                   (self.H*0.3483 -2, offset2), blur=0)
 
 
+    # Web/Local icons
+    for i in range(len(self.icons)):
+        s = i ^ (self.runMod['state'] != 'disabled')
+        self.blend(frame, self.icons[i],
+                   (self.W*0.77 + 50*i*resScale, h2 + self.H*0.3083), 'add',
+                   effect='mult', effectArg=0.2 + 0.6*s)
+
+
 
     mainHandleMouse(self, frame)
 
@@ -288,7 +305,18 @@ def mainHandleMouse(self, frame, click=False):
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
 
-    
+
+    c = (self.H*0.8483, self.W*0.77)
+    h = self.H//10
+    w = self.W//10
+    ey = (c[0] - h//2, c[0] + h//2)
+    ex = (c[1] - w//2, c[1] + w//2)
+    if (ey[0] < my < ey[1]) and (ex[0] < mx < ex[1]):
+        if click:
+            if self.runMod['state'] != 'disabled':
+                self.mkRouter()
+                self.servDisplay = self.hostname.get()
+
 
     h = self.menuEntry.shape[0]
     w = self.menuEntry.shape[1]
@@ -318,7 +346,7 @@ def mainHandleMouse(self, frame, click=False):
     buttonCenters = [(h2, self.W//4),
                      (h2, self.W2),
                      (h2, self.W*3//4),
-                     (self.H*0.7733, self.W//4)]
+                     (h2+self.H*0.2533, self.W//4)]
 
     buttonCmds = [self.goStart, self.goJoin, self.gSettings, self.about]
 
