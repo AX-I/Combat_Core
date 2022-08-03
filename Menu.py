@@ -245,15 +245,12 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.cFont  = ImageFont.truetype(_TIMES, int(24 * resScale))
         self.eFont = ImageFont.truetype(_COURIERBD, int(18 * resScale))
 
-        #i = self.openImageCover('../Assets/Tree.jpeg')
-        #i = self.openImageCover('../Models/Temple/wood_planks_dirt_diff_1k.jpg')
 
         n = self.openImageCover('../Assets/Noise5wa.png')
         nm = np.array(n.rotate(-90))
         a = nm[:,:,3]
-        a = (a / 255.) * a
-        a = a * (210/255) + 40
-        nm[:,:,3] = np.minimum(a, 255)
+        a = a * (320/256) - 72
+        nm[:,:,3] = np.maximum(a, 0)
         diff = n.size[1] - self.H
         nm = nm[diff//2:-diff//2]
 
