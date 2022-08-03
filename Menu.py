@@ -249,7 +249,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         n = self.openImageCover('../Assets/Noise5wa.png')
         nm = np.array(n.rotate(-90))
         a = nm[:,:,3]
-        a = a * (320/256) - 72
+        a = a * (320/256) - 68
         nm[:,:,3] = np.maximum(a, 0)
         diff = n.size[1] - self.H
         nm = nm[diff//2:-diff//2]
