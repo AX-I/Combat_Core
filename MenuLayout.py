@@ -26,11 +26,9 @@ redBG = (255,70,70)
 def mainMenuSetup(self):
     resScale = self.H / 600
 
-    #s = "ITCBLKAD.TTF"
-    #s = "FrankRuehlCLM-Medium.ttf"
+
     sFont = "HTOWERT.TTF"
-    #s = "PARCHM.TTF"
-    #s = "RAGE.TTF"
+    #s = "FrankRuehlCLM-Medium.ttf ITCBLKAD.TTF PARCHM.TTF RAGE.TTF"
     #self.sFont = ImageFont.truetype(sFont, int(48 * resScale))
 
     self.tFont = ImageFont.truetype(sFont, int(96 * resScale))
@@ -38,14 +36,8 @@ def mainMenuSetup(self):
     self.aFont = ImageFont.truetype(sFont, int(68 * resScale))
 
     self.bFont = ImageFont.truetype("ITCBLKAD.TTF", int(60 * resScale))
-    #self.bFont = ImageFont.truetype("FrankRuehlCLM-Medium.ttf", int(50 * resScale))
-    #self.bFont = ImageFont.truetype("HTOWERT.TTF", int(50 * resScale))
-    #self.bFont = ImageFont.truetype("PARCHM.TTF", int(72 * resScale))
-    #self.bFont = ImageFont.truetype("RAGE.TTF", int(60 * resScale))
 
     self.c2Font = ImageFont.truetype(sFont, int(36 * resScale))
-    #self.c2Font = ImageFont.truetype("ITCBLKAD.TTF", int(36 * resScale))
-
     self.cFont = ImageFont.truetype(sFont, int(26 * resScale))
 
     perf = time.perf_counter()
@@ -58,10 +50,7 @@ def mainMenuSetup(self):
     gray = (gray / 255.)*gray
 
 
-    #i = self.openImageCover('../Assets/MenuTemple2a.png')
 
-    #i = i.filter(ImageFilter.BoxBlur(8))
-    #i = i.filter(ImageFilter.GaussianBlur(3))
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
 
@@ -133,8 +122,6 @@ def mainMenuLayout(self):
                    effect='mult', effectArg=1.2)
 
 
-##    self.blend(frame, self.menuBox,
-##               (self.W2, (yc+self.H2)/2), 'add')
 
     self.blend(frame, self.menuOrnamentLine,
                (self.W*3//8, h2), 'alpha')
@@ -405,7 +392,7 @@ def stageSelectLayout(self):
     self.blend(frame, self.stageBgs[self.selectedStage],
                (self.W2, self.H2), 'replace')
     self.blend(frame, self.bgNoise,
-               (self.W2, self.H2), 'hard light',
+               (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
 
     bBlur = 1
@@ -565,7 +552,7 @@ def joinLayout(self):
     self.blend(frame, self.bg,
                (self.W2, self.H2), 'replace')
     self.blend(frame, self.bgNoise,
-               (self.W2, self.H2), 'hard light',
+               (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
 
     for i in range(self.avls.size()):
@@ -678,7 +665,7 @@ def charLayout(self):
     self.blend(frame, self.stageBgs[self.selectedStage],
                (self.W2, self.H2), 'replace')
     self.blend(frame, self.bgNoise,
-               (self.W2, self.H2), 'hard light',
+               (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
 
     fg = blueFG if self.chooseAI else yellowFG
