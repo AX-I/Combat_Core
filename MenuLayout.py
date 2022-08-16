@@ -21,24 +21,29 @@ redFG = (255,200,200)
 redBG = (255,70,70)
 
 
+smallScale = 0.96
+bHalfTop = 50 * smallScale
+bHalfBot = 48 * smallScale
 
 
 def mainMenuSetup(self):
     resScale = self.H / 600
 
+    tFont = "../Assets/HTowerT_Bold_4.ttf"
+    sFont = "../Assets/HTOWERT.TTF"
 
-    sFont = "HTOWERT.TTF"
     #s = "FrankRuehlCLM-Medium.ttf ITCBLKAD.TTF PARCHM.TTF RAGE.TTF"
     #self.sFont = ImageFont.truetype(sFont, int(48 * resScale))
 
-    self.tFont = ImageFont.truetype(sFont, int(97 * resScale))
+    self.tFont = ImageFont.truetype(tFont, int(97 * resScale))
 
     self.aFont = ImageFont.truetype(sFont, int(68 * resScale))
 
-    self.bFont = ImageFont.truetype("ITCBLKAD.TTF", int(60 * resScale))
+    self.bFont = ImageFont.truetype("../Assets/ITCBLKAD.TTF",
+                                    int(60 * resScale * smallScale))
 
     self.c2Font = ImageFont.truetype(sFont, int(36 * resScale))
-    self.cFont = ImageFont.truetype(sFont, int(26 * resScale))
+    self.cFont = ImageFont.truetype(sFont, int(26 * resScale * smallScale))
 
     perf = time.perf_counter()
 
@@ -54,7 +59,7 @@ def mainMenuSetup(self):
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
 
-    self.bg = self.bg * 0.8 + gray * 0.1
+    self.bg = self.bg * 0.7 + gray * 0.1
 
     self.bg = self.makeCL('Bg', self.bg)
 
@@ -79,8 +84,8 @@ def mainMenuSetup(self):
     self.icons = []
     for i in icons:
         b = Image.open('../Assets/' + i)
-        sw = int(b.size[0]*0.45 * resScale)
-        sh = int(b.size[1]*0.45 * resScale)
+        sw = int(b.size[0]*0.45 * smallScale * resScale)
+        sh = int(b.size[1]*0.45 * smallScale * resScale)
         b = b.resize((sw,sh), Image.BILINEAR)
         b = np.array(b)
         b[:,:,:3] = b[:,:,3:4]
@@ -141,9 +146,9 @@ def mainMenuLayout(self):
         self.blend(frame, self.menuOrnament[:,::-1],
                    (xpos + offset, ypos), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (xpos, ypos - 50*resScale), 'alpha')
+                   (xpos, ypos - bHalfTop*resScale), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (xpos, ypos + 48*resScale), 'alpha')
+                   (xpos, ypos + bHalfBot*resScale), 'alpha')
 
 
 
@@ -154,9 +159,9 @@ def mainMenuLayout(self):
     self.blend(frame, self.menuButton,
                (xpos, yc), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xpos, yc - 50*resScale), 'alpha')
+               (xpos, yc - bHalfTop*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xpos, yc + 48*resScale), 'alpha')
+               (xpos, yc + bHalfBot*resScale), 'alpha')
     self.blend(frame, self.menuLights[3:6],
                (xpos, yc), 'alpha')
     self.blend(frame, self.menuOrnament[:,::-1],
@@ -177,14 +182,16 @@ def mainMenuLayout(self):
         # yc += 65*resScale
         yc += self.H*0.1083
 
+    xo = 144*smallScale*resScale
+    yo = 23*smallScale*resScale
     self.blend(frame, self.menuLights[3:6],
-               (xc, yc -23*resScale), 'alpha')
+               (xc, yc - yo), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xc + 144*resScale, yc -23*resScale), 'alpha')
+               (xc + xo, yc - yo), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xc, yc +23*resScale), 'alpha')
+               (xc, yc + yo), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xc + 144*resScale, yc +23*resScale), 'alpha')
+               (xc + xo, yc + yo), 'alpha')
 
 ##    self.blend(frame, self.entryHL,
 ##               (self.W2 + offset2 + 120*resScale*sin(time.time() - self.st),
@@ -249,7 +256,7 @@ def mainMenuLayout(self):
 
 
 
-    titleX = self.W*0.35
+    titleX = self.W*0.36
     titleY = self.H*0.4
 
     self.blend(frame, self.menuTitle,
@@ -447,9 +454,9 @@ def stageSelectLayout(self):
     self.blend(frame, self.menuButton,
                (self.W*0.7, self.H*0.85), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 - 50*resScale), 'alpha')
+               (self.W*0.7, self.H*0.85 - bHalfTop), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 + 48*resScale), 'alpha')
+               (self.W*0.7, self.H*0.85 + bHalfBot), 'alpha')
 
 
     stageHandleMouse(self, frame)
@@ -580,9 +587,9 @@ def joinLayout(self):
     self.blend(frame, self.menuButton,
                (self.W*0.7, self.H*0.85), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 - 50*resScale), 'alpha')
+               (self.W*0.7, self.H*0.85 - bHalfTop), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 + 48*resScale), 'alpha')
+               (self.W*0.7, self.H*0.85 + bHalfBot), 'alpha')
 
     bWidth = 5*resScale
     self.drawText(frame, 'Back', yellowFG, self.cFont,

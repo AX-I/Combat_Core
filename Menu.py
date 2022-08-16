@@ -148,7 +148,8 @@ from MenuLayout import (
     mainMenuLayout, mainHandleMouse, mainMenuSetup,
     stageSelectLayout, stageSelectSetup, stageHandleMouse,
     joinSetup, joinLayout, joinHandleMouse,
-    charLayout, charHandleMouse
+    charLayout, charHandleMouse,
+    smallScale
 )
 
 import string
@@ -243,7 +244,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.bFont = ImageFont.truetype(_TIMESBD, int(48 * resScale))
         self.c2Font = ImageFont.truetype(_TIMES, int(36 * resScale))
         self.cFont  = ImageFont.truetype(_TIMES, int(24 * resScale))
-        self.eFont = ImageFont.truetype(_COURIERBD, int(17 * resScale))
+        self.eFont = ImageFont.truetype(_COURIERBD, int(17 * resScale * smallScale))
 
 
         n = self.openImageCover('../Assets/Noise5wa.png')
@@ -256,37 +257,44 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.bgNoise = self.makeCL('BgNoise', nm)
 
-
-        self.cursor = np.array(Image.open('../Assets/Cursor.png'), 'float32')
+        ci = Image.open('../Assets/Cursor.png')
+        ci = ci.resize((int(ci.size[0] * resScale * 1.15),
+                        int(ci.size[1] * resScale * 1.15)), Image.BILINEAR)
+        self.cursor = np.array(ci, 'float32')
         self.cursor[:,:,:3] = self.cursor[:,:,:3] / 255. * self.cursor[:,:,:3]
 
         self.cursor = self.makeCL('Cursor', self.cursor)
 
 
-        imgs = ['MenuButton.png',
-                'MenuOrnament.png',
-                'MenuLights.png',
-                'MenuBulb.png',
-                'MenuBulb2.png',
-                'MenuEntry.png',
-                'MenuHighlight.png',
-                'MenuRingsW.png',
-                'MenuEntryHighlight.png',
-                'MenuFrame.png',
-                'MenuEntryHighlightRed.png',
-                'MenuOrnamentLine.png',
-                'MenuButtonHighlight.png',
-                'MenuEntryOutline.png',
-                'MenuTitle.png'
+        fc = smallScale
+        imgs = ['MenuButton.png', fc,
+                'MenuOrnament.png', fc,
+                'MenuLights.png', fc,
+                'MenuBulb.png', 1,
+                'MenuBulb2.png', 1,
+                'MenuEntry.png', fc,
+                'MenuHighlight.png', fc,
+                'MenuRingsW.png', fc,
+                'MenuEntryHighlight.png', fc,
+                'MenuFrame.png', 1,
+                'MenuEntryHighlightRed.png', fc,
+                'MenuOrnamentLine.png', fc,
+                'MenuButtonHighlight.png', fc,
+                'MenuEntryOutline.png', fc,
+                'MenuTitle.png', 1,
                 ]
 
-        for f in imgs:
+        for i in range(len(imgs)//2):
+            f = imgs[2*i]
             b = Image.open('../Assets/' + f)
-            sw = int(b.size[0] * resScale)
-            sh = int(b.size[1] * resScale)
+
+            fac = imgs[2*i+1]
+            sw = int(b.size[0] * resScale * fac)
+            sh = int(b.size[1] * resScale * fac)
+
             if 'Ornament' in f:
-                sw = int(78 * resScale)
-                sh = int(112 * resScale)
+                sw = int(78 * resScale * fac)
+                sh = int(112 * resScale * fac)
             if f == 'MenuLights.png':
                 sh = b.size[1]
             b = b.resize((sw,sh), Image.BILINEAR)
