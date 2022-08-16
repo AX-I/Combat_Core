@@ -22,12 +22,14 @@ redBG = (255,70,70)
 
 
 smallScale = 0.96
-bHalfTop = 50 * smallScale
-bHalfBot = 48 * smallScale
 
 
 def mainMenuSetup(self):
     resScale = self.H / 600
+
+    global bHalfTop, bHalfBot
+    bHalfTop = 50 * smallScale * resScale
+    bHalfBot = 48 * smallScale * resScale
 
     tFont = "../Assets/HTowerT_Bold_4.ttf"
     sFont = "../Assets/HTOWERT.TTF"
@@ -146,9 +148,9 @@ def mainMenuLayout(self):
         self.blend(frame, self.menuOrnament[:,::-1],
                    (xpos + offset, ypos), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (xpos, ypos - bHalfTop*resScale), 'alpha')
+                   (xpos, ypos - bHalfTop), 'alpha')
         self.blend(frame, self.menuLights[3:6],
-                   (xpos, ypos + bHalfBot*resScale), 'alpha')
+                   (xpos, ypos + bHalfBot), 'alpha')
 
 
 
@@ -159,9 +161,9 @@ def mainMenuLayout(self):
     self.blend(frame, self.menuButton,
                (xpos, yc), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xpos, yc - bHalfTop*resScale), 'alpha')
+               (xpos, yc - bHalfTop), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (xpos, yc + bHalfBot*resScale), 'alpha')
+               (xpos, yc + bHalfBot), 'alpha')
     self.blend(frame, self.menuLights[3:6],
                (xpos, yc), 'alpha')
     self.blend(frame, self.menuOrnament[:,::-1],

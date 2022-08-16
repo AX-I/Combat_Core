@@ -85,7 +85,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
-        self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Env_Plains_R.wav", volm, True)})
+
         self.si.put({'Preload':[PATH + "../Sound/Noise.wav"]})
 
         self.proceed = True
@@ -94,7 +95,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except TypeError:
             self.proceed = False
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Env_Plains_R.wav'}}})
 
         if not self.proceed: return
 
@@ -1115,7 +1116,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.spheres = []
         self.srbs = []
         for i in range(self.numBullets):
-            p = [32, 3+i, 29]
+            p = [32, -3+i, 29]
             self.addVertObject(VertSphere, p, n=16, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
                                useShaders={"emissive":2})
@@ -1129,7 +1130,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.w.addRB(self.srbs[-1])
 
         for i in range(self.numBullets // 2):
-            p = [-30, 3+i, 20]
+            p = [-30, -3+i, 20]
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
                                texture=PATH+"../Assets/Red.png",
                                useShaders={"emissive":2.5})
@@ -1177,7 +1178,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.clouds = self.vertObjects[-1]
 
         for i in range(self.numBullets // 3):
-            p = [20, 3+i, 20]
+            p = [20, -3+i, 20]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Orange.png",
                                useShaders={"add":0.4})
@@ -1203,7 +1204,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.blackHoles = []
         for i in range(self.numBullets // 5):
-            p = [20, 3+i, 15]
+            p = [20, -3+i, 15]
             self.addVertObject(VertSphere, p, n=12, scale=0.3,
                                texture=PATH+"../Assets/Black.png",
                                useShaders={"emissive":0.0})
@@ -1292,7 +1293,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.makeObjects(1)
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav",
-                                                 PATH + '../Sound/Plains3v4.wav'}}})
+                                                 PATH + '../Sound/Plains3v4.wav',
+                                                 PATH + '../Sound/Env_Plains_R.wav'
+        }}})
 
 
         print("Done in", time.time() - st, "s")
@@ -2362,7 +2365,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if not self.VRMode:
             sp = self.players[sc]
-            self.pos = sp["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
+            self.pos = sp["b1"].offset[:3] + np.array((0,0.7,0)) - 4 * self.vv
             self.pos[1] += sp['legIKoffset']
             self.pos -= sp['animOffset']
 
