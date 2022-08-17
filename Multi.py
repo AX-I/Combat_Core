@@ -1156,13 +1156,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.testSphere = self.vertObjects[-1]
 
 
-        self.addVertObject(VertRing, [0,0,0], n=16, radius=(0.6,1.2),
-                           z=0.3, uMult=5,
-                           texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
-                           shadow="", useShaders={'add':0.6, 'noline':True})
-        self.impulseFX = self.vertObjects[-1]
-        self.impulseFX.prevCoord = np.array([0,0,0.])
-        self.impulseFX.prevRot = np.identity(3)
+        numFX = 4
+        for i in range(numFX):
+            self.addVertObject(VertRing, [0,0,0], n=16,
+                radius=(0.6,1.2), z=0.3, uMult=5,
+                texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
+                shadow="", useShaders={'add':0.6, 'noline':True})
+            obj = self.vertObjects[-1]
+            obj.prevCoord = np.array([0,0,0.])
+            obj.prevRot = np.identity(3)
+            obj.timeStart = -1
+
+        self.impulseFX = self.vertObjects[-numFX:]
 
 
         fogParams = {2: (1.4,0.06,0),
@@ -1937,11 +1942,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         impulses = self.w.stepWorld(self.frameTime,
                                     checkColl=(self.frameNum & vf == 0))
 
-        if len(impulses) > 0:
-            im = impulses[0]
+        for i in range(min(len(impulses), 4)):
+            im = impulses[i]
             idir = im[0]
             ipos = im[1]
-            print('Impulse:', im)
+
+            for fxobj in self.impulseFX:
+                if fxobj.timeStart < 0:
+                    break
+            if fxobj.timeStart > 0:
+                break
+
+            objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
 
             norm = np.cross(idir, (1,1,1))
             norm /= Phys.eucLen(norm)
@@ -1949,15 +1961,21 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             binorm /= Phys.eucLen(binorm)
             rot = np.array([norm, idir, binorm])
 
-            fxobj = self.impulseFX
-            objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
-            self.draw.translate(-self.impulseFX.prevCoord, *objArgs)
-            self.draw.rotate(np.transpose(self.impulseFX.prevRot), *objArgs)
-
             self.draw.rotate(rot, *objArgs)
             self.draw.translate(ipos, *objArgs)
-            self.impulseFX.prevCoord = ipos
-            self.impulseFX.prevRot = rot
+            fxobj.prevCoord = ipos
+            fxobj.prevRot = rot
+            fxobj.timeStart = CURRTIME
+
+        for fxobj in self.impulseFX:
+            if fxobj.timeStart > 0:
+                if CURRTIME - fxobj.timeStart > 0.5:
+                    objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+                    self.draw.translate(-fxobj.prevCoord, *objArgs)
+                    self.draw.rotate(np.transpose(fxobj.prevRot), *objArgs)
+                    fxobj.prevCoord[:] = 0
+                    fxobj.prevRot[:] = np.identity(3)
+                    fxobj.timeStart = -1
 
 
         for a in self.players:
