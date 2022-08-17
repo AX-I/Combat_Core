@@ -107,13 +107,13 @@ class CircleCollider(Collider):
             if self.rb is None:
                 obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
                 obj.rb.pos += cdir * offset * 1.01
-                return
+                return (cdir, obj.rb.pos - cdir * obj.r)
             if obj.rb is None:
                 self.rb.v = self.rb.v - 2 * (self.rb.v @ cdir) * cdir
                 self.rb.pos -= cdir * offset * 1.01
                 if self.prop == 'player':
                     self.rb.colDir = cdir
-                return
+                return (cdir, self.rb.pos + cdir * self.r)
 
             Vsit = self.rb.v @ cdir
             Voit = obj.rb.v @ cdir
@@ -134,10 +134,12 @@ class CircleCollider(Collider):
             self.rb.pos -= cdir * offset * self.rb.M / tmass * 1.01
             obj.rb.pos += cdir * offset * obj.rb.M / tmass * 1.01
 
+            return (cdir, obj.rb.pos - cdir * obj.r)
+
         elif obj.t == "Terrain":
-            obj.collisionImpulse(self)
+            return obj.collisionImpulse(self)
         elif obj.t == "Plane":
-            obj.collisionImpulse(self)
+            return obj.collisionImpulse(self)
 
 
 class BulletCollider(CircleCollider):
@@ -226,6 +228,8 @@ class PlaneCollider(Collider):
         obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
         obj.rb.pos += cdir * offset * 1.01
 
+        return (cdir, obj.rb.pos - cdir * obj.r)
+
 
 class TerrainCollider(Collider):
     t = "Terrain"
@@ -307,6 +311,8 @@ class TerrainCollider(Collider):
         obj.rb.v = (obj.rb.v - (2 * obj.rb.v @ n) * n) * obj.rb.el
         if obj.t == "Circle":
             obj.rb.pos += (pd + 0.001) * n
+
+        return (self.colNorm, obj.rb.pos - self.colNorm * obj.r)
 
 def boundingBox(obj):
     if obj.t == "Rect":
@@ -394,6 +400,8 @@ class World:
     def checkColls(self):
         for i in self.coLs:
             i.update()
+
+        impulses = []
         
         for i in range(len(self.coLs)):
             if self.coLs[i].disabled: continue
@@ -403,15 +411,23 @@ class World:
                 if self.coLs[i].isCollide(self.coLs[j]):
                     if self.coLs[i].onCollide(self.coLs[j]) and \
                        self.coLs[j].onCollide(self.coLs[i]):
-                        self.coLs[i].collisionImpulse(self.coLs[j])
+                        im = self.coLs[i].collisionImpulse(self.coLs[j])
+                        if self.coLs[i].prop == 'player' or self.coLs[j].prop == 'player':
+                            pass
+                        else:
+                            impulses.append(im)
+
+        return impulses
 
     def stepWorld(self, dt=1, checkColl=True):
-        """return # of collisions"""
+        """return (direction, position) of each collision"""
         for o in self.objs:
             o.update(dt, attractors=self.attractors)
         
         if checkColl:
-            self.checkColls()
+            return self.checkColls()
+
+        return []
 
 if __name__ == "__main__":
     w = World()

@@ -394,7 +394,7 @@ class VertRing(VertObject):
     def create(self):
         pos = numpy.array(self.coords)
         n = self.n
-        r = np.arange(32) / 32. * 2*3.1416
+        r = np.arange(n) / n * 2*3.1416
         rx = np.cos(r)
         ry = np.sin(r)
         r1 = self.radius[0] * np.stack((rx, np.zeros_like(rx), ry)).T
