@@ -305,6 +305,14 @@ class CLDraw:
         dat[:,:3] = (dat[:,:3] - o) * diff + o
         self.VBO[tn].write(dat, offset=cStart*size)
 
+    def rotate(self, rotMat, cStart, cEnd, tn):
+        size = 8*4
+        raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
+        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
+        dat[:,:3] = dat[:,:3] @ rotMat
+        self.VBO[tn].write(dat, offset=cStart*size)
+
+
     def highlight(self, color, tn, mult=False):
         if mult:
             try:

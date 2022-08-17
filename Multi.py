@@ -48,7 +48,7 @@ import OpsConv
 import AI
 import Anim
 
-from VertObjects import VertWater0
+from VertObjects import VertWater0, VertRing
 
 from IK import doFullLegIK, doArmIK
 
@@ -1156,6 +1156,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.testSphere = self.vertObjects[-1]
 
 
+        self.addVertObject(VertRing, [0,0,0], n=16, radius=(0.6,1.2),
+                           z=0.3, uMult=5,
+                           texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
+                           shadow="", useShaders={'add':0.6, 'noline':True})
+        self.impulseFX = self.vertObjects[-1]
+        self.impulseFX.prevCoord = np.array([0,0,0.])
+        self.impulseFX.prevRot = np.identity(3)
+
+
         fogParams = {2: (1.4,0.06,0),
                      4: (0.02,0.002,40),
                      5: (0.04,0.001,24)}
@@ -1925,7 +1934,31 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.frameProfile('Ghost/Energy')
 
-        self.w.stepWorld(self.frameTime, checkColl=(self.frameNum & vf == 0))
+        impulses = self.w.stepWorld(self.frameTime,
+                                    checkColl=(self.frameNum & vf == 0))
+
+        if len(impulses) > 0:
+            im = impulses[0]
+            idir = im[0]
+            ipos = im[1]
+            print('Impulse:', im)
+
+            norm = np.cross(idir, (1,1,1))
+            norm /= Phys.eucLen(norm)
+            binorm = np.cross(idir, norm)
+            binorm /= Phys.eucLen(binorm)
+            rot = np.array([norm, idir, binorm])
+
+            fxobj = self.impulseFX
+            objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+            self.draw.translate(-self.impulseFX.prevCoord, *objArgs)
+            self.draw.rotate(np.transpose(self.impulseFX.prevRot), *objArgs)
+
+            self.draw.rotate(rot, *objArgs)
+            self.draw.translate(ipos, *objArgs)
+            self.impulseFX.prevCoord = ipos
+            self.impulseFX.prevRot = rot
+
 
         for a in self.players:
             if self.getHealth(a['id']) <= 0:
