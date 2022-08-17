@@ -1159,7 +1159,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         numFX = 4
         for i in range(numFX):
             self.addVertObject(VertRing, [0,0,0], n=16,
-                radius=(0.6,1.2), z=0.3, uMult=5,
+                radius=(0.5,1.2), z=0.3, uMult=5,
                 texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
                 shadow="", useShaders={'add':0.6, 'noline':True})
             obj = self.vertObjects[-1]
@@ -1969,8 +1969,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         for fxobj in self.impulseFX:
             if fxobj.timeStart > 0:
-                if CURRTIME - fxobj.timeStart > 0.5:
-                    objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+                objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+
+                ctime = CURRTIME - fxobj.timeStart
+                life = 0.3
+
+                self.matShaders[fxobj.texNum]['add'] = 0.5 - 0.5*sqrt(ctime/life)
+                cscale = 0.1 + sqrt(ctime/life)
+                self.draw.scale(fxobj.prevCoord, cscale / fxobj.scale, *objArgs)
+                fxobj.scale = cscale
+                if ctime > life:
                     self.draw.translate(-fxobj.prevCoord, *objArgs)
                     self.draw.rotate(np.transpose(fxobj.prevRot), *objArgs)
                     fxobj.prevCoord[:] = 0
