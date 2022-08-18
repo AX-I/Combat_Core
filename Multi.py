@@ -49,6 +49,7 @@ import AI
 import Anim
 
 from VertObjects import VertWater0, VertRing
+from ParticleSystem import AttractParticleSystem
 
 from IK import doFullLegIK, doArmIK
 
@@ -244,7 +245,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.bindKey("f", self.tgControl)
             self.bindKey("F", self.tgControl1)
         self.bindKey("e", self.mvCam)
-        self.bindKey("x", lambda: self.fire("blank"))
+        self.bindKey("x", lambda: self.fireAnim("blank"))
         self.bindKey("z", lambda: self.fireAnim("orange"))
         self.bindKey("c", lambda: self.fireAnim("red"))
         self.bindKey("v", lambda: self.fireAnim("black"))
@@ -2273,9 +2274,39 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a['animTrans'] *= -1
 
             if self.frameNum - a['frameFired'] == 1:
-                a['throwAnim'] = True
-                a['animFired'] = False
-                a['poseThrow'] = self.throwKF[0][0]
+                if a['fireColor'] == 'blank':
+                    vh = a['fireVH']
+                    if vh is None: vh = self.vv[1]
+                    fxpos = a["b1"].offset[:3]
+                    fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
+                    ps = AttractParticleSystem(
+                        0.4, fxpos + fxoff, 6,
+                        fxpos + 0.6*fxoff, (0,0),
+                        vel=0.0, randVel=0.0,
+                        nParticles=60,
+                        size=0.05, opacity=0.5,
+                        color=(0.2,0.2,0.2), randColor=0)
+                    self.addParticleSystem(ps)
+                    a['projFX'] = ps
+                    a['projFXstart'] = CURRTIME
+                else:
+                    a['throwAnim'] = True
+                    a['animFired'] = False
+                    a['poseThrow'] = self.throwKF[0][0]
+
+            if 'projFX' in a:
+                fxpos = a["b1"].offset[:3]
+                fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
+                a['projFX'].target = fxpos + fxoff
+                a['projFX'].changePos(fxpos + 0.6*fxoff)
+                a['projFX'].step(self.frameTime)
+                if CURRTIME - a['projFXstart'] > 0.12:
+                    a['projFX'].reset()
+                    del a['projFX']
+                    vh = a['fireVH']
+                    if vh is None: vh = self.vv[1]
+                    self.fire('blank', a['id'], vh)
+                    a['frameFired'] = -100
 
             if a['throwAnim']:
                 self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2.2,

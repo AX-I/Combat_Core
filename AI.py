@@ -374,9 +374,8 @@ class AIManager:
                          1, 0, a["moving"])
             a["cr"] = fol[1]
             vh = fol[2]
-            firefunc = self.fireAnim if throw else self.fire
+            firefunc = self.fireAnim
             if not firefunc(choice, pn, vh):
-                firefunc = self.fire if choice2 == 'blank' else self.fireAnim
                 firefunc(choice2, pn, vh)
 
     def _follow(self, pn):
