@@ -116,7 +116,30 @@ class ParticleSystem:
     def reset(self):
         del self.pc, self.pv, self.color
         self.setup()
-        
+
+class AttractParticleSystem(ParticleSystem):
+    """Attract particles to point"""
+    def __init__(self, emitRad, target, attStrength, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.emitRad = emitRad
+        self.target = np.array([target])
+        self.sth = attStrength
+
+    def setup(self):
+        super().setup()
+        self.pc = (nr.randn(self.N, 3)) * self.emitRad + self.pos
+
+    def step(self, dt=1):
+        self.started = True
+        diff = self.target - self.pc
+        self.pv = diff * self.sth
+        self.pc += self.pv * dt
+
+    def changePos(self, newpos):
+        self.pc += newpos - self.pos
+        self.pos[:] = newpos
+
+
 class ContinuousParticleSystem(ParticleSystem):
     """Continous emission"""
     def __init__(self, *args, **kwargs):
