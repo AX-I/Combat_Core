@@ -126,7 +126,7 @@ class AttractParticleSystem(ParticleSystem):
         self.sth = attStrength
 
     def setup(self):
-        super().setup()
+        self.started = False
         self.pc = (nr.randn(self.N, 3)) * self.emitRad + self.pos
 
     def step(self, dt=1):
