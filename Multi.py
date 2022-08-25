@@ -1016,6 +1016,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         a["Energy"] = 1
 
+
+        ps = AttractParticleSystem(
+                0.4, (0,0,0.), 6,
+                (0,0,0.), (0,0),
+                vel=0.0, randVel=0.0,
+                nParticles=60,
+                size=0.05, opacity=0.5,
+                color=(0.2,0.2,0.2), randColor=0)
+        self.addParticleSystem(ps)
+        a['projFX'] = ps
+        a['projFXstart'] = -1
+
+
     def createObjects(self):
         if self.stage < 4:
             snd = self.ENVTRACKS
@@ -2275,34 +2288,23 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if self.frameNum - a['frameFired'] == 1:
                 if a['fireColor'] == 'blank':
-                    vh = a['fireVH']
-                    if vh is None: vh = self.vv[1]
-                    fxpos = a["b1"].offset[:3]
-                    fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
-                    ps = AttractParticleSystem(
-                        0.4, fxpos + fxoff, 6,
-                        fxpos + 0.6*fxoff, (0,0),
-                        vel=0.0, randVel=0.0,
-                        nParticles=60,
-                        size=0.05, opacity=0.5,
-                        color=(0.2,0.2,0.2), randColor=0)
-                    self.addParticleSystem(ps)
-                    a['projFX'] = ps
                     a['projFXstart'] = CURRTIME
                 else:
                     a['throwAnim'] = True
                     a['animFired'] = False
                     a['poseThrow'] = self.throwKF[0][0]
 
-            if 'projFX' in a:
+            if a['projFXstart'] > 0:
                 fxpos = a["b1"].offset[:3]
                 fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
+
                 a['projFX'].target = fxpos + fxoff
                 a['projFX'].changePos(fxpos + 0.6*fxoff)
                 a['projFX'].step(self.frameTime)
                 if CURRTIME - a['projFXstart'] > 0.12:
                     a['projFX'].reset()
-                    del a['projFX']
+                    a['projFXstart'] = -1
+
                     vh = a['fireVH']
                     if vh is None: vh = self.vv[1]
                     self.fire('blank', a['id'], vh)

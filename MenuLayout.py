@@ -200,11 +200,12 @@ def mainMenuLayout(self):
 ##                self.H*(0.7 + 0.1083 * (self.textEntry == 'Serv'))), 'alpha')
 
 
+    yc = buttonCenters[-1][0] - 32*resScale
+
     if self.notConnectedTG:
         self.blend(frame, self.menuEntryHighlightRed,
-                   (xc + offset2, h2 + self.H*0.3083), 'add')
+                   (xc + offset2, yc+65*resScale), 'add')
 
-    yc = buttonCenters[-1][0] - 32*resScale
     self.drawText(frame, self.unameDisplay, (255,255,255), self.eFont,
                   (yc-self.H2 -2, xc-self.W2 + offset2), blur=0)
     self.drawText(frame, self.servDisplay, (255,255,255), self.eFont,

@@ -139,6 +139,9 @@ class AttractParticleSystem(ParticleSystem):
         self.pc += newpos - self.pos
         self.pos[:] = newpos
 
+    def reset(self):
+        self.setup()
+
 
 class ContinuousParticleSystem(ParticleSystem):
     """Continous emission"""

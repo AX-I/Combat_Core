@@ -157,14 +157,6 @@ def setupStage(self):
     self.pillarTexn = getTexN(pa)
 
 
-
-    self.addVertObject(VertRing, [PX,0.5,PX], uMult=6,
-                       texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
-                       shadow="CR", useShaders={'add':0.4, 'noline':True})
-    self.fxTest = self.vertObjects[-1]
-
-
-
     tsize = 512
     hscale = 56
     tscale = hscale / tsize
