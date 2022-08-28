@@ -755,6 +755,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         if self.localIP is None:
             self.localIP = self.mkServ(False)
 
+        sl = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest", 'Strachan']
 
         self.MENUSCREEN = 'STAGE'
         stageSelectSetup(self)
