@@ -932,6 +932,12 @@ class CLDraw:
 
             if shader == 'lens': shaderName = 'lens'
 
+            # FIXME
+            if shader == 'calcNorm':
+                draw = ctx.program(vertex_shader=ts,
+                                   fragment_shader=drawSh,
+                                   geometry_shader=makeProgram('calcNormal.c', 'PipeGL/'))
+
             prog = globals()[shaderName]
             for sp in self.shaderParams:
                 prog = prog.replace(sp, self.shaderParams[sp])
@@ -955,6 +961,9 @@ class CLDraw:
                     draw['R'].write(ra.astype('float32'))
                 except KeyError: pass
 
+
+
+
         for arg in mtl['args']:
             try: draw[arg] = mtl['args'][arg]
             except KeyError: print(f'Unused {arg} in shader {tn}: {mtl}')
@@ -968,6 +977,7 @@ class CLDraw:
 
         elif shader == 'metallic':
             draw['isMetal'] = 1
+        
 
         try:
             draw['SM'] = 0
