@@ -41,10 +41,11 @@ def setupStage(self):
             r = random.random() * 3
             self.addVertObject(VertModel, c, **options, rot=(0,r,0))
 
-    self.directionalLights.append({"dir":[pi*1.7, 0.15], "i":[0.5,0.25,0.2]})
-    self.directionalLights.append({"dir":[pi*1.7, 0.15+pi], "i":[0.12,0.08,0.1]})
-    self.directionalLights.append({"dir":[pi*1.7, 0.15], "i":[0.12,0.1,0.08]})
-    self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.15,0.4]})
+    LInt = np.array([0.5,0.2,0.15]) * 2.8
+    self.directionalLights.append({"dir":[pi*1.7, 0.1], "i":LInt})
+    self.directionalLights.append({"dir":[pi*1.7, 0.1+pi], "i":[0.12,0.08,0.1]})
+    self.directionalLights.append({"dir":[pi*1.7, 0.1], "i":[0.12,0.1,0.08]})
+    self.directionalLights.append({"dir":[0, pi/2], "i":[0.14,0.18,0.5]})
 
 
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
