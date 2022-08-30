@@ -1184,17 +1184,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (1.4,0.06,0),
-                     4: (0.02,0.002,40),
-                     5: (0.04,0.001,24)}
+        fogParams = {2: (1.4, 0.06, 0, 10, np.array((0.1,0.15,0.4)) * 0.1),
+                     4: (0.02,0.002,40,0, (0,0,0)),
+                     5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
-            fog, fabs, fdist = fogParams[self.stage]
+            fog, fabs, fdist, fheight, famb = fogParams[self.stage]
 
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
                            texture=PATH+"../Assets/Blank2.png",
                            useShaders={"2d":1, "fog":fog, 'fogAbsorb':fabs,
-                                       'fogDist':fdist})
+                                       'fogDist':fdist, 'fogHeight':fheight,
+                                       'fogAmb':famb})
             self.fogMTL = self.vertObjects[-1].texNum
 
         if self.stage == 4:
@@ -1429,7 +1430,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.gameStarted = True
 
         self.qi.put(True)
-        if self.stage == 4:
+        if 'isEqui' in self.matShaders[self.skyBox.texNum]:
             self.cubeMap = CubeMap(self.skyTex, None, False)
         else:
             self.cubeMap = CubeMap(self.skyTex, 2, False)
