@@ -757,12 +757,14 @@ class CLDraw:
             else:
                 draw = self.DRAW[i]
             draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
-            if 'fogAbsorb' in shaders[i]:
-                draw['rabsorb'].write(np.float32(shaders[i]['fogAbsorb']))
-            if 'fogDist' in shaders[i]:
-                draw['rdist'].write(np.float32(shaders[i]['fogDist']))
-            if 'fogScatter' in shaders[i]:
-                draw['rscatter'].write(np.float32(shaders[i]['fogScatter']))
+
+            for key in ('Absorb', 'Dist', 'Scatter', 'Height'):
+                if 'fog' + key in shaders[i]:
+                    dkey = 'r' + key.lower()
+                    draw[dkey].write(np.float32(shaders[i]['fog' + key]))
+
+            if 'fogAmb' in shaders[i]:
+                draw['ramb'].write(np.array(shaders[i]['fogAmb'], 'float32'))
 
         elif 'lens' in shaders[i]:
             draw = ctx.program(vertex_shader=ts, fragment_shader=lens)

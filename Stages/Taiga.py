@@ -41,11 +41,19 @@ def setupStage(self):
             r = random.random() * 3
             self.addVertObject(VertModel, c, **options, rot=(0,r,0))
 
-    self.directionalLights.append({"dir":[pi*1.7, 0.54], "i":[0.3,0.4,0.6]})
-    self.directionalLights.append({"dir":[pi*1.7, 0.54+pi], "i":[0.1,0.1,0.1]})
-    self.directionalLights.append({"dir":[pi*1.7, 0.54], "i":[0.1,0.1,0.1]})
-    self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.1,0.2]})
+    self.directionalLights.append({"dir":[pi*1.7, 0.15], "i":[0.5,0.25,0.2]})
+    self.directionalLights.append({"dir":[pi*1.7, 0.15+pi], "i":[0.12,0.08,0.1]})
+    self.directionalLights.append({"dir":[pi*1.7, 0.15], "i":[0.12,0.1,0.08]})
+    self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.15,0.4]})
 
-    self.skyTex = np.zeros((1,6,3),"uint16")
+
+    fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
+    self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=6)
+    self.skyBox.created()
+
+    skyShader = self.matShaders[self.skyBox.texNum]
+    skyShader['isEqui'] = 1
+    skyShader['rotY'] = 0.25
+
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}

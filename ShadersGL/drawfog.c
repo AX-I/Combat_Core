@@ -44,6 +44,9 @@ uniform float rabsorb;
 uniform float rlight;
 uniform float rdist;
 uniform float rscatter;
+uniform float rheight;
+uniform vec3 ramb;
+
 
 uint rand_xorshift(uint rng_state) {
     rng_state ^= (rng_state << 13);
@@ -61,6 +64,13 @@ void main() {
 
 	float inscatter = 0.f;
 	if (rscatter != 0) inscatter = rscatter;
+
+    float fogHeight = 1000.f;
+	if (rheight != 0) fogHeight = rheight;
+	
+	vec3 fogAmb = LInt * inscatter;
+	if ((ramb.x+ramb.y+ramb.z) != 0) fogAmb = ramb;
+	
 
     vec2 wh = 1 / vec2(width, height);
     float wF = width;
@@ -93,7 +103,7 @@ void main() {
 	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
 	vec3 pos = vpos + rayDir * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
-	float light = 0.f;
+	vec3 light = vec3(0);
 	float rn = 0;
 	float currDepth = dot(pos - vpos, Vd);
 	float transmit = 1.f;
@@ -110,21 +120,26 @@ void main() {
 	    sf = clamp(sf, 0.0, 1.0) * wS;
 	    vec2 sxy = floor(sf) / wS;
 
-		float scatter = exp(- ABSORB * currDepth);
+        float heightFac = (pos.y > fogHeight) ? 0 : 1;
+
+		float scatter = exp(- ABSORB * currDepth) * heightFac;
 
 		//if ((sx >= 0) && (sx < 2*wS-1) && (sy >= 0) && (sy < 2*wS-1)) {
-			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase;
-			else light += LIGHT * inscatter * scatter * phase;
+			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase * LInt;
+			else light += (LIGHT * inscatter + fogAmb) * scatter * phase;
 		//}
 		pos += rayDir * DIST;
 		currDepth = dot(pos - vpos, Vd);
 	}
 
-	light += (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * LIGHT * phase;
-	transmit = exp(- ABSORB * maxZ);
+	float heightFac = (pos.y > fogHeight) ? 0 : 1;
+
+	light += (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * LIGHT * phase * LInt;
+
+	transmit = exp(- ABSORB * heightFac * maxZ);
 
 	// Blend mode src.alpha
-	f_color = vec4(max(0., light) * LInt, (1.0 - transmit));
+	f_color = vec4(max(vec3(0), light), (1.0 - transmit));
 
 
 
