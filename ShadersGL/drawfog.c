@@ -68,7 +68,7 @@ void main() {
     float fogHeight = 1000.f;
 	if (rheight != 0) fogHeight = rheight;
 	
-	vec3 fogAmb = LInt * inscatter;
+	vec3 fogAmb = LIGHT * LInt * inscatter;
 	if ((ramb.x+ramb.y+ramb.z) != 0) fogAmb = ramb;
 	
 
@@ -112,6 +112,8 @@ void main() {
 	float phase = 0.5f * (1.f - G*G) / (4.f*3.14f* pow(1.f + G*G - 2.f*G * RdotL, 1.5f));
 	phase += 0.5f * (1.f - GBACK*GBACK) / (4.f*3.14f* pow(1.f + GBACK*GBACK - 2.f*GBACK * RdotL, 1.5f));
 
+	float totDensity = 0.f;
+
 	for (rn = 0; (rn < NSAMPLES) && (currDepth < maxZ); rn += 1.f) {
 
 		vec3 sxyz = SV * (pos - SPos);
@@ -121,12 +123,13 @@ void main() {
 	    vec2 sxy = floor(sf) / wS;
 
         float heightFac = (pos.y > fogHeight) ? 0 : 1;
+		totDensity += heightFac;
 
 		float scatter = exp(- ABSORB * currDepth) * heightFac;
 
 		//if ((sx >= 0) && (sx < 2*wS-1) && (sy >= 0) && (sy < 2*wS-1)) {
 			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase * LInt;
-			else light += (LIGHT * inscatter + fogAmb) * scatter * phase;
+			else light += fogAmb * scatter * phase;
 		//}
 		pos += rayDir * DIST;
 		currDepth = dot(pos - vpos, Vd);
@@ -134,9 +137,9 @@ void main() {
 
 	float heightFac = (pos.y > fogHeight) ? 0 : 1;
 
-	light += (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * LIGHT * phase * LInt;
+	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * LIGHT * phase * LInt;
 
-	transmit = exp(- ABSORB * heightFac * maxZ);
+	transmit = exp(-ABSORB * totDensity);
 
 	// Blend mode src.alpha
 	f_color = vec4(max(vec3(0), light), (1.0 - transmit));
