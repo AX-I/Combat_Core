@@ -101,6 +101,7 @@ def mainMenuSetup(self):
     b = np.array(b)[:,:,3:4] * 0.4
     self.titleCircle = self.makeCL('titleCircle', b)
     self.tCircles = 30
+    np.random.seed(4)
     self.tcPos = np.random.rand(self.tCircles, 2) * 2 - 1
     self.tcPos *= [[self.H*0.4, self.H*0.1]]
     self.tcTimes = np.random.rand(self.tCircles)
@@ -275,12 +276,23 @@ def mainMenuLayout(self):
     titleY = self.H*0.4
 
 
+    titleYTop = titleY - self.H*0.1
+    titleH = self.H*0.25
+    titleYMid = titleYTop + titleH/2
+
+    tcPos = self.tcPos - np.array([[0,20*sTime * resScale]])
+
+    tcPos[:,1] %= titleH
+
+
     for i in range(self.tCircles):
-        xo, yo = self.tcPos[i]
+        xo, yo = tcPos[i]
         m = sin((sTime + 10 * self.tcTimes[i]) * 0.8) * 0.5 + 0.5
+        m *= (1 - (abs(yo - titleH/2) / (titleH/2))**2)**2
         self.blend(frame, self.titleCircle,
-                   (titleX + xo, titleY + yo), 'add',
+                   (titleX + xo, titleYTop + yo), 'add',
                    effect='mult', effectArg=m)
+
 
 
     self.blend(frame, self.menuTitle,
