@@ -94,6 +94,18 @@ def mainMenuSetup(self):
         self.icons.append(self.makeCL(i, b))
 
 
+    b = Image.open('../Assets/Circle.png')
+    sw = int(b.size[0]*0.5 * resScale)
+    sh = int(b.size[1]*0.5 * resScale)
+    b = b.resize((sw,sh), Image.BILINEAR)
+    b = np.array(b)[:,:,3:4] * 0.4
+    self.titleCircle = self.makeCL('titleCircle', b)
+    self.tCircles = 30
+    self.tcPos = np.random.rand(self.tCircles, 2) * 2 - 1
+    self.tcPos *= [[self.H*0.4, self.H*0.1]]
+    self.tcTimes = np.random.rand(self.tCircles)
+
+
     self.textEntry = 'User'
 
     print("mainMenuSetup", time.perf_counter() - perf)
@@ -261,6 +273,15 @@ def mainMenuLayout(self):
 
     titleX = self.W*0.36
     titleY = self.H*0.4
+
+
+    for i in range(self.tCircles):
+        xo, yo = self.tcPos[i]
+        m = sin((sTime + 10 * self.tcTimes[i]) * 0.8) * 0.5 + 0.5
+        self.blend(frame, self.titleCircle,
+                   (titleX + xo, titleY + yo), 'add',
+                   effect='mult', effectArg=m)
+
 
     self.blend(frame, self.menuTitle,
                (titleX, titleY + self.H*0.11), 'alpha')
