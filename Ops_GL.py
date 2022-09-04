@@ -830,8 +830,14 @@ class CLDraw:
     def changeShaderZ(self, tn, shader):
         i = tn
         p = self.VBO[i]
+
+        if i in self.BO:
+            ts = trisetupAnim
+        else:
+            ts = trisetup
+
         if 'alpha' in shader:
-            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZA)
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawZA)
             draw['TA'] = 2
             vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
         elif 'dissolve' in shader:
@@ -839,13 +845,18 @@ class CLDraw:
                 draw = self.DRAWZ[i][1]
                 vao = self.DRAWZ[i][0]
             else:
-                draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZDissolve)
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawZDissolve)
                 vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
             draw['fadeOrigin'].write(np.array(shader['dissolve']['origin'], 'float32'))
             draw['fadeFact'].write(shader['dissolve']['fact'])
         else:
-            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
-            vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawZ)
+            if i in self.BO:
+                vao = ctx.vertex_array(draw,
+                        [(p, '3f4 5x4 /v', 'in_vert'),
+                         (self.BN[i], '1f /v', 'boneNum')])
+            else:
+                vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
         draw['aspect'].write(np.float32(self.H/self.W))
         self.DRAWZ[i] = (vao, draw)
 

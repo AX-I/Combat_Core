@@ -18,7 +18,7 @@ def interpAttr(t: float, kf: list):
     return kf[i-1][1] * (1-r) + kf[i][1] * r
 
 
-def loadAnim(fn, timeScale=1):
+def loadAnim(fn, timeScale=1, flatten=True):
     """Returns (time, angles, root offset, angle array)"""
     keyFrames = []
     co = [0,0,0]
@@ -30,7 +30,7 @@ def loadAnim(fn, timeScale=1):
                 co = json.loads(line[2:-1])
             elif line[:2] == "A ":
                 cp = json.loads(line[2:-1])
-                ar = flattenPose(cp)
+                ar = flattenPose(cp) if flatten else cp
                 keyFrames.append((ct, cp, np.array(co, 'float'), ar))
                 co = [0,0,0]
     return keyFrames
@@ -98,7 +98,7 @@ class AnimManager:
         if p[timer] < keyFrames[0][0]:
             p[timer] += keyFrames[-1][0] - keyFrames[0][0]
 
-        if len(self.keyFrames) < 2: return
+        if len(keyFrames) < 2: return
         k = None
         for i in range(len(keyFrames)):
             if p[timer] < keyFrames[i][0]:
