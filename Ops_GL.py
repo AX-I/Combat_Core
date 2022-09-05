@@ -717,8 +717,6 @@ class CLDraw:
             sa = shaders[i]['alpha']
             draw['TA'] = 2
             self.TA[sa].use(location=2)
-            if 'translucent' in shaders[i]:
-                draw['translucent'] = shaders[i]['translucent']
             if 'highlight' in shaders[i]:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
@@ -802,12 +800,17 @@ class CLDraw:
         try:
             if 'stage' in kwargs:
                 draw['stage'] = kwargs['stage']
-        except: pass
+        except KeyError: pass
+
+        try:
+            if 'translucent' in shaders[i]:
+                draw['translucent'] = shaders[i]['translucent']
+        except KeyError: pass
 
         try:
             draw['width'].write(np.float32(self.W))
             draw['height'].write(np.float32(self.H))
-        except: pass
+        except KeyError: pass
 
         draw['vscale'].write(self.sScale)
         draw['aspect'].write(np.float32(self.H/self.W))
