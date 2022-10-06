@@ -290,6 +290,19 @@ class CLDraw:
             except KeyError:
                 pass
 
+    def translateBatch(self, batch: dict):
+        """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
+        for tn in batch:
+            tb = batch[tn]
+            size = 8*4
+            mEnd = max(a[2] for a in tb)
+            mStart = min(a[1] for a in tb)
+            raw = self.VBO[tn].read(size=(mEnd-mStart)*size, offset=mStart*size)
+            dat = np.array(np.frombuffer(raw, 'float32')).reshape((mEnd-mStart, 8))
+            for i in range(len(tb)):
+                dat[tb[i][1]-mStart:tb[i][2]-mStart,:3] += np.expand_dims(tb[i][0], 0)
+            self.VBO[tn].write(dat, offset=mStart*size)
+
     def translate(self, diff, cStart, cEnd, tn):
         size = 8*4
         raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)

@@ -2033,6 +2033,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.srbs[i].disabled = True
 
 
+        batch = {}
         for i in range(len(self.spheres)):
             s = self.spheres[i][1]
             if (np.isnan(self.srbs[i].pos)).any():
@@ -2042,9 +2043,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.srbs[i].disabled = True
             diff = self.srbs[i].pos - self.lp[i]
             if sum(diff*diff) > 0:
-                self.draw.translate(diff, s.cStart*3, s.cEnd*3, s.texNum)
+                if s.texNum not in batch:
+                    batch[s.texNum] = []
+                batch[s.texNum].append((diff, s.cStart*3, s.cEnd*3))
 
             self.lp[i] = np.array(self.srbs[i].pos)
+
+        self.draw.translateBatch(batch)
 
         self.frameProfile('Translate')
 

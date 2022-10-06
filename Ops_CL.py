@@ -381,6 +381,13 @@ class CLDraw:
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
+    def translateBatch(self, batch: dict):
+        """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
+        for tn in batch:
+            tb = batch[tn]
+            for i in tb:
+                self.translate(*i, tn)
+
     def translate(self, coords, cStart, cEnd, tn):
         if cEnd is None: cEnd = self.gSize[tn]
         oo = coords.astype("float32")
