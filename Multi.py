@@ -1131,7 +1131,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.srbs = []
         for i in range(self.numBullets):
             p = [32, -3+i, 29]
-            self.addVertObject(VertSphere, p, n=16, scale=0.25,
+            self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
                                useShaders={"emissive":2})
             self.spheres.append(("blank", self.vertObjects[-1]))
@@ -1227,7 +1227,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = [0, 0, 0]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Green.png",
-                               useShaders={"emissive":1.4})
+                               useShaders={"emissive":1.8})
             self.pickups.append({"pos":None, "t":-1, "obj":self.vertObjects[-1]})
 
 
