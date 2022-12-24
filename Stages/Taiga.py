@@ -34,6 +34,10 @@ def setupStage(self):
     nr.seed(1); random.seed(1)
     options = {"filename":mpath+"pine/Pine.obj", "static":True,
            "texMode":None, "scale":0.2, "shadow":"C"}
+    options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
+                'static':True, 'texMode':None, 'scale':1, 'shadow':'R'}
+
+    cn = []
     for i in range(-50, 70, 20):
         for j in range(-50, 70, 20):
             c = np.array((i, 0, j), dtype="float")
@@ -45,9 +49,30 @@ def setupStage(self):
             c[1] = self.terrain.getHeight(c[0],c[2]) - 0.4
             r = random.random() * 3
             self.addVertObject(VertModel, c, **options, rot=(0,r,0))
+            cn.append([round(x, 3) for x in c])
+
+    # Grass around trees
+    for i in range(len(cn)):
+        c = cn[i]
+        for j in range(7):
+            d = c + (nr.rand(3) - 0.5) * 5
+            d[1] = self.terrain.getHeight(d[0],d[2]) + 0.4
+            r = random.random() * 3
+            self.addVertObject(VertModel, d, **options2, rot=(0,r,0))
+
+    # Random grass
+    for i in range(-40, 60, 13):
+        for j in range(-40, 60, 13):
+            c = np.array((i, 0, j), dtype="float")
+            c += nr.rand(3) * 18
+            for k in range(random.randint(3, 9)):
+                d = c + (nr.rand(3) - 0.5) * 5
+                d[1] = self.terrain.getHeight(d[0],d[2]) + 0.4
+                r = random.random() * 3
+                self.addVertObject(VertModel, d, **options2, rot=(0,r,0))
 
 
-    pfile = mpath + "TaigaPillar.obj"
+    pfile = mpath + "TaigaNew/TaigaPillar.obj"
     self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
                        rot=(0,-47.8 * 3.14/180, 0), static=True,
                        mip=2, useShaders={'spec': 0.4}, shadow="CR")
