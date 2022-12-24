@@ -329,6 +329,10 @@ class ThreeDBackend:
         ps.setup()
         self.particleSystems.append(ps)
 
+    def addNrmMap(self, tex, name):
+        nrm = np.array(Image.open(tex).rotate(-90))
+        self.draw.addNrmMap(nrm, name)
+
     def render(self):
 
         self.vc = self.viewCoords()
