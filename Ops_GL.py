@@ -138,6 +138,7 @@ class CLDraw:
         self.SVA = []
         self.drawSB = {}
 
+        self.NM = {}
 
         x = np.array([-1, -1, 1, 1, -1, 1])
         y = np.array([1, -1, 1, 1, -1, -1])
@@ -181,6 +182,10 @@ class CLDraw:
         a = ctx.texture(tex.shape[::-1], 1, ta)
         a.build_mipmaps(0, 2)
         self.TA.append(a)
+
+    def addNrmMap(self, nrm, name):
+        t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
+        self.NM[name] = t
 
     def addBoneWeights(self, tn, bw):
         dat = bw.reshape((-1,))
@@ -812,6 +817,9 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
+            if 'normal' in shaders[i]:
+                draw['useNM'] = 1
+                draw['NM'] = 7
             draw['RAND'] = 2
 
         try:
@@ -945,6 +953,11 @@ class CLDraw:
                     self.DRAW[i]['useNoise'] = 1
                     self.DRAW[i]['noiseDist'] = self.noiseDist
                     self.DRAW[i]['noisePos'].write(self.noisePos.astype('float32'))
+                if 'normal' in shaders[i]:
+                    try:
+                        self.NM[shaders[i]['normal']].use(location=7)
+                    except KeyError:
+                        print('Normal map {} not found'.format(shaders[i]['normal']))
 
                 vao.render(moderngl.TRIANGLES)
 
