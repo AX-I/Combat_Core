@@ -212,8 +212,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.expPow = 2.7
 
         self.dofFoc = 3
-        self.gamma = 1.75 if self.stage == 1 else 1.4
-        self.tonemap = 'gamma' if self.stage == 1 else 'aces'
+
+        exps = [1.4 for _ in stageNames]
+        exps[1] = 1.75
+        exps[2] = 1.2
+        self.exposure = exps[self.stage]
+
+        self.tonemap = 'aces'
         self.doSSAO = False
         self.showAINav = False
         self.doMB = True
@@ -637,11 +642,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def tgMB(self): self.doMB = not self.doMB
     def tgAO(self): self.doSSAO = not self.doSSAO
     def foc1(self):
-        self.gamma *= 1.1 #self.dofFoc *= 1.1
-        print(self.gamma)
+        self.exposure *= 1.1
+        print(self.exposure)
     def foc2(self):
-        self.gamma /= 1.1 #self.dofFoc /= 1.1
-        print(self.gamma)
+        self.exposure /= 1.1
+        print(self.exposure)
     def tgNav(self): self.showAINav = not self.showAINav
 
     def gesture(self, pn, n, gi=None):
@@ -1184,7 +1189,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.5, 0.06, 0, 10, np.array((0.1,0.15,0.4)) * 0.08),
+        fogParams = {2: (0.16, 0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
                      4: (0.02,0.002,40,0, (0,0,0)),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
@@ -1313,7 +1318,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    useShaders={"border":0.1})
 
         sr = self.shRes
-        fact = 0.5 if self.stage == 4 else 1
+        fact = (1,1,1,0.9,0.5,1)[self.stage]
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":24*sr/2048 * fact})
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
@@ -1363,7 +1368,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.distort(bx/self.W, by/self.H, tr[0],
                                   portal, strength)
 
-        self.draw.gamma(self.gamma, self.tonemap)
+        self.draw.gamma(self.exposure, self.tonemap)
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}

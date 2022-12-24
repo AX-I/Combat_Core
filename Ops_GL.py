@@ -1042,6 +1042,13 @@ class CLDraw:
     def clearZBuffer(self):
         self.fbo.clear(0.0, 0.0, 0.0, 1.0)
 
+    def addBakedShadow(self, i, tex):
+        assert i == 0
+        t = ctx.texture(tex.shape, 1, tex)
+        s = self.SHADOWMAP[i]
+        s['sm_baked'] = t
+        s['sm_baked_size'] = tex.shape[0]
+
     def addShadowMap(self, i, size, scale, ambLight=None, gi=None):
         c = ctx.texture((size,size), 1, dtype='f4')
         d = ctx.depth_texture((size,size))
@@ -1135,6 +1142,8 @@ class CLDraw:
                 sva.render(moderngl.TRIANGLES)
 
         sm['tex'].use(location=4+i)
+        if 'sm_baked' in sm:
+            sm['sm_baked'].use(location=6)
 
         self.fbo.use()
         ctx.enable(moderngl.BLEND)
@@ -1151,7 +1160,13 @@ class CLDraw:
             draw['SV'].write(sm['vec'])
             draw['wS'] = np.int32(sm['dim'])
             draw['sScale'].write(sm['scale'])
-        except KeyError: return
+        except KeyError: pass
+        try:
+            draw['SM_im'] = 6
+            sm['sm_baked'].use(location=6)
+            draw['wS_im'] = np.int32(sm['sm_baked_size'])
+        except KeyError: pass
+
         sm = self.SHADOWMAP[1]
         try:
             draw['SM2'] = 5

@@ -10,20 +10,26 @@ in vec3 v_pos;
 uniform vec3 LDir;
 uniform vec3 LInt;
 
+// Shadowmap 1
 uniform vec3 SPos;
 uniform mat3 SV;
 uniform float sScale;
 uniform sampler2D SM;
 uniform int wS;
 
-
+// Shadowmap 2
 uniform vec3 SPos2;
 uniform mat3 SV2;
 uniform float sScale2;
 uniform sampler2D SM2;
 uniform int wS2;
 
+// Baked shadowmap sharing shadowmap 1 params
+uniform sampler2D SM_im;
+uniform int wS_im;
 
+
+// Lights
 uniform vec3 DInt[8];
 uniform vec3 DDir[8];
 uniform int lenD;
@@ -81,6 +87,13 @@ void main() {
 	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
 	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
 	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+
+  // Baked shadowmap
+  if (wS_im > 0) {
+    sf = sxyz.xy * sScale/2 + 0.5;
+    sf = clamp(sf, 0.0, 1.0);
+    shadow += 1.0 - texture(SM_im, sf).r;
+  }
 
 
 	sxyz = SV2 * (v_pos*tz - SPos2);

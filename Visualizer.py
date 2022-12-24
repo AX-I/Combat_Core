@@ -221,6 +221,8 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         
         self.root.config(background="#000")
         self.root.bind("<Escape>", self.escapeMouse)
+        self.root.bind("`", self.escapeMouse)
+
         if PLATFORM == "darwin": # Fn+F11 shows desktop
             self.root.bind("<F10>", self.tgFullScreen)
         else:
