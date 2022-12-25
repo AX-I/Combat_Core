@@ -402,9 +402,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.changeMusic()
         if t > 6 and not self.changedShader:
             sbt = self.sandstoneBricksTex
-            self.matShaders[sbt] = {}
+            self.matShaders[sbt] = {'normal':'sand_blocks'}
             self.draw.changeShaderZ(self.sandstoneBricksTex, {})
-            self.draw.changeShader(sbt, {}, stage=self.stage)
+            self.draw.changeShader(sbt, {'normal':'sand_blocks'}, stage=self.stage)
             self.changedShader = True
         if t > 2.2 and self.changedMusic == 0:
             self.changeNoise()

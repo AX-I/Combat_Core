@@ -108,3 +108,7 @@ def setupStage(self):
                             PATH+"../Sound/Forest4_Reverb.wav",
                             PATH+"../Sound/NoiseOpen.wav",
                             PATH+"../Sound/ForestNoise.wav"]})
+
+def frameUpdate(self):
+    if self.frameNum == 1:
+        self.addNrmMap(PATH + '../Models/Temple/SandstoneBricks_nrm.jpg', 'sand_blocks')

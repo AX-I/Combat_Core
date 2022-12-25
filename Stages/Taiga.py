@@ -21,9 +21,11 @@ def setupStage(self):
 
     self.addVertObject(VertTerrain, [-50, 0, -50],
                    heights=PATH+"../Assets/Terrain.tif",
-                   texture=PATH+"../Assets/Blank1.png", scale=0.6,
+                   texture=PATH+"../Assets/Blank1.png",
+                   scale=0.6,
                    vertScale=2.5/6553, vertPow=2, vertMax=50000,
-                   useShaders={'spec': 1}, uvspread=2, shadow="CR")
+                   useShaders={'spec': 1, 'normal': 'snow'},
+                   uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
     self.t2 = Phys.TerrainCollider([-50,0,-50], self.terrain.size[0],
@@ -75,7 +77,8 @@ def setupStage(self):
     pfile = mpath + "TaigaNew/TaigaPillar.obj"
     self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
                        rot=(0,-47.8 * 3.14/180, 0), static=True,
-                       mip=2, useShaders={'spec': 0.4}, shadow="CR")
+                       mip=2, useShaders={'spec': 0.4, 'normal': 'rock'},
+                       shadow="CR")
 
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8
     LDir = pi*1.45
@@ -101,6 +104,9 @@ def frameUpdate(self):
         s = Image.open(PATH + '../Assets/Sh2.png').convert('L')
         s = np.array(s)
         self.draw.addBakedShadow(0, s)
+
+        self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', 'rock')
+        self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
