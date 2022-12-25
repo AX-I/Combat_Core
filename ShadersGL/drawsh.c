@@ -125,7 +125,7 @@ void main() {
 
 	vec3 norm = normalize(v_norm * tz);
 
-  if (useNM) {
+  if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
     vec2 dUV2 = dFdy(v_UV*tz);
     vec3 dPos1 = dFdx(v_pos*tz);

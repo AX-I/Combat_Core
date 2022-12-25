@@ -480,9 +480,12 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
                           (self.H2-105, -self.W2+175), blur=0)
             
             self.drawKey(fr, (self.H-105, 20), "Q")
-            self.drawTextNP(fr, "Release/Capture\nMouse", (0,0,0), self.cFont,
-                          (self.H2-135, -self.W2+55), blur=0)
-            
+            try:
+                self.drawTextNP(fr, "Release/Capture\nMouse", (0,0,0), self.cFont,
+                              (self.H2-135, -self.W2+55), blur=0)
+            except ValueError:
+                pass
+
             fi = "ZXCV"
             for i in range(4):
                 self.drawKey(fr, (self.H-30, self.W2+30*(i-1)), fi[i])
