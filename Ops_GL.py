@@ -183,8 +183,10 @@ class CLDraw:
         a.build_mipmaps(0, 2)
         self.TA.append(a)
 
-    def addNrmMap(self, nrm, name):
+    def addNrmMap(self, nrm, name, mip=True):
         t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
+        if mip:
+            t.build_mipmaps(0, 2)
         self.NM[name] = t
 
     def addBoneWeights(self, tn, bw):
