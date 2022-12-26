@@ -5,7 +5,7 @@ import numpy as np
 from math import pi
 from OpsConv import PATH
 
-from VertObjects import VertTerrain, VertModel
+from VertObjects import VertTerrain, VertModel, VertPlane
 from TexObjects import TexSkyBox
 
 import random
@@ -80,6 +80,13 @@ def setupStage(self):
                        mip=2, useShaders={'spec': 0.4, 'normal': 'rock'},
                        shadow="CR")
 
+    iceW = 16
+    self.addVertObject(VertPlane, [8.5-iceW, 1.8, 7-iceW],
+                       h1=[iceW*2,0,0], h2=[0,0,iceW*2], n=16,
+                       texture=PATH+'../Assets/Blank3.png', uvspread=0.333,
+                       useShaders={'SSR':'0', 'normal': 'ice'})
+    self.iceMTL = self.vertObjects[-1].texNum
+
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8
     LDir = pi*1.45
     skyI = np.array([0.1,0.15,0.5]) * 0.8
@@ -97,16 +104,28 @@ def setupStage(self):
     skyShader['isEqui'] = 1
     skyShader['rotY'] = 0.4
 
+    self.matShaders[self.iceMTL]['envFallback'] = self.skyBox.texNum
+    self.matShaders[self.iceMTL]['rotY'] = skyShader['rotY']
+    self.matShaders[self.iceMTL]['roughness'] = 0.02
+
+
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
 def frameUpdate(self):
     if self.frameNum == 1:
+
+        h = self.terrain.heights
+        c = h[50:-50,50:-50]
+        c[c < 1.8/0.6] = 1.8/0.6
+        h[50:-50,50:-50] = c
+
         s = Image.open(PATH + '../Assets/Sh2.png').convert('L')
         s = np.array(s)
         self.draw.addBakedShadow(0, s)
 
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', 'rock')
         self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
+        self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
