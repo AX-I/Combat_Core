@@ -46,6 +46,10 @@ class VertObject:
         self.texMul = 1
         if "texMul" in kwargs:
             self.texMul = kwargs["texMul"]
+
+        self.uvspread = 0
+        if 'uvspread' in kwargs:
+            self.uvspread = kwargs['uvspread']
         
         self.mip = None
         self.reflection = False
@@ -207,6 +211,11 @@ class VertObject:
             self.vertNorms *= -1
         self.u = np.array(self.u)
         self.v = np.array(self.v)
+
+        if self.uvspread:
+            self.u /= self.uvspread
+            self.v /= self.uvspread
+
         if self.texMode == "repeat":
             self.u %= 1
             self.v %= 1
@@ -829,7 +838,7 @@ class VertTerrain0:
         
 
 class VertTerrain(VertObject):
-    def __init__(self, *args, size=(20,20), heights=None, uvspread=2,
+    def __init__(self, *args, size=(20,20), heights=None,
                  vertScale=1, vertPow=1, vertMax=None, **ex):
         """heights -> array dims (size+1, size+1) OR filename"""
         super().__init__(*args, **ex)
@@ -863,7 +872,6 @@ class VertTerrain(VertObject):
             
         self.estWedges = self.size[0] * self.size[1] * 2
 
-        self.uvspread = uvspread
         self.texMode = "repeat"
 
     def create(self):
@@ -944,9 +952,8 @@ class VertTerrain(VertObject):
 
         self.v = np.concatenate((v1, v2))
 
-        sp = self.uvspread
-        self.u = np.array(self.u) / sp
-        self.v = np.array(self.v) / sp
+        self.u = np.array(self.u)
+        self.v = np.array(self.v)
 
     def getHeight(self, x, z):
         """World coords x,z -> world coord y"""
