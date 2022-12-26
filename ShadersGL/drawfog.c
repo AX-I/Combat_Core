@@ -8,7 +8,7 @@
 #define NSAMPLES 32
 #define DIST 1.f
 #define G 0.5f
-#define GBACK -0.25f
+#define GBACK -0.1f
 
 uniform mat3 vmat;
 uniform vec3 vpos;

@@ -4,7 +4,7 @@
 #version 330
 
 #define REFL_STEP 2
-#define REFL_LENGTH 320
+#define REFL_LENGTH 480
 #define REFL_DEPTH 2.f
 #define REFL_VSIZE 2.f
 #define REFL_DBIAS 0.5f

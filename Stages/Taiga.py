@@ -16,6 +16,12 @@ import Phys
 def getHeight(self, pos):
     return self.terrain.getHeight(*pos[::2])
 
+def grassClump(self, c, options):
+    d = c + (nr.rand(3) - 0.5) * 5
+    d[1] = self.terrain.getHeight(d[0],d[2]) + 0.4
+    r = random.random() * 3
+    self.addVertObject(VertModel, d, **options, rot=(0,r,0))
+
 def setupStage(self):
     mpath = PATH + '../Models/'
 
@@ -28,8 +34,13 @@ def setupStage(self):
                    uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
+    tmpHeights = np.array(self.terrain.heights)
+    c = tmpHeights[50:-50,50:-50]
+    c[c < 1.8/0.6] = 1.8/0.6
+    tmpHeights[50:-50,50:-50] = c
+
     self.t2 = Phys.TerrainCollider([-50,0,-50], self.terrain.size[0],
-                                   self.terrain.heights, 0.6)
+                                   tmpHeights, 0.6)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
@@ -57,10 +68,7 @@ def setupStage(self):
     for i in range(len(cn)):
         c = cn[i]
         for j in range(7):
-            d = c + (nr.rand(3) - 0.5) * 5
-            d[1] = self.terrain.getHeight(d[0],d[2]) + 0.4
-            r = random.random() * 3
-            self.addVertObject(VertModel, d, **options2, rot=(0,r,0))
+            grassClump(self, c, options2)
 
     # Random grass
     for i in range(-40, 60, 13):
@@ -68,10 +76,16 @@ def setupStage(self):
             c = np.array((i, 0, j), dtype="float")
             c += nr.rand(3) * 18
             for k in range(random.randint(3, 9)):
-                d = c + (nr.rand(3) - 0.5) * 5
-                d[1] = self.terrain.getHeight(d[0],d[2]) + 0.4
-                r = random.random() * 3
-                self.addVertObject(VertModel, d, **options2, rot=(0,r,0))
+                grassClump(self, c, options2)
+
+    # Tree to cover fake shadow
+    c = np.array((51,0,26.5))
+    c[1] = self.terrain.getHeight(c[0],c[2]) - 0.4
+    options['scale'] = 0.2 * 0.7
+    self.addVertObject(VertModel, c, **options)
+    cn.append([round(x, 3) for x in c])
+    for j in range(7):
+        grassClump(self, c, options2)
 
 
     pfile = mpath + "TaigaNew/TaigaPillar.obj"
