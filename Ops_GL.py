@@ -798,6 +798,16 @@ class CLDraw:
                 draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
                 del shaders[i]['SSR']
                 shaders[i]['SSRopaque'] = 1
+            if 'envFallback' in shaders[i]:
+                draw['useEquiEnv'] = 1
+                draw['rotY'] = shaders[i]['rotY']
+                draw['equiEnv'] = 6
+                ra = np.random.rand(64)
+                draw['R'].write(ra.astype('float32'))
+                draw['roughness'] = shaders[i]['roughness']
+            if 'normal' in shaders[i]:
+                draw['useNM'] = 1
+                draw['NM'] = 7
 
         elif 'dissolve' in shaders[i]:
             if 'dissolve' in self.oldShaders[i]:
@@ -1018,6 +1028,13 @@ class CLDraw:
                 self.DRAW[i]['currFrame'] = 3
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['rawVM'].write(self.rawVM)
+                if 'envFallback' in shaders[i]:
+                    self.TEX[shaders[i]['envFallback']].use(location=6)
+                if 'normal' in shaders[i]:
+                    try:
+                        self.NM[shaders[i]['normal']].use(location=7)
+                    except KeyError:
+                        print('Normal map {} not found'.format(shaders[i]['normal']))
 
             elif 'sub' in shaders[i]:
                 ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA

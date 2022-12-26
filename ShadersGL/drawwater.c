@@ -34,6 +34,25 @@ uniform sampler2D tex1;
 uniform sampler2D db;
 uniform sampler2D currFrame;
 
+// Normal map
+uniform int useNM;
+uniform sampler2D NM;
+
+
+uniform int useEquiEnv;
+uniform float rotY;
+uniform sampler2D equiEnv;
+
+uniform float roughness;
+uniform float R[64];
+
+uint rand_xorshift(uint rng_state) {
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
 void main() {
 	vec3 SVd = rawVM[0];
 	vec3 SVx = rawVM[1];
@@ -53,6 +72,37 @@ void main() {
 	if (tz != 1.0/depth) tz = 1.0/depth;
 	vec3 pos = v_pos / depth;
 	vec3 norm = normalize(v_norm / depth);
+
+  if (useNM > 0) {
+    vec2 dUV1 = dFdx(v_UV*tz);
+    vec2 dUV2 = dFdy(v_UV*tz);
+    vec3 dPos1 = dFdx(v_pos*tz);
+    vec3 dPos2 = dFdy(v_pos*tz);
+
+    float det = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
+    float rdet = 1.0 / det;
+
+    vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
+    vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
+
+    vec3 tgvec = texture(NM, v_UV*tz).rgb * 2.0 - 1.0;
+    tgvec = normalize(tgvec);
+
+    norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
+  }
+
+  if (roughness > 0) {
+    uint rng_state = uint(cy * hF + cx);
+    uint rid1 = rand_xorshift(rng_state) & uint(63);
+    rng_state = rand_xorshift(rng_state);
+    uint rid2 = rand_xorshift(rng_state) & uint(63);
+    rng_state = rand_xorshift(rng_state);
+    uint rid3 = rand_xorshift(rng_state) & uint(63);
+    rng_state = rand_xorshift(rng_state);
+    vec3 svec = vec3(R[rid1], R[rid2], R[rid3]) * 2.f - 1.f;
+    norm += roughness * normalize(svec);
+    norm = normalize(norm);
+  }
 
 	vec3 rgb = texture(tex1, v_UV / depth).rgb;
 
@@ -114,15 +164,18 @@ void main() {
 		}
     }
 
-    // No cubemap fallback here
-
     float fade = min(1.f, float(REFL_LENGTH - rn) / REFL_FADE);
 
+    // Equirect fallback
+    refl = normalize(refl);
+    vec2 uvEnv;
+    uvEnv.x = atan(refl.x, refl.z) / 6.2832 + rotY;
+    uvEnv.y = acos(refl.y) / 3.1416;
 
     vec3 refltest = vec3(0.04, 0.08, 0.12);
-
-
-
+    if (useEquiEnv) {
+      refltest = texture(equiEnv, uvEnv).rgb;
+    }
 
     float refractDist = texture(db, tc*wh).r - tz;
     vec3 refractDir = normalize(a + 0.5 * nd * norm) * refractDist * (sScale/800);
