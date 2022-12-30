@@ -839,7 +839,7 @@ class VertTerrain0:
 
 class VertTerrain(VertObject):
     def __init__(self, *args, size=(20,20), heights=None,
-                 vertScale=1, vertPow=1, vertMax=None, **ex):
+                 vertScale=1, vertPow=1, vertMax=None, interpLim=False, **ex):
         """heights -> array dims (size+1, size+1) OR filename"""
         super().__init__(*args, **ex)
         
@@ -873,6 +873,7 @@ class VertTerrain(VertObject):
         self.estWedges = self.size[0] * self.size[1] * 2
 
         self.texMode = "repeat"
+        self.interpLim = interpLim
 
     def create(self):
         self.heights = numpy.array(self.heights)
@@ -971,7 +972,12 @@ class VertTerrain(VertObject):
         h2 = self.heights[tex1, min(tex2+1,self.heights.shape[1]-1)]
         h3 = self.heights[min(tex1+1, self.heights.shape[0]-1),
                           min(tex2+1, self.heights.shape[1]-1)]
+
         h = h0*texi1*texi2 + h1*texr1*texi2 + h2*texi1*texr2 + h3*texr1*texr2
+        if self.interpLim:
+            if max(h0,h1,h2,h3)-min(h0,h1,h2,h3) > self.interpLim:
+                h = h0
+
         try:
             if self.scale.shape[0] == 3:
                 s = self.scale[1]
