@@ -42,6 +42,17 @@ def setupStage(self):
     tmpHeights[50:-50,50:-50] = c
     self.iceMap = VertTerrain0([-50,0,-50], iceMap, scale=0.6)
 
+    p = Image.open(PATH+'../Assets/PillarHeight1.png').convert('L')
+    pdim = 17
+    pdim2 = pdim//2
+    p = (np.array(p).astype('float')[:,::-1] - 1) / 254
+    p = (22.5 - 22.5 * p) / 0.63
+    q = np.zeros_like(tmpHeights)
+    q[80-pdim2:80+pdim2+1,112-pdim2:112+pdim2+1] = p
+
+    tmpHeights = np.maximum(tmpHeights, q)
+    self.tmpHeights = tmpHeights
+
     self.t2 = Phys.TerrainCollider([-50,0,-50], self.terrain.size[0],
                                    tmpHeights, 0.6)
     self.t2.onHit = lambda x: self.explode(x)
@@ -134,11 +145,8 @@ def setupStage(self):
 
 def frameUpdate(self):
     if self.frameNum == 1:
-
-        h = self.terrain.heights
-        c = h[50:-50,50:-50]
-        c[c < 1.8/0.6] = 1.8/0.6
-        h[50:-50,50:-50] = c
+        self.terrain.heights = self.tmpHeights
+        self.terrain.interpLim = 2
 
         s = Image.open(PATH + '../Assets/Sh2.png').convert('L')
         s = np.array(s)
