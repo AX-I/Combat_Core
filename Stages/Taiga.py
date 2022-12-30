@@ -5,7 +5,7 @@ import numpy as np
 from math import pi
 from OpsConv import PATH
 
-from VertObjects import VertTerrain, VertModel, VertPlane
+from VertObjects import VertTerrain, VertModel, VertPlane, VertTerrain0
 from TexObjects import TexSkyBox
 
 import random
@@ -35,9 +35,12 @@ def setupStage(self):
     self.terrain = self.vertObjects[-1]
 
     tmpHeights = np.array(self.terrain.heights)
+    iceMap = np.zeros_like(tmpHeights)
     c = tmpHeights[50:-50,50:-50]
+    iceMap[50:-50,50:-50][c < 1.8/0.6] = 1
     c[c < 1.8/0.6] = 1.8/0.6
     tmpHeights[50:-50,50:-50] = c
+    self.iceMap = VertTerrain0([-50,0,-50], iceMap, scale=0.6)
 
     self.t2 = Phys.TerrainCollider([-50,0,-50], self.terrain.size[0],
                                    tmpHeights, 0.6)
@@ -48,7 +51,8 @@ def setupStage(self):
     options = {"filename":mpath+"pine/Pine.obj", "static":True,
            "texMode":None, "scale":0.2, "shadow":"C"}
     options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
-                'static':True, 'texMode':None, 'scale':1, 'shadow':'R'}
+                'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
+                'useShaders':{'translucent':1}}
 
     cn = []
     for i in range(-50, 70, 20):
@@ -87,6 +91,9 @@ def setupStage(self):
     for j in range(7):
         grassClump(self, c, options2)
 
+    for f in self.vtNames:
+        if f.endswith('Piney.png'):
+            self.matShaders[self.vtNames[f]]['normal'] = 'bark'
 
     pfile = mpath + "TaigaNew/TaigaPillar.obj"
     self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
@@ -101,7 +108,7 @@ def setupStage(self):
                        useShaders={'SSR':'0', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
-    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8
+    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
     skyI = np.array([0.1,0.15,0.5]) * 0.8
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
@@ -140,6 +147,7 @@ def frameUpdate(self):
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', 'rock')
         self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
         self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
+        self.addNrmMap(PATH + '../Models/TaigaNew/Bark012_Normal.png', 'bark')
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
