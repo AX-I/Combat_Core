@@ -1189,7 +1189,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.16, 0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
+        fogParams = {2: (0.36,0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
                      4: (0.02,0.002,40,0, (0,0,0)),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
@@ -2238,15 +2238,20 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             a['lastStep'] = time.time()
 
                             sfn = ['Short_Heavy_0{}.wav', 'StonyPath_0{}.wav']
-                            sf = sfn[self.stage&1].format(random.randint(1, 6))
+                            sf = sfn[self.stage&1]
+
+                            if self.stage == 2:
+                                sf = 'Short_Heavy_0{}.wav'
+                                if self.iceMap.getHeight(*a['b1'].offset[::2]):
+                                    sf = 'StonyPath_0{}.wav'
 
                             if self.stage == 4:
                                 sf = 'Short_Heavy_0{}.wav'
                                 if a['b1'].offset[0] < 12 and \
                                    -2 < a['b1'].offset[2] < 41:
                                     sf = 'StonyPath_0{}.wav'
-                                sf = sf.format(random.randint(1, 6))
 
+                            sf = sf.format(random.randint(1, 6))
                             self.si.put({"Play":(PATH+'../Sound/New/'+sf,
                                                  self.volmFX / 2,
                                                  (a['b1'].offset[:3], 6, 1.2))})
