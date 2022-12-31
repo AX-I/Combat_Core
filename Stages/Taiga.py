@@ -119,15 +119,28 @@ def setupStage(self):
                        useShaders={'SSR':'0', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
-    for i in range(2):
+
+    self.skis = []
+    self.poles = []
+    for i in range(2*len(self.players)):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath + 'Ski.obj', cache=False,
                            mip=2, useShaders={'spec': 0.4},
                            scale=0.6, rot=(0,-pi/2,0))
-    self.skis = self.vertObjects[-2:]
+        self.skis.append(self.vertObjects[-1])
+        self.addVertObject(VertModel, [0,-1.9,0], # obj is 1.6 height
+                           filename=mpath + 'Pole.obj', cache=False,
+                           useShaders={'spec': 0.4},
+                           scale=1.2, rot=(0,pi/2,0))
+        self.poles.append(self.vertObjects[-1])
     for s in self.skis:
         s.prevPos = np.array([0,0,0.])
         s.prevRot = np.identity(3)
+    for s in self.poles:
+        s.planted = False
+        s.prevPos = np.array([0,0,0.])
+        s.prevRot = np.identity(3)
+        s.plantDir = None
 
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
@@ -173,17 +186,68 @@ def frameUpdate(self):
 
 
 def frameUpdateAfter(self):
-    p = self.players[self.selchar]
-    for i in range(2):
+    for i in range(2*len(self.players)):
+        p = self.players[i//2]
+        if p['id'] == 4: continue
+
         s = self.skis[i]
         objArgs = (s.cStart*3, s.cEnd*3, s.texNum)
 
-        foot = p['b1'].children[1+i].children[0].children[0]
+        foot = p['b1'].children[1+(i%2)].children[0].children[0]
         pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
-        vv = [cos(p['cr']), 0, sin(p['cr'])]
-        rot = np.array([vv, [0,1,0], [-sin(p['cr']), 0, cos(p['cr'])]])
+
+        vv = (np.array([1,0,0,0.]) @ foot.TM)[:3]
+        vv[1] = 0; vv /= Phys.eucLen(vv)
+        vx = np.cross(vv, np.array([0,1,0.]))
+        rot = np.array([vv, np.array([0,1,0.]), vx])
         self.draw.translate(-s.prevPos, *objArgs)
         self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
         self.draw.translate(pos, *objArgs)
         s.prevPos = pos
         s.prevRot = rot
+
+
+        s = self.poles[i]
+        objArgs = (s.cStart*3, s.cEnd*3, s.texNum)
+
+        hand = p['b1'].children[0].children[i%2].children[0].children[0]
+        pos = (np.array([0,-0.04,-0.14 + 0.28*(i%2),1.]) @ hand.TM)[:3]
+
+        plant1a = (self.keyFrames[1][0] + self.keyFrames[2][0]) / 2
+        plant1b = self.keyFrames[6][0] + 0.1
+        plant2a = (self.keyFrames[9][0] + self.keyFrames[10][0]) / 2
+        plant2b = self.keyFrames[14][0] + 0.1
+        if (plant1a < p['poset'] < plant1b or
+            plant2a < p['poset'] < plant2b) and not s.planted:
+            s.planted = True
+            s.plantPos = np.array([s.prevPos[0],
+                                   self.terrain.getHeight(*s.prevPos[::2]),
+                                   s.prevPos[2]])
+
+        if (plant1b < p['poset'] < plant2a or p['poset'] > plant2b) and s.planted:
+            s.planted = False
+            s.plantDir = pos - s.plantPos
+
+        self.draw.translate(-s.prevPos, *objArgs)
+        if s.planted:
+            vy = pos - s.plantPos
+            vy /= Phys.eucLen(vy)
+            vv = np.array([cos(p['cr']),0,sin(p['cr'])])
+            vx = np.cross(vv,vy)
+            vx /= Phys.eucLen(vx)
+            rot = np.array([np.cross(vx,vy),vy,vx])
+            self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
+            s.prevRot = rot
+        elif s.plantDir is not None:
+            s.plantDir = s.plantDir + np.array([0,0.2,0])
+            s.plantDir /= Phys.eucLen(s.plantDir)
+            vy = s.plantDir
+            vv = np.array([cos(p['cr']),0,sin(p['cr'])])
+            vx = np.cross(vv,vy)
+            vx /= Phys.eucLen(vx)
+            rot = np.array([np.cross(vx,vy),vy,vx])
+            self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
+            s.prevRot = rot
+
+        self.draw.translate(pos, *objArgs)
+        s.prevPos = pos

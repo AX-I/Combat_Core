@@ -1012,7 +1012,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.players.append(a)
         self.w.addRB(pv)
 
-        a["cheight"] = self.rpi[a["num"]][2]
+        a["cheight"] = self.rpi[a["num"]][2] + 0.06
 
         r = json.load(open(self.rpi[a["num"]][0]))
         a["rig"] = Rig(r, scale=self.rpi[a["num"]][1])
@@ -1446,7 +1446,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
-        self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
+        #self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
+        self.poses = Anim.loadAnim(p+'Ski2.ava', timeScale=0.9)
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
         self.idleFlat = Anim.flattenPose(self.idle)
@@ -1534,6 +1535,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
+            if self.stage == 2:
+                sobj[self.skis[0].texNum] = True
+                sobj[self.poles[0].texNum] = True
         return sobj
 
     def sendState(self):
