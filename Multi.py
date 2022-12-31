@@ -1059,6 +1059,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
                     (mpath + "Vader/Vader5.rig", 1.6, 1.56),
                     ]
+        self.footSize = (0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
@@ -2419,7 +2420,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     doArmIK(a['b1'].children[0].children[0],
                             a['b1'].offset[:3] + test, handLen)
 
-                footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
+                footSize = self.footSize[a['id']]
+
+                # Skis
+                if self.stage == 2:
+                    if a['id'] == self.selchar:
+                        footSize += 0.08
+
                 try: ikR, ikL = a['legIKPos']
                 except KeyError: pass
                 else:
@@ -2458,6 +2465,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["movingOld"] = a["moving"]
 
         self.frameProfile('PlayerMove')
+
+
+        try:
+            self.STAGECONFIG.frameUpdateAfter(self)
+        except AttributeError:
+            pass
 
         nd = self.draw.noiseDist
         if self.iceEffect:

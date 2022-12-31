@@ -2,7 +2,7 @@
 
 from PIL import Image
 import numpy as np
-from math import pi
+from math import pi, sin, cos
 from OpsConv import PATH
 
 from VertObjects import VertTerrain, VertModel, VertPlane, VertTerrain0
@@ -119,6 +119,16 @@ def setupStage(self):
                        useShaders={'SSR':'0', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
+    for i in range(2):
+        self.addVertObject(VertModel, [0,0,0],
+                           filename=mpath + 'Ski.obj', cache=False,
+                           mip=2, useShaders={'spec': 0.4},
+                           scale=0.6, rot=(0,-pi/2,0))
+    self.skis = self.vertObjects[-2:]
+    for s in self.skis:
+        s.prevPos = np.array([0,0,0.])
+        s.prevRot = np.identity(3)
+
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
     skyI = np.array([0.1,0.15,0.5]) * 0.8
@@ -159,3 +169,21 @@ def frameUpdate(self):
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
+
+
+
+def frameUpdateAfter(self):
+    p = self.players[self.selchar]
+    for i in range(2):
+        s = self.skis[i]
+        objArgs = (s.cStart*3, s.cEnd*3, s.texNum)
+
+        foot = p['b1'].children[1+i].children[0].children[0]
+        pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
+        vv = [cos(p['cr']), 0, sin(p['cr'])]
+        rot = np.array([vv, [0,1,0], [-sin(p['cr']), 0, cos(p['cr'])]])
+        self.draw.translate(-s.prevPos, *objArgs)
+        self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
+        self.draw.translate(pos, *objArgs)
+        s.prevPos = pos
+        s.prevRot = rot
