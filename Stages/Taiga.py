@@ -186,12 +186,16 @@ def frameUpdate(self):
 
 
 def frameUpdateAfter(self):
+    batchT1 = []
+    batchR = []
+    batchT2 = []
+
     for i in range(2*len(self.players)):
         p = self.players[i//2]
         if p['id'] == 4: continue
 
         s = self.skis[i]
-        objArgs = (s.cStart*3, s.cEnd*3, s.texNum)
+        objArgs = (s.cStart*3, s.cEnd*3)
 
         foot = p['b1'].children[1+(i%2)].children[0].children[0]
         pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
@@ -200,15 +204,30 @@ def frameUpdateAfter(self):
         vv[1] = 0; vv /= Phys.eucLen(vv)
         vx = np.cross(vv, np.array([0,1,0.]))
         rot = np.array([vv, np.array([0,1,0.]), vx])
-        self.draw.translate(-s.prevPos, *objArgs)
-        self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
-        self.draw.translate(pos, *objArgs)
+
+        batchT1.append((-s.prevPos, *objArgs))
+        batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
+        batchT2.append((pos, *objArgs))
+
         s.prevPos = pos
         s.prevRot = rot
 
+    tn = self.skis[0].texNum
+    self.draw.translateBatch({tn: batchT1})
+    self.draw.rotateBatch({tn: batchR})
+    self.draw.translateBatch({tn: batchT2})
+
+
+    batchT1 = []
+    batchR = []
+    batchT2 = []
+
+    for i in range(2*len(self.players)):
+        p = self.players[i//2]
+        if p['id'] == 4: continue
 
         s = self.poles[i]
-        objArgs = (s.cStart*3, s.cEnd*3, s.texNum)
+        objArgs = (s.cStart*3, s.cEnd*3)
 
         hand = p['b1'].children[0].children[i%2].children[0].children[0]
         pos = (np.array([0,-0.04,-0.14 + 0.28*(i%2),1.]) @ hand.TM)[:3]
@@ -228,7 +247,7 @@ def frameUpdateAfter(self):
             s.planted = False
             s.plantDir = pos - s.plantPos
 
-        self.draw.translate(-s.prevPos, *objArgs)
+        batchT1.append((-s.prevPos, *objArgs))
         if s.planted:
             vy = pos - s.plantPos
             vy /= Phys.eucLen(vy)
@@ -236,7 +255,7 @@ def frameUpdateAfter(self):
             vx = np.cross(vv,vy)
             vx /= Phys.eucLen(vx)
             rot = np.array([np.cross(vx,vy),vy,vx])
-            self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
+            batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
             s.prevRot = rot
         elif s.plantDir is not None:
             s.plantDir = s.plantDir + np.array([0,0.2,0])
@@ -246,8 +265,14 @@ def frameUpdateAfter(self):
             vx = np.cross(vv,vy)
             vx /= Phys.eucLen(vx)
             rot = np.array([np.cross(vx,vy),vy,vx])
-            self.draw.rotate(np.transpose(s.prevRot) @ rot, *objArgs)
+            batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
             s.prevRot = rot
 
-        self.draw.translate(pos, *objArgs)
+        batchT2.append((pos, *objArgs))
         s.prevPos = pos
+
+    tn = self.poles[0].texNum
+    self.draw.translateBatch({tn: batchT1})
+    if batchR:
+        self.draw.rotateBatch({tn: batchR})
+    self.draw.translateBatch({tn: batchT2})
