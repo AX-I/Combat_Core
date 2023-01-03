@@ -1447,7 +1447,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         p = PATH+"../Poses/"
         #self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
-        self.poses = Anim.loadAnim(p+'Ski2.ava', timeScale=0.9)
+        self.poses = Anim.loadAnim(p+'Ski4.ava', timeScale=0.9)
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
         self.idleFlat = Anim.flattenPose(self.idle)
@@ -2193,7 +2193,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
 
             if a["moving"]:
-                transKF = 2 if a['moving'] > 0 else 4
+                transKF = 5 if a['moving'] > 0 else 4
                 if not a['movingOld']:
                     a['animTrans'] = CURRTIME
                     a['poset'] = self.keyFrames[transKF][0]

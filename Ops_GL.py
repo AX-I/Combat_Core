@@ -128,7 +128,7 @@ class CLDraw:
         self.gSize = []
 
         self.TEX = []
-        self.TA = []
+        self.TA = {}
         self.DRAW = []
         self.DRAWZ = {}
 
@@ -179,11 +179,12 @@ class CLDraw:
 
     def setReflTex(self, name, r, g, b, size):
         pass
-    def addTexAlpha(self, tex):
+    def addTexAlpha(self, tex, name=None):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
         a.build_mipmaps(0, 2)
-        self.TA.append(a)
+        if name is None: name = len(self.TA)
+        self.TA[name] = a
 
     def addNrmMap(self, nrm, name, mip=True):
         t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
@@ -193,6 +194,7 @@ class CLDraw:
 
     def addPSTex(self, tex, name):
         t = ctx.texture((tex.shape[1],tex.shape[0]), 1, tex)
+        t.build_mipmaps(0, 2)
         self.PSTEX[name] = t
 
     def addBoneWeights(self, tn, bw):

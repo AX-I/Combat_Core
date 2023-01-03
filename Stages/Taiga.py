@@ -4,10 +4,11 @@ from PIL import Image
 import numpy as np
 from math import pi, sin, cos
 from OpsConv import PATH
+import time
 
 from VertObjects import VertTerrain, VertModel, VertPlane, VertTerrain0
 from TexObjects import TexSkyBox
-from ParticleSystem import ParticleSystem
+from ParticleSystem import ContinuousParticleSystem
 
 import random
 import numpy.random as nr
@@ -123,6 +124,7 @@ def setupStage(self):
 
     self.skis = []
     self.poles = []
+    self.skiParticles = []
     for i in range(2*len(self.players)):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath + 'Ski.obj', cache=False,
@@ -134,6 +136,16 @@ def setupStage(self):
                            useShaders={'spec': 0.4},
                            scale=1.2, rot=(0,pi/2,0))
         self.poles.append(self.vertObjects[-1])
+        ts = 4
+        ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
+                                      vel=0.03/ts, force=(0,-0.01/ts/ts,0),
+                                      lifespan=90*ts, nParticles=30,
+                                      randPos=0.02, randVel=0.01/ts,
+                                      size=0.15, opacity=0.15,
+                                      color=np.array([1,0.3,0.24]) * 0.3)
+        self.addParticleSystem(ps)
+        self.skiParticles.append(ps)
+
     for s in self.skis:
         s.prevPos = np.array([0,0,0.])
         s.prevRot = np.identity(3)
@@ -143,12 +155,14 @@ def setupStage(self):
         s.prevRot = np.identity(3)
         s.plantDir = None
 
-    self.snowPS = ParticleSystem([20,10,20.],[0,0.],
-                                 size=0.4, color=(0.2,0.2,0.2),
-                                 vel=0, randVel=0.01, randPos=6,
-                                 nparticles=1000, lifespan=100000,
-                                 tex='snowflake')
-    self.addParticleSystem(self.snowPS)
+
+    for i in range(2000):
+        p = nr.rand(3) * np.array([70,8,70]) + np.array([-20,0,-20])
+        r = random.random()*3
+        self.addVertObject(VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
+                           texture=PATH+'../Assets/Snowflake.png',
+                           useShaders={'add': 1, 'noline':1}, mip=2,
+                           rot=(0,r,0))
 
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
@@ -175,7 +189,7 @@ def setupStage(self):
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
 def frameUpdate(self):
-    if self.frameNum == 1:
+    if self.frameNum == 0:
         self.terrain.heights = self.tmpHeights
         self.terrain.interpLim = 2
 
@@ -188,11 +202,10 @@ def frameUpdate(self):
         self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
         self.addNrmMap(PATH + '../Models/TaigaNew/Bark012_Normal.png', 'bark')
 
-        s = Image.open(PATH+'../Assets/Snowflake.png').convert('L')
+        s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
         s = np.array(s)
-        self.draw.addPSTex(s, 'snowflake')
-
-    self.snowPS.step()
+        s = np.array(s > 30, 'uint8')
+        self.draw.addTexAlpha(s, 'snowflake')
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
@@ -200,12 +213,15 @@ def frameUpdate(self):
 
 
 def frameUpdateAfter(self):
+    CURRTIME = time.time()
+
     batchT1 = []
     batchR = []
     batchT2 = []
 
     for i in range(2*len(self.players)):
         p = self.players[i//2]
+        if p['id'] not in self.actPlayers: continue
         if p['id'] == 4: continue
 
         s = self.skis[i]
@@ -225,6 +241,15 @@ def frameUpdateAfter(self):
 
         s.prevPos = pos
         s.prevRot = rot
+
+        ps = self.skiParticles[i]
+        active = self.keyFrames[11][0] > p['poset'] > self.keyFrames[3][0]
+
+        if ((i + active)&1) and (p['moving'] or (CURRTIME - p['animTrans'] < 0.1)):
+            ps.changePos(pos + 0.5*vv)
+            ps.step()
+        elif (CURRTIME - p['animTrans'] > 0.1) and ps.started:
+            ps.reset()
 
     tn = self.skis[0].texNum
     self.draw.translateBatch({tn: batchT1})
@@ -253,9 +278,9 @@ def frameUpdateAfter(self):
         if (plant1a < p['poset'] < plant1b or
             plant2a < p['poset'] < plant2b) and not s.planted:
             s.planted = True
-            s.plantPos = np.array([s.prevPos[0],
-                                   self.terrain.getHeight(*s.prevPos[::2]),
-                                   s.prevPos[2]])
+            pI = s.prevPos + np.array([-sin(p['cr']), 0, cos(p['cr'])]) * \
+                 (-0.15 + 0.3 * (i&1))
+            s.plantPos = np.array([pI[0], self.terrain.getHeight(*pI[::2]), pI[2]])
 
         if (plant1b < p['poset'] < plant2a or p['poset'] > plant2b) and s.planted:
             s.planted = False
@@ -272,7 +297,8 @@ def frameUpdateAfter(self):
             batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
             s.prevRot = rot
         elif s.plantDir is not None:
-            s.plantDir = s.plantDir + np.array([0,0.2,0])
+            off = np.array([0,0.1 * (self.frameTime*25),0])
+            s.plantDir = s.plantDir + off
             s.plantDir /= Phys.eucLen(s.plantDir)
             vy = s.plantDir
             vv = np.array([cos(p['cr']),0,sin(p['cr'])])
