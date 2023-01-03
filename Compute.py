@@ -279,10 +279,6 @@ class ThreeDBackend:
             if len(self.vertBones[i]) > 0:
                 self.draw.addBoneWeights(i, self.vertBones[i])
 
-        for ps in self.particleSystems:
-            if ps.tex is not None:
-                self.draw.setPSTex(getTexture(ps.tex), ps.tex)
-
         d = self.directionalLights[0]
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
@@ -361,9 +357,7 @@ class ThreeDBackend:
 
         for i in range(len(cc)):
             ps = cc[i][0]
-            if ps.tex is not None:
-                self.draw.drawPSTex(ps.pc, ps.color, ps.opacity, ps.size, ps.tex)
-            else: self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size)
+            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex)
 
 
         self.postProcess()

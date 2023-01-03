@@ -140,6 +140,8 @@ class CLDraw:
 
         self.NM = {}
 
+        self.PSTEX = {}
+
         x = np.array([-1, -1, 1, 1, -1, 1])
         y = np.array([1, -1, 1, 1, -1, -1])
         z = np.ones(6)*-0.9999
@@ -188,6 +190,10 @@ class CLDraw:
         if mip:
             t.build_mipmaps(0, 2)
         self.NM[name] = t
+
+    def addPSTex(self, tex, name):
+        t = ctx.texture((tex.shape[1],tex.shape[0]), 1, tex)
+        self.PSTEX[name] = t
 
     def addBoneWeights(self, tn, bw):
         dat = bw.reshape((-1,))
@@ -395,7 +401,7 @@ class CLDraw:
             draw['lenW2'].write(self.WNUM[1])
 
 
-    def drawPS(self, xyz, color, opacity, size):
+    def drawPS(self, xyz, color, opacity, size, tex=None):
         try: _ = self.psProg
         except:
             ctx.point_size = 4
@@ -411,7 +417,15 @@ class CLDraw:
         self.psProg['size'] = size
         self.psProg['emPow'].write(np.float32(1-opacity))
         self.psProg['tColor'].write(np.array(color[0], 'float32').tobytes())
-        self.psProg['fadeUV'].write(np.int32(1))
+
+        if tex in self.PSTEX:
+            self.psProg['fadeUV'] = 0
+            self.psProg['useTex'] = 1
+            self.psProg['tex1'] = 0
+            self.PSTEX[tex].use(location=0)
+        else:
+            self.psProg['useTex'] = 0
+            self.psProg['fadeUV'] = 1
 
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)
@@ -430,9 +444,12 @@ class CLDraw:
         self.fbo.depth_mask = True
         ctx.enable(moderngl.DEPTH_TEST)
 
-        ctx.enable(moderngl.BLEND)
-        ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
-        ctx.blend_equation = moderngl.FUNC_ADD
+        if tex in self.PSTEX:
+            ctx.disable(moderngl.BLEND)
+        else:
+            ctx.enable(moderngl.BLEND)
+            ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+            ctx.blend_equation = moderngl.FUNC_ADD
 
         self.PSvao.render(moderngl.POINTS)
 

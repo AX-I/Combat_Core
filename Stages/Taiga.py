@@ -7,6 +7,7 @@ from OpsConv import PATH
 
 from VertObjects import VertTerrain, VertModel, VertPlane, VertTerrain0
 from TexObjects import TexSkyBox
+from ParticleSystem import ParticleSystem
 
 import random
 import numpy.random as nr
@@ -142,6 +143,13 @@ def setupStage(self):
         s.prevRot = np.identity(3)
         s.plantDir = None
 
+    self.snowPS = ParticleSystem([20,10,20.],[0,0.],
+                                 size=0.4, color=(0.2,0.2,0.2),
+                                 vel=0, randVel=0.01, randPos=6,
+                                 nparticles=1000, lifespan=100000,
+                                 tex='snowflake')
+    self.addParticleSystem(self.snowPS)
+
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
     skyI = np.array([0.1,0.15,0.5]) * 0.8
@@ -179,6 +187,12 @@ def frameUpdate(self):
         self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
         self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
         self.addNrmMap(PATH + '../Models/TaigaNew/Bark012_Normal.png', 'bark')
+
+        s = Image.open(PATH+'../Assets/Snowflake.png').convert('L')
+        s = np.array(s)
+        self.draw.addPSTex(s, 'snowflake')
+
+    self.snowPS.step()
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
