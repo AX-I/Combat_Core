@@ -6,9 +6,12 @@
 #define MAXSKIP 4.f
 #define PI2 6.283f
 
+#define CHROM
+
 uniform sampler2D tex1;
 uniform sampler2D db;
 out vec3 f_color;
+
 uniform float width;
 uniform float height;
 uniform float exposure;
@@ -82,7 +85,15 @@ void main() {
 				if (radius > ecoc) cover *= ecoc / radius;
 				nsamples += cover;
 
-		        color += cover * texture(tex1, (tc+vec2(i, j))*wh).rgb;
+        #ifdef CHROM
+        vec2 center = vec2(width, height)/2;
+        vec2 coord = tc + vec2(i, j) - center;
+        color.r += cover * texture(tex1, (coord*0.994 + center)*wh).r;
+        color.g += cover * texture(tex1, (coord + center)*wh).g;
+        color.b += cover * texture(tex1, (coord*1.006 + center)*wh).b;
+        #else
+        color += cover * texture(tex1, (tc + vec2(i, j))*wh).rgb;
+        #endif
 		    }
 		}
 	}
