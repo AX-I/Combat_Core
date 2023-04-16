@@ -607,7 +607,7 @@ class CLDraw:
 
         self.blurVao1.render(moderngl.TRIANGLES)
 
-    def gamma(self, ex, tonemap='gamma'):
+    def gamma(self, ex, tonemap='gamma', blackPoint=0):
         tm = {'gamma':0, 'reinhard':1, 'reinhard2':2, 'aces':3}
 
         ctx.disable(moderngl.DEPTH_TEST)
@@ -620,6 +620,7 @@ class CLDraw:
         self.post_prog['tex1'] = 0
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
+        self.post_prog['blackPoint'] = np.float32(blackPoint)
         self.FB.use(location=0)
 
         self.post_prog['db'] = 1

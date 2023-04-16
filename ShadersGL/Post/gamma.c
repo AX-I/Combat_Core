@@ -17,6 +17,8 @@ uniform float aperture;
 
 uniform int tonemap;
 
+uniform float blackPoint;
+
 
 vec3 ACESFilm(vec3 x)
 {
@@ -86,7 +88,8 @@ void main() {
 	}
 	color /= nsamples;
 
-    vec3 j = max(vec3(0.f), 8 * exposure * color);
+    vec3 j = max(vec3(0.f), 8 * exposure * color - blackPoint);
+    // now is in [0,1]
 
   if (tonemap == 0) {
     // Basic gamma
@@ -128,5 +131,5 @@ void main() {
     j = sqrt(j);
   }
 
-    f_color = j;
+  f_color = j;
 }

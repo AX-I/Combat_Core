@@ -217,6 +217,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         exps[1] = 1.75
         exps[2] = 1.2
         self.exposure = exps[self.stage]
+        self.blackPoint = 0.02
 
         self.tonemap = 'aces'
         self.doSSAO = False
@@ -292,6 +293,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.iceEffect = False
         self.bindKey('m', self.tgIce)
 
+        self.bindKey('j', self.tgBlack1)
+        self.bindKey('J', self.tgBlack2)
+
+    def tgBlack1(self):
+        self.blackPoint += 0.01
+        print('black point', self.blackPoint)
+    def tgBlack2(self):
+        self.blackPoint -= 0.01
+        print('black point', self.blackPoint)
     def tgIce(self):
         if self.iceEffect is False:
             self.iceEffect = (True, self.selchar)
@@ -1368,7 +1378,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.distort(bx/self.W, by/self.H, tr[0],
                                   portal, strength)
 
-        self.draw.gamma(self.exposure, self.tonemap)
+        self.draw.gamma(self.exposure, self.tonemap, self.blackPoint)
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
