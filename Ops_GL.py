@@ -94,6 +94,9 @@ class CLDraw:
         self.A = w*h
 
         self.FB = ctx.texture((self.W, self.H), 3, dtype='f2')
+        self.FB.repeat_x = False
+        self.FB.repeat_y = False
+
         self.DB = ctx.depth_texture((self.W, self.H))
         self.fbo = ctx.framebuffer(self.FB, self.DB)
         self.fbo.use()
