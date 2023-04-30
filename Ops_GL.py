@@ -76,6 +76,16 @@ bloom2 = makeProgram('Post/bloom2.c')
 
 lens = makeProgram('Post/lens.c')
 
+fsr_frag = makeProgram('Post/fsr.c')
+fsr_frag = fsr_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
+fsr_frag = fsr_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
+ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+
+fsr_rcas_frag = makeProgram('Post/fsr_rcas.c')
+fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
+fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
+ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
 ctx.front_face = 'cw'
@@ -87,11 +97,15 @@ class CLDraw:
     def __init__(self, size_sky, max_uv, w, h, max_particles):
 
         # Internal resolution for supersampling
-        self.IRES = 1
+        self.IRES = 0.5
 
+        self.USE_FSR = 1
         self.W = np.int32(w * self.IRES)
         self.H = np.int32(h * self.IRES)
         self.A = w*h
+
+        self.outW = w
+        self.outH = h
 
         self.FB = ctx.texture((self.W, self.H), 3, dtype='f2')
         self.FB.repeat_x = False
@@ -109,6 +123,10 @@ class CLDraw:
         self.FS_GL = ctx.texture((w, h), 3, dtype='f1')
         self.DS_GL = ctx.depth_texture((w, h))
         self.fs = ctx.framebuffer(self.FS_GL, self.DS_GL)
+        if self.USE_FSR:
+            self.F_FSR = ctx.texture((self.W, self.H), 3, dtype='f1')
+            self.D_FSR = ctx.depth_texture((self.W, self.H))
+            self.fs_fsr = ctx.framebuffer(self.F_FSR, self.D_FSR)
 
         # Readable depth buffer
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
@@ -151,8 +169,27 @@ class CLDraw:
         self.post_vbo = ctx.buffer(vertices.astype('float32').tobytes())
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
+        self.post_prog['tex1'] = 0
+        self.post_prog['db'] = 1
+
         self.post_prog['width'].write(np.float32(w))
         self.post_prog['height'].write(np.float32(h))
+
+        if self.USE_FSR:
+            self.post_prog['width'].write(np.float32(self.W))
+            self.post_prog['height'].write(np.float32(self.H))
+
+            self.fsr_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+            self.fsr_vao = ctx.vertex_array(self.fsr_prog, self.post_vbo, 'in_vert')
+            self.fsr_prog['Source'] = 0
+            self.fsr_prog['width_in'].write(np.float32(self.W))
+            self.fsr_prog['height_in'].write(np.float32(self.H))
+            self.fsr_prog['width_out'].write(np.float32(w))
+            self.fsr_prog['height_out'].write(np.float32(h))
+
+            self.fsr_rcas_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+            self.fsr_rcas_vao = ctx.vertex_array(self.fsr_rcas_prog, self.post_vbo, 'in_vert')
+
 
         self.oldShaders = {}
 
@@ -616,21 +653,27 @@ class CLDraw:
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.fs.clear(0.0, 0.0, 0.0, 0.0)
-        self.fs.use()
+        if self.USE_FSR:
+            self.fs_fsr.clear(0.0, 0.0, 0.0, 0.0)
+            self.fs_fsr.use()
+        else:
+            self.fs.clear(0.0, 0.0, 0.0, 0.0)
+            self.fs.use()
         self.post_prog['focus'] = self.dofFocus
-        self.post_prog['aperture'] = self.dofAperture
-        self.post_prog['tex1'] = 0
+        self.post_prog['aperture'] = self.dofAperture * self.IRES
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.post_prog['blackPoint'] = np.float32(blackPoint)
-        self.FB.use(location=0)
 
-        self.post_prog['db'] = 1
+        self.FB.use(location=0)
         self.DBT.use(location=1)
 
         self.post_vao.render(moderngl.TRIANGLES)
 
+        if self.USE_FSR:
+            self.fs.use()
+            self.F_FSR.use(location=0)
+            self.fsr_vao.render(moderngl.TRIANGLES)
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.enable(moderngl.BLEND)
 
@@ -1226,7 +1269,7 @@ class CLDraw:
         return s.reshape((sm['dim'], sm['dim']))
 
     def getFrame(self):
-        shape = (int(self.H//self.IRES), int(self.W//self.IRES), 3)
+        shape = (self.outH, self.outW, 3)
         h = np.frombuffer(self.fs.read(), "uint8").reshape(shape)
         return h
 

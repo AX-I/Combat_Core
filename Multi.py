@@ -1353,7 +1353,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.motionBlur(self.oldVPos, self.oldVMat)
 
         db = self.draw.getDB()
-        target = max(0.6, min(6, db[self.H//2, self.W//2]))
+        target = max(0.6, min(6, db[self.draw.H//2, self.draw.W//2]))
         df = self.dofFoc
         if (target < self.dofFoc) or (self.frameNum & 1 == 0):
             self.dofFoc = sqrt(sqrt(df * df * df * target))
