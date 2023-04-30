@@ -52,6 +52,8 @@ vec3 rtt_and_odt_fit(vec3 v)
 
 void main() {
 	vec2 wh = 1 / vec2(width, height);
+  vec2 center = vec2(width, height)/2;
+
 	vec2 tc = gl_FragCoord.xy;
 
 	// For VR mode
@@ -86,7 +88,6 @@ void main() {
 				nsamples += cover;
 
         #ifdef CHROM
-        vec2 center = vec2(width, height)/2;
         vec2 coord = tc + vec2(i, j) - center;
         color.r += cover * texture(tex1, (coord*0.994 + center)*wh).r;
         color.g += cover * texture(tex1, (coord + center)*wh).g;
@@ -141,6 +142,10 @@ void main() {
     j = j * acesOut;
     j = sqrt(j);
   }
+
+  float vignette = dot((tc - center) * wh, (tc - center) * wh);
+
+  j *= 1 - vignette*vignette * 3;
 
   f_color = j;
 }
