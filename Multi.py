@@ -296,6 +296,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('j', self.tgBlack1)
         self.bindKey('J', self.tgBlack2)
 
+        self.bindKey('9', self.tgFxaa)
+        self.useFxaa = 1
+
+    def tgFxaa(self):
+        self.useFxaa = 1 - self.useFxaa
     def tgBlack1(self):
         self.blackPoint += 0.01
         print('black point', self.blackPoint)
@@ -1380,7 +1385,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.draw.distort(bx/self.W, by/self.H, tr[0],
                                   portal, strength)
 
-        self.draw.gamma(self.exposure, self.tonemap, self.blackPoint)
+        self.draw.gamma(self.exposure, self.tonemap, self.blackPoint, self.useFxaa)
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
