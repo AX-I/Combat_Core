@@ -1363,9 +1363,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if (target < self.dofFoc) or (self.frameNum & 1 == 0):
             self.dofFoc = sqrt(sqrt(df * df * df * target))
 
-        ap = np.tan(self.fovX*pi/360)/0.7
+        ap = 0.7 / np.tan(self.fovX*pi/360)
+        ap *= self.W / 752
 
-        self.draw.dof(self.dofFoc, aperture=8/ap if self.cam1P else 12/ap)
+        self.draw.dof(self.dofFoc, aperture=8*ap if self.cam1P else 12*ap)
         if self.doBloom:
             self.draw.blur()
 
