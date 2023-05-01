@@ -144,7 +144,7 @@ def setupStage(self):
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
 def frameUpdate(self):
-    if self.frameNum == 1:
+    if self.frameNum == 0:
         self.terrain.heights = self.tmpHeights
         self.terrain.interpLim = 2
 
@@ -152,10 +152,11 @@ def frameUpdate(self):
         s = np.array(s)
         self.draw.addBakedShadow(0, s)
 
-        self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', 'rock')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Bark012_Normal.png', 'bark')
+        tpath = PATH + '../Models/TaigaNew/'
+        self.addNrmMap(tpath + '3DRock004_Normal.jpg', 'rock')
+        self.addNrmMap(tpath + 'Snow005_Normal.jpg', 'snow')
+        self.addNrmMap(tpath + 'Ice004_Normal.jpg', 'ice')
+        self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
 
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
