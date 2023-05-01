@@ -159,7 +159,7 @@ class CLDraw:
         self.gSize = []
 
         self.TEX = []
-        self.TA = []
+        self.TA = {}
         self.DRAW = []
         self.DRAWZ = {}
 
@@ -236,11 +236,12 @@ class CLDraw:
 
     def setReflTex(self, name, r, g, b, size):
         pass
-    def addTexAlpha(self, tex):
+    def addTexAlpha(self, tex, name=None):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
         a.build_mipmaps(0, 2)
-        self.TA.append(a)
+        if name is None: name = len(self.TA)
+        self.TA[name] = a
 
     def addNrmMap(self, nrm, name, mip=True):
         t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
@@ -887,6 +888,7 @@ class CLDraw:
                 draw['useEquiEnv'] = 1
                 draw['rotY'] = shaders[i]['rotY']
                 draw['equiEnv'] = 6
+            if 'roughness' in shaders[i]:
                 ra = np.random.rand(64)
                 draw['R'].write(ra.astype('float32'))
                 draw['roughness'] = shaders[i]['roughness']
@@ -1055,6 +1057,8 @@ class CLDraw:
                         self.NM[shaders[i]['normal']].use(location=7)
                     except KeyError:
                         print('Normal map {} not found'.format(shaders[i]['normal']))
+                if 'ignoreShadow' in shaders[i]:
+                    self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
 
                 vao.render(moderngl.TRIANGLES)
 

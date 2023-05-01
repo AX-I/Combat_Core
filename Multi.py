@@ -961,7 +961,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc["dir"] = self.directionalLights[0]["dir"]
         sc["pos"] = -40 * viewVec(*sc["dir"]) + numpy.array([20, 5, 20])
         self.updateShadowCam(0)
-        sc["bias"] = (0.18 * abs(cos(ti)) + 0.12) * 2048 / self.shRes
+        sc["bias"] = (0.18 * abs(cos(ti)) + 0.12) * 2560 / self.shRes
 
         tempObjs = np.array(self.castObjs)
         tempObjs = tempObjs * (1 - np.array(self.testRM()))
