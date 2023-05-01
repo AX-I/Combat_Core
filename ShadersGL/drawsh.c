@@ -59,6 +59,7 @@ in vec3 vertLight;
 uniform vec3 vpos;
 
 uniform float specular;
+#define roughness 0.6f
 
 uniform vec3 VV;
 uniform int useNoise;
@@ -167,6 +168,20 @@ void main() {
     float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
     vec3 spec = theta * theta * vec3(0.008);
     spec *= specular;
+
+	// Sun specular
+	a = normalize(a);
+	vec3 h = normalize(a + LDir);
+	//theta = min(1.f, max(0.f, dot(h, norm) + 0.1f));
+	theta = max(0.f, dot(h, norm));
+
+	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
+    fr *= fr; fr *= fr; fr *= fr;// fr *= fr; fr *= fr; fr *= fr;
+
+	int specPow = int(exp2(12*(1.f - roughness)));
+	float fac = (specPow + 2) / (2*8 * 3.1416f);
+	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
+
 
 
     light *= (1 + highMult);
