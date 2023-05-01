@@ -214,7 +214,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.dofFoc = 3
 
         exps = [1.4 for _ in stageNames]
-        exps[1] = 1.75
+        exps[1] = 1.6
         exps[2] = 1.2
         self.exposure = exps[self.stage]
         self.blackPoint = 0.02
@@ -288,7 +288,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('i', self.respawnTest)
 
         self.bindKey('b', self.testAniso)
-        self.aniso = 2
+        self.aniso = 4
 
         self.iceEffect = False
         self.bindKey('m', self.tgIce)
@@ -296,6 +296,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('j', self.tgBlack1)
         self.bindKey('J', self.tgBlack2)
 
+        self.bindKey('k', self.tgSpec)
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
@@ -307,6 +308,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def tgBlack2(self):
         self.blackPoint -= 0.01
         print('black point', self.blackPoint)
+    def tgSpec(self):
+        tn = self.players[self.selchar]['obj'].texNum
+        self.matShaders[tn]['spec'] = 1 - self.matShaders[tn]['spec']
+        self.draw.changeShader(tn, self.matShaders[tn])
+        d = self.directionalLights[0]
+        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
     def tgIce(self):
         if self.iceEffect is False:
             self.iceEffect = (True, self.selchar)
@@ -904,7 +912,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i = np.array((1,1,1.)) * min(1, 1.33 * max(0, p["poset"] - 0.25))**2
         self.pointLights.append({"i":i, "pos":(pr + pl) / 2})
 
-    def z1(self): self.setFOV(max(45, self.fovX * 0.96))
+    def z1(self): self.setFOV(max(30, self.fovX * 0.96))
     def z2(self): self.setFOV(min(120, self.fovX * 1.04166))
 
     def tgControl(self):
@@ -996,7 +1004,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                              self.volmFX / 3, (np.array(p), 6, 1))})
 
     def addPlayer(self, o):
-        pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=True)
+        pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
         pv.addCollider(Phys.CircleCollider(0.5, (0,0.51,0), rb=pv))
         pv.colliders[0].prop = "player"
@@ -1074,6 +1082,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
                     (mpath + "Vader/Vader5.rig", 1.6, 1.56),
                     ]
+        self.footSize = (0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
@@ -1092,7 +1101,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"L3/L3.obj",
                            animated=True,
-                           texMul=1, useShaders={'spec': 1},
+                           texMul=1, useShaders={'spec': 1, 'normal':'Link'},
                            scale=0.75, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
@@ -1315,7 +1324,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    "scale":1, "obj":self.vertObjects[-1]})
 
         # (Min xz, Max xz)
-        bd = [(-10, 50), (-10, 50), (-20, 50),
+        bd = [(-10, 50), (-10, 50), (-25, 50),
               (0, 35), (-35, 60), (-20, 50)]
         ss = [b[1] - b[0] for b in bd]
         self.BORDER = np.array(bd[self.stage], "float")
@@ -1533,6 +1542,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 except: pass
 
         self.draw.noisePos = np.zeros((3,), 'float32')
+
+        self.addNrmMap(PATH + '../Models/L3/Atlas1Nrm.png', 'Link')
 
     def shadowChar(self):
         sc = self.shadowCams[1]
@@ -2201,6 +2212,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
                         a["isHit"] = self.frameNum
 
+            a['pv'].v *= 0.9
+
             if a["gesturing"]:
                 a["moving"] = 0
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
@@ -2437,7 +2450,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     doArmIK(a['b1'].children[0].children[0],
                             a['b1'].offset[:3] + test, handLen)
 
-                footSize = (0.2, 0.1, 0.2, 0.1, None, 0.2, 0.08, 0.16, 0.16)[a['id']]
+                footSize = self.footSize[a['id']]
                 try: ikR, ikL = a['legIKPos']
                 except KeyError: pass
                 else:
@@ -2555,7 +2568,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def debugOverlay(self):
         if not self.showAINav: return
-        if self.stage in (0, 2): return
+
+        self.rgb = np.array(self.rgb)
+        fps = int((1 / self.frameTime))
+        if fps > 30:
+            col = [[0,192,255]]
+        elif fps > 20:
+            col = [[192,255,0]]
+        elif fps > 15:
+            col = [[255,192,0]]
+        else:
+            col = [[255,32,0]]
+        self.rgb[:8,:5*fps] = col
+        self.rgb[:8,5*30-2:5*31+2] = [[0,0,0]]
+        self.rgb[:8,5*30:5*31] = [[0,255,0]]
+
+        if self.stage not in (1, 3): return
 
         hm = self.atriumNav['map']
         n = hm.shape[0]
@@ -2572,7 +2600,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except AttributeError:
             pass
 
-        self.rgb = np.array(self.rgb)
         out = 0.7 * overlay + 0.3 * self.rgb[self.H-n:self.H,:n]
         self.rgb[self.H-n:self.H,:n] = out
 
