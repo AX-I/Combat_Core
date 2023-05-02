@@ -270,12 +270,16 @@ def frameUpdateAfter(self):
         objArgs = (s.cStart*3, s.cEnd*3)
 
         foot = p['b1'].children[1+(i%2)].children[0].children[0]
-        pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
+        relpos = np.array([0.3,-0.08-self.footSize[p['id']],0,1])
+        pos = (relpos @ foot.TM)[:3]
 
         vv = (np.array([1,0,0,0.]) @ foot.TM)[:3]
         vv[1] = 0; vv /= Phys.eucLen(vv)
-        vx = np.cross(vv, np.array([0,1,0.]))
-        rot = np.array([vv, np.array([0,1,0.]), vx])
+
+        vy = np.array([0,1,0.])
+
+        vx = np.cross(vv, vy)
+        rot = np.array([vv, vy, vx])
 
         batchT1.append((-s.prevPos, *objArgs))
         batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
