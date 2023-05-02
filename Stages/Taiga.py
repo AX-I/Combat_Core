@@ -128,6 +128,12 @@ def setupStage(self):
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
 
 
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
+            useShaders={'2d':1, 'lens':1})
+
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
     self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=5)
     self.skyBox.created()

@@ -214,7 +214,7 @@ def setupStage(self):
 
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/Blank3.png',
+            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
             useShaders={'2d':1, 'lens':1})
 
 

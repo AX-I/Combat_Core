@@ -52,10 +52,9 @@ void main() {
 
 	float d = texture(db, tc*wh).r;
 
-    float maxZ = 0 + v_norm.x + v_UV.x + texture(tex1, tc*wh).r;
-    maxZ += aspect + vpos.x;
-    if (maxZ != d) maxZ = d;
-    
+  float maxZ = v_norm.x + v_UV.x + aspect;
+  if (maxZ != d) maxZ = d;
+
 	vec3 Vd = vmat[0];
 	vec3 Vx = vmat[1];
 	vec3 Vy = vmat[2];
@@ -63,7 +62,6 @@ void main() {
 	
 
 	vec3 rayDir = normalize(Vd + (-Vx * (cx - wF/2) + Vy * (cy - hF/2)) / (vscale * hF/2));
-	//vec3 pos = vpos + rayDir * (0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 
   float shadow = 0;
@@ -111,13 +109,16 @@ void main() {
 
   float sunDot = max(0, -dot(rayDir,LDir));
   vec3 te = LInt; // * 0.001 + vec3(1.2,0.8,0.3);
+
   vec3 col = 0.01 * te * pow(sunDot, 8.0);
   col += 0.04 * te * pow(sunDot, 256.0);
 
 
+  float fac = texture(tex1, vec2(0.5, 0.5) + (tc - vec2(wF/2,hF/2)) / width / vscale).r;
+  col += te * fac * 4;
 
 
-  col += 0.00001 * maxZ;
+  col += 0.00000001 * maxZ;
   col *= (1-shadow);
 
   f_color = vec4(col, 1.);
