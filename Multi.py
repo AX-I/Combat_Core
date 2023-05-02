@@ -341,6 +341,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def printStuff(self):
         print('pos', self.pos,
               'charpos', self.players[self.selchar]['b1'].offset[:3])
+        print('a', self.α, 'b', self.β)
 
     # ==== Temple interactivity ====
     def lightTest(self):
