@@ -103,6 +103,10 @@ void main() {
     vec3 j = max(vec3(0.f), 8 * exposure * color - blackPoint);
     // now is in [0,1]
 
+  float vignette = dot((tc - center) * wh, (tc - center) * wh);
+
+  j *= 1 - vignette*vignette * 3;
+
   if (tonemap == 0) {
     // Basic gamma
 	j = sqrt(j) / 1.1f;
@@ -142,10 +146,6 @@ void main() {
     j = j * acesOut;
     j = sqrt(j);
   }
-
-  float vignette = dot((tc - center) * wh, (tc - center) * wh);
-
-  j *= 1 - vignette*vignette * 3;
 
   f_color = j;
 }
