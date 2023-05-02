@@ -6,9 +6,12 @@
 #define MAXSKIP 4.f
 #define PI2 6.283f
 
+#define CHROM
+
 uniform sampler2D tex1;
 uniform sampler2D db;
 out vec3 f_color;
+
 uniform float width;
 uniform float height;
 uniform float exposure;
@@ -16,6 +19,8 @@ uniform float focus;
 uniform float aperture;
 
 uniform int tonemap;
+
+uniform float blackPoint;
 
 
 vec3 ACESFilm(vec3 x)
@@ -47,6 +52,8 @@ vec3 rtt_and_odt_fit(vec3 v)
 
 void main() {
 	vec2 wh = 1 / vec2(width, height);
+  vec2 center = vec2(width, height)/2;
+
 	vec2 tc = gl_FragCoord.xy;
 
 	// For VR mode
@@ -80,13 +87,25 @@ void main() {
 				if (radius > ecoc) cover *= ecoc / radius;
 				nsamples += cover;
 
-		        color += cover * texture(tex1, (tc+vec2(i, j))*wh).rgb;
+        #ifdef CHROM
+        vec2 coord = tc + vec2(i, j) - center;
+        color.r += cover * texture(tex1, (coord*0.994 + center)*wh).r;
+        color.g += cover * texture(tex1, (coord + center)*wh).g;
+        color.b += cover * texture(tex1, (coord*1.006 + center)*wh).b;
+        #else
+        color += cover * texture(tex1, (tc + vec2(i, j))*wh).rgb;
+        #endif
 		    }
 		}
 	}
 	color /= nsamples;
 
-    vec3 j = max(vec3(0.f), 8 * exposure * color);
+    vec3 j = max(vec3(0.f), 8 * exposure * color - blackPoint);
+    // now is in [0,1]
+
+  float vignette = dot((tc - center) * wh, (tc - center) * wh);
+
+  j *= 1 - vignette*vignette * 3;
 
   if (tonemap == 0) {
     // Basic gamma
@@ -128,5 +147,5 @@ void main() {
     j = sqrt(j);
   }
 
-    f_color = j;
+  f_color = j;
 }

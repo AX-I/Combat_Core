@@ -15,13 +15,12 @@ def getHeight(self, pos):
 def setupStage(self):
     self.addVertObject(VertTerrain, [-10, 0, -10],
                     heights=PATH+"../Assets/TerrainA.png",
-                    texture=PATH+"../Assets/Sand.png",
+                    texture=PATH+"../Assets/aerial_beach_01_diff_2k.png",
                     scale=0.375, vertScale=26,
-                    shadow="CR",# mip=1,
-                    uvspread=4)
+                    shadow="CR", mip=2,
+                    uvspread=20, useShaders={'normal':'sand'})
     self.terrain = self.vertObjects[-1]
 
-    
 
     self.t2 = Phys.TerrainCollider([-10,0,-10], self.terrain.size[0],
                                    self.terrain.heights, 0.375)
@@ -36,3 +35,10 @@ def setupStage(self):
     self.skyBox.created()
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
+def frameUpdate(self):
+    if self.frameNum == 1:
+        tpath = 'C:/Users/L/Downloads/Textures/ornate-celtic-gold/'
+        self.addNrmMap(tpath + "ornate-celtic-gold-normal.png", 'gold')
+        self.addNrmMap(PATH + '../Assets/aerial_beach_01_nor_gl_1k.png', 'sand',
+                       mip=True)

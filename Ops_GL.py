@@ -76,6 +76,19 @@ bloom2 = makeProgram('Post/bloom2.c')
 
 lens = makeProgram('Post/lens.c')
 
+fsr_frag = makeProgram('Post/fsr.c')
+fsr_frag = fsr_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
+fsr_frag = fsr_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
+ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+
+fsr_rcas_frag = makeProgram('Post/fsr_rcas.c')
+fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
+fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
+ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+
+fxaa = makeProgram('Post/FXAA.c')
+ctx.program(vertex_shader=trisetup2d, fragment_shader=fxaa)
+
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
 ctx.front_face = 'cw'
@@ -87,13 +100,22 @@ class CLDraw:
     def __init__(self, size_sky, max_uv, w, h, max_particles):
 
         # Internal resolution for supersampling
-        self.IRES = 1
+        self.IRES = 0.5
+
+        self.USE_FSR = 1
+        self.ENABLE_FXAA = 1
 
         self.W = np.int32(w * self.IRES)
         self.H = np.int32(h * self.IRES)
         self.A = w*h
 
+        self.outW = w
+        self.outH = h
+
         self.FB = ctx.texture((self.W, self.H), 3, dtype='f2')
+        self.FB.repeat_x = False
+        self.FB.repeat_y = False
+
         self.DB = ctx.depth_texture((self.W, self.H))
         self.fbo = ctx.framebuffer(self.FB, self.DB)
         self.fbo.use()
@@ -106,6 +128,15 @@ class CLDraw:
         self.FS_GL = ctx.texture((w, h), 3, dtype='f1')
         self.DS_GL = ctx.depth_texture((w, h))
         self.fs = ctx.framebuffer(self.FS_GL, self.DS_GL)
+
+        self.FS2_GL = ctx.texture((w, h), 3, dtype='f1')
+        self.DS2_GL = ctx.depth_texture((w, h))
+        self.fs2 = ctx.framebuffer(self.FS2_GL, self.DS2_GL)
+
+        if self.USE_FSR or self.ENABLE_FXAA:
+            self.F_FSR = ctx.texture((self.W, self.H), 3, dtype='f1')
+            self.D_FSR = ctx.depth_texture((self.W, self.H))
+            self.fs_fsr = ctx.framebuffer(self.F_FSR, self.D_FSR)
 
         # Readable depth buffer
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
@@ -150,8 +181,36 @@ class CLDraw:
         self.post_vbo = ctx.buffer(vertices.astype('float32').tobytes())
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
+        self.post_prog['tex1'] = 0
+        self.post_prog['db'] = 1
+
         self.post_prog['width'].write(np.float32(w))
         self.post_prog['height'].write(np.float32(h))
+
+        if self.USE_FSR:
+            self.post_prog['width'].write(np.float32(self.W))
+            self.post_prog['height'].write(np.float32(self.H))
+
+            self.fsr_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+            self.fsr_vao = ctx.vertex_array(self.fsr_prog, self.post_vbo, 'in_vert')
+            self.fsr_prog['Source'] = 0
+            self.fsr_prog['width_in'].write(np.float32(self.W))
+            self.fsr_prog['height_in'].write(np.float32(self.H))
+            self.fsr_prog['width_out'].write(np.float32(w))
+            self.fsr_prog['height_out'].write(np.float32(h))
+
+            self.fsr_rcas_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+            self.fsr_rcas_vao = ctx.vertex_array(self.fsr_rcas_prog, self.post_vbo, 'in_vert')
+
+        self.fxaa_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fxaa)
+        self.fxaa_vao = ctx.vertex_array(self.fxaa_prog, self.post_vbo, 'in_vert')
+        self.fxaa_prog['tex1'] = 0
+        if self.USE_FSR:
+            self.fxaa_prog['width'].write(np.float32(self.W))
+            self.fxaa_prog['height'].write(np.float32(self.H))
+        else:
+            self.fxaa_prog['width'].write(np.float32(w))
+            self.fxaa_prog['height'].write(np.float32(h))
 
         self.oldShaders = {}
 
@@ -586,6 +645,8 @@ class CLDraw:
             fragment_shader=makeProgram('Post/bloom2.c'))
         self.blurVao2 = ctx.vertex_array(self.blurProg2, self.post_vbo, 'in_vert')
 
+        self.blurProg1['tex1'] = 0
+        self.blurProg2['tex1'] = 0
         self.blurProg2['width'].write(np.float32(self.W//2))
         self.blurProg2['height'].write(np.float32(self.H//2))
 
@@ -601,7 +662,6 @@ class CLDraw:
         self.blurProg1['width'].write(np.float32(self.W//2))
         self.blurProg1['height'].write(np.float32(self.H//2))
         self.blurProg1['useLum'].write(np.int32(1))
-        self.blurProg1['tex1'] = 0
         self.FB.use(location=0)
 
         self.blurVao1.render(moderngl.TRIANGLES)
@@ -612,7 +672,6 @@ class CLDraw:
 
         self.POSTBUF1.use(location=0)
 
-        self.blurProg2['tex1'] = 0
         self.blurProg2['axis'].write(np.int32(0))
         self.blurVao2.render(moderngl.TRIANGLES)
 
@@ -622,7 +681,6 @@ class CLDraw:
 
         self.POSTBUF2.use(location=0)
 
-        self.blurProg2['tex1'] = 0
         self.blurProg2['axis'].write(np.int32(1))
         self.blurVao2.render(moderngl.TRIANGLES)
 
@@ -640,25 +698,52 @@ class CLDraw:
 
         self.blurVao1.render(moderngl.TRIANGLES)
 
-    def gamma(self, ex, tonemap='gamma'):
+    def gamma(self, ex, tonemap='gamma', blackPoint=0, useFxaa=0):
         tm = {'gamma':0, 'reinhard':1, 'reinhard2':2, 'aces':3}
+
+        useFxaa &= self.ENABLE_FXAA
 
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.fs.clear(0.0, 0.0, 0.0, 0.0)
-        self.fs.use()
+        if self.USE_FSR or useFxaa:
+            self.fs_fsr.clear(0.0, 0.0, 0.0, 0.0)
+            self.fs_fsr.use()
+        else:
+            self.fs.clear(0.0, 0.0, 0.0, 0.0)
+            self.fs.use()
         self.post_prog['focus'] = self.dofFocus
-        self.post_prog['aperture'] = self.dofAperture
-        self.post_prog['tex1'] = 0
+        self.post_prog['aperture'] = self.dofAperture * self.IRES
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
-        self.FB.use(location=0)
+        self.post_prog['blackPoint'] = np.float32(blackPoint)
 
-        self.post_prog['db'] = 1
+        self.FB.use(location=0)
         self.DBT.use(location=1)
 
         self.post_vao.render(moderngl.TRIANGLES)
+
+        if self.USE_FSR and useFxaa:
+            self.fbo.use()
+            self.F_FSR.use(location=0)
+            self.fxaa_vao.render(moderngl.TRIANGLES)
+
+            self.fs2.use()
+            self.FB.use(location=0)
+            self.fsr_vao.render(moderngl.TRIANGLES)
+
+            self.fs.use()
+            self.FS2_GL.use(location=0)
+            self.fsr_rcas_vao.render(moderngl.TRIANGLES)
+
+        elif self.USE_FSR or useFxaa:
+            self.fs.use()
+            self.F_FSR.use(location=0)
+
+        if self.USE_FSR and not useFxaa:
+            self.fsr_vao.render(moderngl.TRIANGLES)
+        if not self.USE_FSR and useFxaa:
+            self.fxaa_vao.render(moderngl.TRIANGLES)
 
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.enable(moderngl.BLEND)
@@ -835,6 +920,7 @@ class CLDraw:
                 draw['useEquiEnv'] = 1
                 draw['rotY'] = shaders[i]['rotY']
                 draw['equiEnv'] = 6
+            if 'roughness' in shaders[i]:
                 ra = np.random.rand(64)
                 draw['R'].write(ra.astype('float32'))
                 draw['roughness'] = shaders[i]['roughness']
@@ -1003,6 +1089,8 @@ class CLDraw:
                         self.NM[shaders[i]['normal']].use(location=7)
                     except KeyError:
                         print('Normal map {} not found'.format(shaders[i]['normal']))
+                if 'ignoreShadow' in shaders[i]:
+                    self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
 
                 vao.render(moderngl.TRIANGLES)
 
@@ -1255,7 +1343,7 @@ class CLDraw:
         return s.reshape((sm['dim'], sm['dim']))
 
     def getFrame(self):
-        shape = (int(self.H//self.IRES), int(self.W//self.IRES), 3)
+        shape = (self.outH, self.outW, 3)
         h = np.frombuffer(self.fs.read(), "uint8").reshape(shape)
         return h
 

@@ -56,6 +56,13 @@ def setupStage(self):
         if 'Sandstone' in f:
             tm = self.vtextures[self.vtNames[f]] * 0.8
             self.vtextures[self.vtNames[f]] = tm.astype('uint16')
+        if 'SandFloor' in f:
+            self.matShaders[self.vtNames[f]]['normal'] = 'sand_floor'
+        if '3DRock' in f:
+            self.matShaders[self.vtNames[f]]['normal'] = '3DRock'
+        if '095' in f:
+            self.matShaders[self.vtNames[f]]['normal'] = '096'
+
 
     pp1 = np.array((-14.5,15,24.))
     pp2 = np.array((-14.5,15,16.))
@@ -90,7 +97,7 @@ def setupStage(self):
     # Sun glare
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/Blank3.png',
+            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
             useShaders={'2d':1, 'lens':1})
 
 
@@ -111,4 +118,7 @@ def setupStage(self):
 
 def frameUpdate(self):
     if self.frameNum == 1:
-        self.addNrmMap(PATH + '../Models/Temple/SandstoneBricks_nrm.jpg', 'sand_blocks')
+        self.addNrmMap(PATH + '../Models/Temple/SandstoneBricks_nrm.jpg', 'sand_blocks', mip=True)
+        self.addNrmMap(PATH + '../Models/Temple/sandstone_cracks_nor_gl_1k.png', 'sand_floor')
+        self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
+        self.addNrmMap(PATH + '../Models/Temple/096.png', '096')

@@ -5,6 +5,8 @@
 
 #define SBIAS -0.04
 
+#define NBIAS 0.1
+
 in vec3 v_pos;
 //in vec3 v_color;
 uniform vec3 LDir;
@@ -28,6 +30,7 @@ uniform int wS2;
 uniform sampler2D SM_im;
 uniform int wS_im;
 
+uniform int ignoreShadow;
 
 // Lights
 uniform vec3 DInt[8];
@@ -59,6 +62,7 @@ in vec3 vertLight;
 uniform vec3 vpos;
 
 uniform float specular;
+#define roughness 0.6f
 
 uniform vec3 VV;
 uniform int useNoise;
@@ -72,8 +76,11 @@ mat2 rot(float t) {
 void main() {
 	float tz = 1.0/depth;
 
+	vec3 norm = normalize(v_norm * tz);
+
 	vec3 sxyz = SV * (v_pos*tz - SPos);
-	float sz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
+  float normbias = min(1., 1 - dot(LDir, norm)) * NBIAS;
+  float sz = (sxyz.z/2 - SBIAS - normbias - NEAR)/FAR + 0.5;
 	vec2 sf = sxyz.xy * sScale/2 + 0.5;
 	sf = clamp(sf, 0.0, 1.0) * wS;
 
@@ -123,7 +130,8 @@ void main() {
 
 	shadow = clamp(shadow, 0, 1);
 
-	vec3 norm = normalize(v_norm * tz);
+	if (ignoreShadow) shadow = 0;
+
 
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
@@ -137,7 +145,7 @@ void main() {
     vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
     vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
 
-    vec3 tgvec = texture(NM, v_UV*tz).rgb * 2.0 - 1.0;
+    vec3 tgvec = texture(NM, v_UV*tz, -0.8f).rgb * 2.0 - 1.0;
     tgvec = normalize(tgvec);
 
     norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
@@ -167,6 +175,20 @@ void main() {
     float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
     vec3 spec = theta * theta * vec3(0.008);
     spec *= specular;
+
+	// Sun specular
+	a = normalize(a);
+	vec3 h = normalize(a + LDir);
+	//theta = min(1.f, max(0.f, dot(h, norm) + 0.1f));
+	theta = max(0.f, dot(h, norm));
+
+	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
+    fr *= fr; fr *= fr; fr *= fr;// fr *= fr; fr *= fr; fr *= fr;
+
+	int specPow = int(exp2(12*(1.f - roughness)));
+	float fac = (specPow + 2) / (2*8 * 3.1416f);
+	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
+
 
 
     light *= (1 + highMult);

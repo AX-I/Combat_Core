@@ -173,6 +173,12 @@ def setupStage(self):
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
 
 
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
+            useShaders={'2d':1, 'lens':1})
+
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
     self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=5)
     self.skyBox.created()
@@ -197,10 +203,11 @@ def frameUpdate(self):
         s = np.array(s)
         self.draw.addBakedShadow(0, s)
 
-        self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', 'rock')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Snow005_Normal.jpg', 'snow')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Ice004_Normal.jpg', 'ice')
-        self.addNrmMap(PATH + '../Models/TaigaNew/Bark012_Normal.png', 'bark')
+        tpath = PATH + '../Models/TaigaNew/'
+        self.addNrmMap(tpath + '3DRock004_Normal.jpg', 'rock')
+        self.addNrmMap(tpath + 'Snow005_Normal.jpg', 'snow')
+        self.addNrmMap(tpath + 'Ice004_Normal.jpg', 'ice')
+        self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
 
         s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
         s = np.array(s)

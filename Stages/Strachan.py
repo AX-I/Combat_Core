@@ -67,6 +67,7 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['SSR'] = 2
         elif "Wood_Ceil" in f:
             self.matShaders[self.vtNames[f]]['noise'] = 1
+            self.matShaders[self.vtNames[f]]['normal'] = 'wood_coffers'
         elif "Wood" in f:
             self.matShaders[self.vtNames[f]]['spec'] = 0.5
             self.matShaders[self.vtNames[f]]['noise'] = 1
@@ -213,7 +214,7 @@ def setupStage(self):
 
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/Blank3.png',
+            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
             useShaders={'2d':1, 'lens':1})
 
 
@@ -322,6 +323,8 @@ def testPlatforms(self):
 
 def frameUpdate(self):
     if self.frameNum < 2:
+        self.addNrmMap(PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
+                       'wood_coffers')
         return
 
 
