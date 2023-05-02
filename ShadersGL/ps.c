@@ -5,6 +5,7 @@
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
+uniform float vscale;
 uniform float aspect;
 uniform float size;
 
@@ -17,7 +18,7 @@ in VS_OUT {
 
 void main() {
     depth = gs_in[0].depth;
-    float dimy = size * gs_in[0].depth;
+    float dimy = size * gs_in[0].depth * vscale;
     float dimx = dimy * aspect;
 
     gl_Position = gl_in[0].gl_Position + vec4(-dimx, -dimy, 0.0, 0.0);

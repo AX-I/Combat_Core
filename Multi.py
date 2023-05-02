@@ -1035,7 +1035,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.players.append(a)
         self.w.addRB(pv)
 
-        a["cheight"] = self.rpi[a["num"]][2]
+        a["cheight"] = self.rpi[a["num"]][2] + 0.06
 
         r = json.load(open(self.rpi[a["num"]][0]))
         a["rig"] = Rig(r, scale=self.rpi[a["num"]][1])
@@ -1472,7 +1472,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
-        self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
+        #self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
+        self.poses = Anim.loadAnim(p+'Ski4.ava', timeScale=0.9)
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
         self.idleFlat = Anim.flattenPose(self.idle)
@@ -1562,6 +1563,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
+            if self.stage == 2:
+                sobj[self.skis[0].texNum] = True
+                sobj[self.poles[0].texNum] = True
         return sobj
 
     def sendState(self):
@@ -2219,7 +2223,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
 
             if a["moving"]:
-                transKF = 2 if a['moving'] > 0 else 4
+                transKF = 5 if a['moving'] > 0 else 4
                 if not a['movingOld']:
                     a['animTrans'] = CURRTIME
                     a['poset'] = self.keyFrames[transKF][0]
@@ -2451,6 +2455,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             a['b1'].offset[:3] + test, handLen)
 
                 footSize = self.footSize[a['id']]
+
+                # Skis
+                if self.stage == 2:
+                    if a['id'] == self.selchar:
+                        footSize += 0.08
+
                 try: ikR, ikL = a['legIKPos']
                 except KeyError: pass
                 else:
@@ -2489,6 +2499,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["movingOld"] = a["moving"]
 
         self.frameProfile('PlayerMove')
+
+
+        try:
+            self.STAGECONFIG.frameUpdateAfter(self)
+        except AttributeError:
+            pass
 
         nd = self.draw.noiseDist
         if self.iceEffect:

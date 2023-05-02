@@ -54,7 +54,7 @@ class ParticleSystem:
                  randPos=0.5, randVel=0.2, randDir=0.1,
                  force=(0, 0, 0), drag=0.001,
                  lifespan=10, colorOverLife=None,
-                 randColor=15, tex=None, shSize=2,
+                 randColor=0, tex=None, shSize=2,
                  **ex):
         
         self.N = nParticles

@@ -2,11 +2,13 @@
 
 from PIL import Image
 import numpy as np
-from math import pi
+from math import pi, sin, cos
 from OpsConv import PATH
+import time
 
 from VertObjects import VertTerrain, VertModel, VertPlane, VertTerrain0
 from TexObjects import TexSkyBox
+from ParticleSystem import ContinuousParticleSystem
 
 import random
 import numpy.random as nr
@@ -119,6 +121,49 @@ def setupStage(self):
                        useShaders={'SSR':'0', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
+
+    self.skis = []
+    self.poles = []
+    self.skiParticles = []
+    for i in range(2*len(self.players)):
+        self.addVertObject(VertModel, [0,0,0],
+                           filename=mpath + 'Ski.obj', cache=False,
+                           mip=2, useShaders={'spec': 0.4},
+                           scale=0.6, rot=(0,-pi/2,0))
+        self.skis.append(self.vertObjects[-1])
+        self.addVertObject(VertModel, [0,-1.9,0], # obj is 1.6 height
+                           filename=mpath + 'Pole.obj', cache=False,
+                           useShaders={'spec': 0.4},
+                           scale=1.2, rot=(0,pi/2,0))
+        self.poles.append(self.vertObjects[-1])
+        ts = 4
+        ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
+                                      vel=0.03/ts, force=(0,-0.01/ts/ts,0),
+                                      lifespan=90*ts, nParticles=30,
+                                      randPos=0.02, randVel=0.01/ts,
+                                      size=0.15, opacity=0.15,
+                                      color=np.array([1,0.3,0.24]) * 0.3)
+        self.addParticleSystem(ps)
+        self.skiParticles.append(ps)
+
+    for s in self.skis:
+        s.prevPos = np.array([0,0,0.])
+        s.prevRot = np.identity(3)
+    for s in self.poles:
+        s.planted = False
+        s.prevPos = np.array([0,0,0.])
+        s.prevRot = np.identity(3)
+        s.plantDir = None
+
+
+    for i in range(2000):
+        p = nr.rand(3) * np.array([70,8,70]) + np.array([-20,0,-20])
+        r = random.random()*3
+        self.addVertObject(VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
+                           texture=PATH+'../Assets/Snowflake.png',
+                           useShaders={'add': 1, 'noline':1}, mip=2,
+                           rot=(0,r,0))
+
     LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
     LDir = pi*1.45
     skyI = np.array([0.1,0.15,0.5]) * 0.8
@@ -164,5 +209,117 @@ def frameUpdate(self):
         self.addNrmMap(tpath + 'Ice004_Normal.jpg', 'ice')
         self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
 
+        s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
+        s = np.array(s)
+        s = np.array(s > 30, 'uint8')
+        self.draw.addTexAlpha(s, 'snowflake')
+
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
+
+
+
+def frameUpdateAfter(self):
+    CURRTIME = time.time()
+
+    batchT1 = []
+    batchR = []
+    batchT2 = []
+
+    for i in range(2*len(self.players)):
+        p = self.players[i//2]
+        if p['id'] not in self.actPlayers: continue
+        if p['id'] == 4: continue
+
+        s = self.skis[i]
+        objArgs = (s.cStart*3, s.cEnd*3)
+
+        foot = p['b1'].children[1+(i%2)].children[0].children[0]
+        pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
+
+        vv = (np.array([1,0,0,0.]) @ foot.TM)[:3]
+        vv[1] = 0; vv /= Phys.eucLen(vv)
+        vx = np.cross(vv, np.array([0,1,0.]))
+        rot = np.array([vv, np.array([0,1,0.]), vx])
+
+        batchT1.append((-s.prevPos, *objArgs))
+        batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
+        batchT2.append((pos, *objArgs))
+
+        s.prevPos = pos
+        s.prevRot = rot
+
+        ps = self.skiParticles[i]
+        active = self.keyFrames[11][0] > p['poset'] > self.keyFrames[3][0]
+
+        if ((i + active)&1) and (p['moving'] or (CURRTIME - p['animTrans'] < 0.1)):
+            ps.changePos(pos + 0.5*vv)
+            ps.step()
+        elif (CURRTIME - p['animTrans'] > 0.1) and ps.started:
+            ps.reset()
+
+    tn = self.skis[0].texNum
+    self.draw.translateBatch({tn: batchT1})
+    self.draw.rotateBatch({tn: batchR})
+    self.draw.translateBatch({tn: batchT2})
+
+
+    batchT1 = []
+    batchR = []
+    batchT2 = []
+
+    for i in range(2*len(self.players)):
+        p = self.players[i//2]
+        if p['id'] == 4: continue
+
+        s = self.poles[i]
+        objArgs = (s.cStart*3, s.cEnd*3)
+
+        hand = p['b1'].children[0].children[i%2].children[0].children[0]
+        pos = (np.array([0,-0.04,-0.14 + 0.28*(i%2),1.]) @ hand.TM)[:3]
+
+        plant1a = (self.keyFrames[1][0] + self.keyFrames[2][0]) / 2
+        plant1b = self.keyFrames[6][0] + 0.1
+        plant2a = (self.keyFrames[9][0] + self.keyFrames[10][0]) / 2
+        plant2b = self.keyFrames[14][0] + 0.1
+        if (plant1a < p['poset'] < plant1b or
+            plant2a < p['poset'] < plant2b) and not s.planted:
+            s.planted = True
+            pI = s.prevPos + np.array([-sin(p['cr']), 0, cos(p['cr'])]) * \
+                 (-0.15 + 0.3 * (i&1))
+            s.plantPos = np.array([pI[0], self.terrain.getHeight(*pI[::2]), pI[2]])
+
+        if (plant1b < p['poset'] < plant2a or p['poset'] > plant2b) and s.planted:
+            s.planted = False
+            s.plantDir = pos - s.plantPos
+
+        batchT1.append((-s.prevPos, *objArgs))
+        if s.planted:
+            vy = pos - s.plantPos
+            vy /= Phys.eucLen(vy)
+            vv = np.array([cos(p['cr']),0,sin(p['cr'])])
+            vx = np.cross(vv,vy)
+            vx /= Phys.eucLen(vx)
+            rot = np.array([np.cross(vx,vy),vy,vx])
+            batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
+            s.prevRot = rot
+        elif s.plantDir is not None:
+            off = np.array([0,0.1 * (self.frameTime*25),0])
+            s.plantDir = s.plantDir + off
+            s.plantDir /= Phys.eucLen(s.plantDir)
+            vy = s.plantDir
+            vv = np.array([cos(p['cr']),0,sin(p['cr'])])
+            vx = np.cross(vv,vy)
+            vx /= Phys.eucLen(vx)
+            rot = np.array([np.cross(vx,vy),vy,vx])
+            batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
+            s.prevRot = rot
+
+        batchT2.append((pos, *objArgs))
+        s.prevPos = pos
+
+    tn = self.poles[0].texNum
+    self.draw.translateBatch({tn: batchT1})
+    if batchR:
+        self.draw.rotateBatch({tn: batchR})
+    self.draw.translateBatch({tn: batchT2})
