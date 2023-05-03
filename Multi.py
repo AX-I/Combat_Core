@@ -1046,7 +1046,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.players.append(a)
         self.w.addRB(pv)
 
-        a["cheight"] = self.rpi[a["num"]][2] + 0.06
+        a["cheight"] = self.rpi[a["num"]][2] + 0.06 * (self.stage == 2)
 
         r = json.load(open(self.rpi[a["num"]][0]))
         a["rig"] = Rig(r, scale=self.rpi[a["num"]][1])
@@ -1483,8 +1483,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
-        #self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
-        self.poses = Anim.loadAnim(p+'Ski4.ava', timeScale=0.9)
+        if self.stage == 2:
+            self.poses = Anim.loadAnim(p+'Ski4.ava', timeScale=0.9)
+            self.transStartKF = 5
+        else:
+            self.poses = Anim.loadAnim(p+'WalkCycle8.ava', timeScale=0.9)
+            self.transStartKF = 2
+
         self.keyFrames = self.poses
         self.idle = json.load(open(p+"Idle1.pose"))
         self.idleFlat = Anim.flattenPose(self.idle)
@@ -2234,7 +2239,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
 
             if a["moving"]:
-                transKF = 5 if a['moving'] > 0 else 4
+                transKF = self.transStartKF if a['moving'] > 0 else 4
                 if not a['movingOld']:
                     a['animTrans'] = CURRTIME
                     a['poset'] = self.keyFrames[transKF][0]
