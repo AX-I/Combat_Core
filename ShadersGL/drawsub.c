@@ -32,7 +32,7 @@ void main() {
   if (fadeUV == 1) {
     opacity *= max(0., 1-2*length(v_UV / depth - vec2(0.5)));
   }
-  if (useTex) {
+  if (useTex == 1) {
     opacity = texture(tex1, v_UV / depth).r;
     if (opacity < 0.5) discard;
     f_color = vec4(rgb * opacity, opacity);

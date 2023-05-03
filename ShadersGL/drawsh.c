@@ -130,7 +130,7 @@ void main() {
 
 	shadow = clamp(shadow, 0, 1);
 
-	if (ignoreShadow) shadow = 0;
+	if (ignoreShadow == 1) shadow = 0;
 
 
   if (useNM > 0) {

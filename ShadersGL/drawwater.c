@@ -118,7 +118,7 @@ void main() {
     vec3 refl = normalize(a - 2 * nd * norm) * REFL_VSIZE;
 
     int maxRLen = REFL_LENGTH;
-	if (dot(refl, SVd) < -0.1f) maxRLen = 1;
+    //if (dot(refl, SVd) < -0.1f) maxRLen = 1;
     if (refl.y < 0) maxRLen = 1;
 
     vec2 rxy = tc;
@@ -173,7 +173,7 @@ void main() {
     uvEnv.y = acos(refl.y) / 3.1416;
 
     vec3 refltest = vec3(0.04, 0.08, 0.12);
-    if (useEquiEnv) {
+    if (useEquiEnv == 1) {
       refltest = texture(equiEnv, uvEnv).rgb;
     }
 
