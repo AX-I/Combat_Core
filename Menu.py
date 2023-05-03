@@ -48,7 +48,16 @@ from math import sin
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
-import ImgUtilsCL as ImgUtils
+USE_CL = True
+
+if USE_CL:
+    import ImgUtilsCL as ImgUtils
+else:
+    import ImgUtils
+
+from ImgUtilsCL import CLObject
+import pyopencl as cl
+mf = cl.mem_flags
 
 import OpsConv
 BLOCK_SIZE = 128
@@ -139,10 +148,6 @@ h = ("Courier", 10)
 TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 
 
-import pyopencl as cl
-mf = cl.mem_flags
-
-from ImgUtilsCL import CLObject
 
 from MenuLayout import (
     mainMenuLayout, mainHandleMouse, mainMenuSetup,
@@ -335,7 +340,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
         f = np.zeros((self.H, self.W, 3), dtype='uint16')
-        self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
+        if USE_CL:
+            self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
+        else:
+            self.frameBuf = f
         self.frameHost = f
 
         self.buttonSelect = False
@@ -373,6 +381,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
+        if not USE_CL: return x
         x = (x * 256).astype('uint16')
         buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=x.nbytes)
         cl.enqueue_copy(self.cq, buf, x)
@@ -405,10 +414,13 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         frame = self.frameBuf
 
-        self.gamma(frame)
+        if USE_CL:
+            self.gamma(frame)
 
-        cl.enqueue_copy(self.cq, self.frameHost, frame)
-        frame = self.frameHost
+            cl.enqueue_copy(self.cq, self.frameHost, frame)
+            frame = self.frameHost
+        else:
+            frame = np.sqrt(frame) * 16
 
         et = time.perf_counter() - xt
         #print('Blend', et)

@@ -52,7 +52,7 @@ class NPCanvas:
 
     def drawText(self, fr: np.array, dText: str, dFill: tuple, dFont,
                  coords: tuple, fOpacity=1,
-                 blur=2, bFill=(0,0,0), method='box') -> None:
+                 blur=2, bFill=(0,0,0), method='box', blurWidth=None) -> None:
         """Draw text onto fr
         coords => offset from center (y, x)
         """
@@ -74,7 +74,8 @@ class NPCanvas:
                            b[:,:,:3] * opacity
 
     def blend(self, dest: np.array, source: np.array,
-              coords: tuple, method='alpha') -> None:
+              coords: tuple, method='alpha',
+              effect=None, effectArg=None) -> None:
         """Blend image source onto dest, centered at coords (x, y)
         Preconditions:
             - method in {'alpha', 'add', 'screen', 'replace'}
@@ -108,11 +109,11 @@ class NPCanvas:
         if method == 'alpha':
             alpha = np.expand_dims(source[:,:,3], -1) / 255.
             np.minimum(alpha, 1, out=alpha)
-            dest[up:down, left:right] *= 1 - alpha
-            dest[up:down, left:right] += source[:,:,:3] * alpha
+            tmp = (dest[up:down, left:right] * (1 - alpha)).astype('uint16')
+            dest[up:down, left:right] = tmp + (source[:,:,:3] * alpha).astype('uint16')
 
         if method == 'add':
-            p = np.clip(source.astype('uint16') + dest[up:down, left:right], 0, 255)
+            p = np.clip(source.astype('uint16')[:,:,:3] + dest[up:down, left:right], 0, 255)
             dest[up:down, left:right] = p.astype('uint8')
 
         if method == 'screen':
@@ -120,4 +121,4 @@ class NPCanvas:
                                         * (255 - source) / 255
 
         if method == 'replace':
-            dest[up:down, left:right] = source
+            dest[up:down, left:right] = source[:,:,:3]
