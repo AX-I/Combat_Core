@@ -297,11 +297,21 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('J', self.tgBlack2)
 
         self.bindKey('k', self.tgSpec)
+
+        self.bindKey('0', self.testColor)
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
+    def testColor(self):
+        import tkinter.colorchooser
+        c = tkinter.colorchooser.askcolor()
+        if c[0] is None: return
+        d = self.directionalLights[0]
+        d['i'] = np.array(c[0]) / 255 * 2
+        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
     def tgBlack1(self):
         self.blackPoint += 0.01
         print('black point', self.blackPoint)
@@ -331,6 +341,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def printStuff(self):
         print('pos', self.pos,
               'charpos', self.players[self.selchar]['b1'].offset[:3])
+        print('a', self.α, 'b', self.β)
 
     # ==== Temple interactivity ====
     def lightTest(self):

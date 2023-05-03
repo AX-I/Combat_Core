@@ -108,11 +108,36 @@ def setupStage(self):
         if f.endswith('Piney.png'):
             self.matShaders[self.vtNames[f]]['normal'] = 'bark'
 
-    pfile = mpath + "TaigaNew/TaigaPillar.obj"
+    tgpath = mpath + 'TaigaNew/'
+    pfile = tgpath + "TaigaPillar.obj"
     self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
                        rot=(0,-47.8 * 3.14/180, 0), static=True,
                        mip=2, useShaders={'spec': 0.4, 'normal': 'rock'},
                        shadow="CR")
+
+    # Large rocks
+    pfile = tgpath + "LargeRocks.obj"
+    objs = [{'pos':(0,0,0), 'rot':(0,0,0)},
+            {'pos':(21,  6.9,-21.6), 'rot':(0,23/180*3.14,0)},
+            {'pos':(37.6,4.8,-22), 'rot':(0,-34/180*3.14,0)},
+            {'pos':(-1,5.5,-36.3), 'rot':(0,201/180*3.14,0)},
+            {'pos':(-29,3.5,3.1), 'rot':(0,127/180*3.14,0)}]
+    for o in objs:
+        self.addVertObject(VertModel, o['pos'], rot=o['rot'], static=True,
+                           filename=pfile,
+                           mip=2, useShaders={'spec':0.4, 'normal':'largeRock'},
+                           shadow="CR")
+
+    # Background Mountain
+    pfile = tgpath + "Mountain.obj"
+    opts = {'filename':pfile, 'mip':2, 'useShaders':
+            {'spec':0.4, 'normal':'mountain', 'ignoreShadow':1},
+            'shadow':'', 'static':True}
+    self.addVertObject(VertModel, [22,32,-271], rot=(0,0,0), scale=2,
+                       **opts)
+    self.addVertObject(VertModel, [-366,50,-11], rot=(0,pi/2,0), scale=2.5,
+                       **opts)
+
 
     iceW = 16
     self.addVertObject(VertPlane, [8.5-iceW, 1.8, 7-iceW],
@@ -136,7 +161,7 @@ def setupStage(self):
                            useShaders={'spec': 0.4},
                            scale=1.2, rot=(0,pi/2,0))
         self.poles.append(self.vertObjects[-1])
-        ts = 4
+        ts = 1
         ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
                                       vel=0.03/ts, force=(0,-0.01/ts/ts,0),
                                       lifespan=90*ts, nParticles=30,
@@ -157,19 +182,27 @@ def setupStage(self):
 
 
     for i in range(2000):
-        p = nr.rand(3) * np.array([70,8,70]) + np.array([-20,0,-20])
+        p = nr.rand(3) * np.array([70,12,70]) + np.array([-20,1.5,-20])
         r = random.random()*3
         self.addVertObject(VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
                            texture=PATH+'../Assets/Snowflake.png',
                            useShaders={'add': 1, 'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6
+    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6 * 1.5
+    #LInt = np.array([0.1,0.3,0.9]) * 1
+    #LInt = np.array([0.5,0.6,0.9])
+    #LInt = np.array([1,0.4,0.2])
+    # 255, 122, 2
+    # 63, 125, 252, black point 0.15
     LDir = pi*1.45
-    skyI = np.array([0.1,0.15,0.5]) * 0.8
+    skyI = np.array([0.2,0.25,0.5]) * 0.8 * 0.6
+    #skyI = np.array([0.1,0.15,0.5]) * 0.3
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
-    self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":[0.08,0.06,0.1]})
-    self.directionalLights.append({"dir":[LDir, 0.1], "i":[0.12,0.1,0.08]})
+    self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
+                                   np.array([0.08,0.06,0.1]) * 0.6})
+    self.directionalLights.append({"dir":[LDir, 0.1], "i":
+                                   np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
 
 
@@ -180,7 +213,7 @@ def setupStage(self):
             useShaders={'2d':1, 'lens':1})
 
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
-    self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=5)
+    self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=2)
     self.skyBox.created()
 
     skyShader = self.matShaders[self.skyBox.texNum]
@@ -208,6 +241,8 @@ def frameUpdate(self):
         self.addNrmMap(tpath + 'Snow005_Normal.jpg', 'snow')
         self.addNrmMap(tpath + 'Ice004_Normal.jpg', 'ice')
         self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
+        self.addNrmMap(tpath + 'LargeRocks_normal.png', 'largeRock')
+        self.addNrmMap(tpath + 'Mountain_normal.png', 'mountain')
 
         s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
         s = np.array(s)
@@ -235,12 +270,16 @@ def frameUpdateAfter(self):
         objArgs = (s.cStart*3, s.cEnd*3)
 
         foot = p['b1'].children[1+(i%2)].children[0].children[0]
-        pos = (np.array([0.3,-0.08-self.footSize[p['id']],0,1]) @ foot.TM)[:3]
+        relpos = np.array([0.3,-0.08-self.footSize[p['id']],0,1])
+        pos = (relpos @ foot.TM)[:3]
 
         vv = (np.array([1,0,0,0.]) @ foot.TM)[:3]
         vv[1] = 0; vv /= Phys.eucLen(vv)
-        vx = np.cross(vv, np.array([0,1,0.]))
-        rot = np.array([vv, np.array([0,1,0.]), vx])
+
+        vy = np.array([0,1,0.])
+
+        vx = np.cross(vv, vy)
+        rot = np.array([vv, vy, vx])
 
         batchT1.append((-s.prevPos, *objArgs))
         batchR.append((np.transpose(s.prevRot) @ rot, *objArgs))
