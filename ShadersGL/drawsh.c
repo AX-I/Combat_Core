@@ -183,7 +183,7 @@ void main() {
 	theta = max(0.f, dot(h, norm));
 
 	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
-    fr *= fr; fr *= fr; fr *= fr;// fr *= fr; fr *= fr; fr *= fr;
+    fr *= fr; fr *= fr; fr *= fr;
 
 	int specPow = int(exp2(12*(1.f - roughness)));
 	float fac = (specPow + 2) / (2*8 * 3.1416f);

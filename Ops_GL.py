@@ -924,9 +924,6 @@ class CLDraw:
                 ra = np.random.rand(64)
                 draw['R'].write(ra.astype('float32'))
                 draw['roughness'] = shaders[i]['roughness']
-            if 'normal' in shaders[i]:
-                draw['useNM'] = 1
-                draw['NM'] = 7
 
         elif 'dissolve' in shaders[i]:
             if 'dissolve' in self.oldShaders[i]:
@@ -948,10 +945,11 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
-            if 'normal' in shaders[i]:
-                draw['useNM'] = 1
-                draw['NM'] = 7
             draw['RAND'] = 2
+
+        if 'normal' in shaders[i]:
+            draw['useNM'] = 1
+            draw['NM'] = 7
 
         try:
             if 'stage' in kwargs:

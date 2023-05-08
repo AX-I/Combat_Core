@@ -44,11 +44,16 @@ uniform sampler2D TA;
 
 uniform int translucent;
 
+// Normal map
+uniform int useNM;
+uniform sampler2D NM;
+
 in vec3 vertLight;
 
 uniform vec3 vpos;
 
 uniform float specular;
+#define roughness 0.6f
 
 void main() {
 	float tz = 1.0/depth;
@@ -100,6 +105,23 @@ void main() {
     shadow = clamp(shadow, 0, 1);
 
 	vec3 norm = normalize(v_norm * tz);
+  if (useNM > 0) {
+    vec2 dUV1 = dFdx(v_UV*tz);
+    vec2 dUV2 = dFdy(v_UV*tz);
+    vec3 dPos1 = dFdx(v_pos*tz);
+    vec3 dPos2 = dFdy(v_pos*tz);
+
+    float det = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
+    float rdet = 1.0 / det;
+
+    vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
+    vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
+
+    vec3 tgvec = texture(NM, v_UV*tz, -0.8f).rgb * 2.0 - 1.0;
+    tgvec = normalize(tgvec);
+
+    norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
+  }
 
     vec3 light;
     if (translucent == 1)
@@ -131,6 +153,19 @@ void main() {
 	float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
 	vec3 spec = theta * theta * vec3(0.008);
     spec *= specular;
+
+  // Sun specular
+	a = normalize(a);
+	vec3 h = normalize(a + LDir);
+	//theta = min(1.f, max(0.f, dot(h, norm) + 0.1f));
+	theta = max(0.f, dot(h, norm));
+
+	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
+    fr *= fr; fr *= fr; fr *= fr;
+
+	int specPow = int(exp2(12*(1.f - roughness)));
+	float fac = (specPow + 2) / (2*8 * 3.1416f);
+	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 
 
     light *= (1 + highMult);
