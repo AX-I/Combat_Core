@@ -502,32 +502,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
         if self.stage < 4:
             return rm
-
-        if self.stage == 5:
-            return self.STAGECONFIG.getRenderMask(self, rm)
-
-        try: t = time.time() - self.transStart
-        except: t = 0
-
-        if t > 2:
-            r = list(rm)
-            if t > 3:
-                for f in self.vtNames:
-                    if 'rocks_ground_test' in f:
-                        r[self.vtNames[f]] = True
-            return r
-        else:
-            r = list(rm)
-            for f in self.vtNames:
-                if '3DRock004' in f or 'None' in f or 'Blank2' in f:
-                    r[self.vtNames[f]] = False
-                elif 'rocks_ground_test' in f or 'Cloud' in f:
-                    r[self.vtNames[f]] = False
-                elif self.vtNames[f] > self.players[-1]['obj'].texNum:
-                    r[self.vtNames[f]] = True
-            if t > 0.5:
-                r[self.sandstoneBricksTex] = False
-            return r
+        return self.STAGECONFIG.getRenderMask(self, rm)
 
 
     # ==== Respawning / recovery ====
