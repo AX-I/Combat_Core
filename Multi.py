@@ -923,7 +923,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i = np.array((1,1,1.)) * min(1, 1.33 * max(0, p["poset"] - 0.25))**2
         self.pointLights.append({"i":i, "pos":(pr + pl) / 2})
 
-    def z1(self): self.setFOV(max(30, self.fovX * 0.96))
+    def z1(self): self.setFOV(max(20, self.fovX * 0.96))
     def z2(self): self.setFOV(min(120, self.fovX * 1.04166))
 
     def tgControl(self):

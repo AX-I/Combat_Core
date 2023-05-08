@@ -100,7 +100,7 @@ class CLDraw:
     def __init__(self, size_sky, max_uv, w, h, max_particles):
 
         # Internal resolution for supersampling
-        self.IRES = 0.5
+        self.IRES = 0.75
 
         self.USE_FSR = 1
         self.ENABLE_FXAA = 1
@@ -630,10 +630,14 @@ class CLDraw:
 
         # 1st pass
         self.POSTBUF1 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
+        self.POSTBUF1.repeat_x = False
+        self.POSTBUF1.repeat_y = False
         self.POSTDB1 = ctx.depth_texture((self.W//2, self.H//2))
         self.POSTFBO1 = ctx.framebuffer(self.POSTBUF1, self.POSTDB1)
         # 2nd pass
         self.POSTBUF2 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
+        self.POSTBUF2.repeat_x = False
+        self.POSTBUF2.repeat_y = False
         self.POSTDB2 = ctx.depth_texture((self.W//2, self.H//2))
         self.POSTFBO2 = ctx.framebuffer(self.POSTBUF2, self.POSTDB2)
 
