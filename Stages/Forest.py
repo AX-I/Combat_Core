@@ -78,7 +78,7 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['translucent'] = 1
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
-            self.matShaders[self.flameMTL] = {'add': 1.6, 'noline': 1}
+            self.matShaders[self.flameMTL] = {'add': 5, 'noline': 1}
             self.vertObjects[self.flameMTL].castShadow = False
         if 'Sandstone' in f:
             tm = self.vtextures[self.vtNames[f]] * 0.8
@@ -93,8 +93,8 @@ def setupStage(self):
 
     pp1 = np.array((-14.5,15,24.))
     pp2 = np.array((-14.5,15,16.))
-    pi1 = np.array((1,0.91,0.72)) * 30
-    pi2 = np.array((0.48,0.99,1)) * 24
+    pi1 = np.array((1,0.91,0.72)) * 30 * 0.6
+    pi2 = np.array((0.48,0.99,1)) * 24 * 0.6
 
     ppc = np.array((-14.5,2.3,20))
     pic = np.array((1,1,1.))
@@ -103,7 +103,7 @@ def setupStage(self):
                            {'i':pic, 'pos':ppc}]
 
     # Torches
-    fi = np.array((1,0.6,0.35)) * 2
+    fi = np.array((1,0.5,0.05)) * 10
     self.envPointLights.extend([
         {'i':fi, 'pos':(-6.3, 3.2,5.5)},
         {'i':fi, 'pos':(-22.7,3.2,5.5)},
