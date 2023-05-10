@@ -111,15 +111,19 @@ def setupStage(self):
         {'i':fi, 'pos':(-22.7,3.2,34.5)}
     ])
 
-    # Overwritten by transition
-    self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":[1.8,1.6,0.9]})
+    # Will transition to this
+    self.DIR0I = np.array([1.9,1.4,0.6]) * 1.4
+    self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":self.DIR0I})
     # First bounce
-    self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":[0.22,0.24,0.2]})
+    self.DIR1I = np.array([0.22,0.24,0.2])# * 0.4
+    self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":self.DIR1I})
     # Second bounce
     self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
     # Sky light
-    self.directionalLights.append({"dir":[0, pi/2], "i":[0.04,0.12,0.18]})
-    self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":[0.1,0.25,0.4]})
+    self.DIR3I = np.array([0.04,0.12,0.18])# * 0.4
+    self.directionalLights.append({"dir":[0, pi/2], "i":self.DIR3I})
+    self.DIR4I = np.array([0.1,0.25,0.4]) * 0.4
+    self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":self.DIR4I})
 
     # Sun glare
     self.addVertObject(VertPlane, [-1,-1,0],
@@ -184,8 +188,6 @@ def testTempleTrans(self):
 
     if t > 12:
         # Fade out sky light if inside temple
-        di = np.array(self.directionalLights[4]['i'])
-        do = np.array([0.1,0.25,0.4]) * 0.4
         pos = self.players[self.selchar]['b1'].offset[:3]
 
         # Border x: (-30, 7)
@@ -194,15 +196,18 @@ def testTempleTrans(self):
         f += max(0, min(1, (pos[2] - 32)/8)) + max(0, min(1, (5 - pos[2])/8))
 
         f = min(1, f)
+
+        di = np.array(self.directionalLights[4]['i'])
+        do = self.DIR4I
         self.directionalLights[4]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
 
         di[:] = self.directionalLights[3]['i']
-        do[:] = np.array([0.04,0.12,0.18])# * 0.4
+        do[:] = self.DIR3I
         self.directionalLights[3]['i'] = di * 0.7 + do * max(0.6, f) * 0.3
 
         # Fade out bounce light too
         di[:] = self.directionalLights[1]['i']
-        do[:] = np.array([0.22,0.24,0.2])# * 0.4
+        do[:] = self.DIR1I
         self.directionalLights[1]['i'] = di * 0.7 + do * max(0.7, f) * 0.3
 
         # Fade out fog too
@@ -240,7 +245,7 @@ def testTempleTrans(self):
 
     d = self.directionalLights[0]
     dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
-             (4, np.array([2.,2.,2.])), (10, np.array([1.9,1.4,0.6]) * 1.4)]
+             (4, np.array([2.,2.,2.])), (10, self.DIR0I)]
 
     d['i'] = Anim.interpAttr(t, dirKF)
 
