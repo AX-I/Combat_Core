@@ -112,7 +112,7 @@ def setupStage(self):
     ])
 
     # Will transition to this
-    self.DIR0I = np.array([1.72,1.5,0.6]) * 1.4
+    self.DIR0I = np.array([1.72,1.5,0.6]) * 2
     self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":self.DIR0I})
     # First bounce
     self.DIR1I = np.array([0.22,0.24,0.2]) * 0.7
@@ -254,7 +254,7 @@ def testTempleTrans(self):
              (0.8, np.array((1.6, 0.3,400, 1))),
              (2,   np.array((1.6, 0.2,400, 1))),
              (5, np.array((0.1, 0.01, 80,  0.6))),
-             (9, np.array((0.02,0.002,40,  0)))]
+             (9, np.array((0.015,0.002,40, 0)))]
 
     fparams = Anim.interpAttr(t, fogKF)
 
