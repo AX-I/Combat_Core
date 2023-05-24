@@ -93,8 +93,8 @@ def setupStage(self):
 
     pp1 = np.array((-14.5,15,24.))
     pp2 = np.array((-14.5,15,16.))
-    pi1 = np.array((1,0.91,0.72)) * 30 * 0.6
-    pi2 = np.array((0.48,0.99,1)) * 24 * 0.6
+    pi1 = np.array((1,0.91,0.72)) * 30 * 0.4
+    pi2 = np.array((0.48,0.99,1)) * 24 * 0.4
 
     ppc = np.array((-14.5,2.3,20))
     pic = np.array((1,1,1.))
@@ -103,7 +103,7 @@ def setupStage(self):
                            {'i':pic, 'pos':ppc}]
 
     # Torches
-    fi = np.array((1,0.5,0.05)) * 10
+    fi = np.array((1,0.45,0.04)) * 10
     self.envPointLights.extend([
         {'i':fi, 'pos':(-6.3, 3.2,5.5)},
         {'i':fi, 'pos':(-22.7,3.2,5.5)},
@@ -112,13 +112,14 @@ def setupStage(self):
     ])
 
     # Will transition to this
-    self.DIR0I = np.array([1.7,1.5,0.66]) * 1.4
+    self.DIR0I = np.array([1.72,1.5,0.6]) * 1.4
     self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":self.DIR0I})
     # First bounce
     self.DIR1I = np.array([0.22,0.24,0.2]) * 0.7
     self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":self.DIR1I})
     # Second bounce
-    self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
+    self.DIR2I = np.array([0.14,0.12,0.08])
+    self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":self.DIR2I})
     # Sky light
     self.DIR3I = np.array([0.04,0.12,0.18])
     self.directionalLights.append({"dir":[0, pi/2], "i":self.DIR3I})
@@ -186,7 +187,7 @@ def testTempleTrans(self):
     self.draw.setUVOff(self.flameMTL, (0,0), (1,1),
                        (-int(t*14)//5*0.2, int(t*14-1)*0.2))
 
-    if t > 12:
+    if t > 10:
         # Fade out sky light if inside temple
         pos = self.players[self.selchar]['b1'].offset[:3]
 
@@ -199,16 +200,16 @@ def testTempleTrans(self):
 
         di = np.array(self.directionalLights[4]['i'])
         do = self.DIR4I
-        self.directionalLights[4]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
+        self.directionalLights[4]['i'] = di * 0.9 + do * max(0.2, f) * 0.1
 
         di[:] = self.directionalLights[3]['i']
         do[:] = self.DIR3I
-        self.directionalLights[3]['i'] = di * 0.7 + do * max(0.4, f) * 0.3
+        self.directionalLights[3]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
 
         # Fade out bounce light too
         di[:] = self.directionalLights[1]['i']
         do[:] = self.DIR1I
-        self.directionalLights[1]['i'] = di * 0.7 + do * max(0.7, f) * 0.3
+        self.directionalLights[1]['i'] = di * 0.8 + do * max(0.4, f) * 0.2
 
         # Fade out fog too
         di = self.matShaders[self.fogMTL]['fogDist']
