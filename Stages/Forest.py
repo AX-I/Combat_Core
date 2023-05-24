@@ -112,15 +112,15 @@ def setupStage(self):
     ])
 
     # Will transition to this
-    self.DIR0I = np.array([1.9,1.4,0.6]) * 1.4
+    self.DIR0I = np.array([1.7,1.5,0.66]) * 1.4
     self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6], "i":self.DIR0I})
     # First bounce
-    self.DIR1I = np.array([0.22,0.24,0.2])# * 0.4
+    self.DIR1I = np.array([0.22,0.24,0.2]) * 0.7
     self.directionalLights.append({"dir":[pi*2/3+0.14, 2.6+pi], "i":self.DIR1I})
     # Second bounce
     self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":[0.14,0.12,0.08]})
     # Sky light
-    self.DIR3I = np.array([0.04,0.12,0.18])# * 0.4
+    self.DIR3I = np.array([0.04,0.12,0.18])
     self.directionalLights.append({"dir":[0, pi/2], "i":self.DIR3I})
     self.DIR4I = np.array([0.1,0.25,0.4]) * 0.4
     self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":self.DIR4I})
@@ -203,7 +203,7 @@ def testTempleTrans(self):
 
         di[:] = self.directionalLights[3]['i']
         do[:] = self.DIR3I
-        self.directionalLights[3]['i'] = di * 0.7 + do * max(0.6, f) * 0.3
+        self.directionalLights[3]['i'] = di * 0.7 + do * max(0.4, f) * 0.3
 
         # Fade out bounce light too
         di[:] = self.directionalLights[1]['i']

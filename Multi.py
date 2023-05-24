@@ -1771,9 +1771,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else: self.uInfo["End"] = endText[1]
             elif alive == 0: self.uInfo["End"] = endText[2]
 
-        if self.stage == 4:
-            self.testTempleTrans()
-
         self.testRest()
 
         self.renderMask = self.testRM(rm)
