@@ -69,7 +69,8 @@ void main() {
 	if (rheight != 0) fogHeight = rheight;
 	
 	vec3 fogAmb = LIGHT * LInt * inscatter;
-	if ((ramb.x+ramb.y+ramb.z) != 0) fogAmb = ramb;
+
+  fogAmb += ramb;
 	
 
     vec2 wh = 1 / vec2(width, height);
