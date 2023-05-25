@@ -1130,7 +1130,10 @@ class CLDraw:
                 ctx.blend_equation = moderngl.FUNC_ADD
                 if 'special' in shaders[i]:
                     self.DRAW[i]['VV'].write(self.rawVM[0])
+                try:
                     self.DRAW[i]['iTime'].write(np.float32(time.time() - self.stTime))
+                except KeyError:
+                    pass
 
             elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
                 ctx.disable(moderngl.DEPTH_TEST)
