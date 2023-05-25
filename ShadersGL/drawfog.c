@@ -6,9 +6,8 @@
 #define FAR 200.0
 
 #define NSAMPLES 32
-#define DIST 1.f
 #define G 0.5f
-#define GBACK -0.1f
+#define GBACK -0.2f
 
 uniform mat3 vmat;
 uniform vec3 vpos;
@@ -69,7 +68,8 @@ void main() {
 	if (rheight != 0) fogHeight = rheight;
 	
 	vec3 fogAmb = LIGHT * LInt * inscatter;
-	if ((ramb.x+ramb.y+ramb.z) != 0) fogAmb = ramb;
+
+  fogAmb += ramb;
 	
 
     vec2 wh = 1 / vec2(width, height);
@@ -85,7 +85,11 @@ void main() {
     maxZ += aspect + vpos.x;
     if (maxZ != d) maxZ = d;
 
-    if (rdist != 0) maxZ = min(maxZ, rdist);
+    float stepDist = 0.5;
+    float stepFac = 1.2;
+    if (rdist != 0) {
+      stepDist = rdist * (1-stepFac) / (1-pow(stepFac,NSAMPLES));
+    }
 
 	vec3 Vd = vmat[0];
 	vec3 Vx = vmat[1];
@@ -101,7 +105,10 @@ void main() {
 	uint rid3 = rand_xorshift(rng_state) & uint(63);
 
 	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
-	vec3 pos = vpos + rayDir * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
+
+  stepDist *= 1 + stepFac * R[rid1] * (1 - 1/stepFac);
+  stepDist *= 1.5;
+	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 	vec3 light = vec3(0);
 	float rn = 0;
@@ -123,21 +130,23 @@ void main() {
 	    vec2 sxy = floor(sf) / wS;
 
         float heightFac = (pos.y > fogHeight) ? 0 : 1;
-		totDensity += heightFac;
+		totDensity += heightFac * stepDist;
 
-		float scatter = exp(- ABSORB * currDepth) * heightFac;
+    // int e^{-cx} dx = -1/c e^{-cx}
+    float scatter = 1/ABSORB * (exp(-ABSORB * currDepth) - exp(- ABSORB * (currDepth + stepDist))) * heightFac;
 
 		//if ((sx >= 0) && (sx < 2*wS-1) && (sy >= 0) && (sy < 2*wS-1)) {
 			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase * LInt;
 			else light += fogAmb * scatter * phase;
 		//}
-		pos += rayDir * DIST;
+		pos += rayDir * stepDist;
 		currDepth = dot(pos - vpos, Vd);
+    stepDist *= stepFac;
 	}
 
 	float heightFac = (pos.y > fogHeight) ? 0 : 1;
 
-	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * LIGHT * phase * LInt;
+	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * fogAmb * phase * LInt;
 
 	transmit = exp(-ABSORB * totDensity);
 

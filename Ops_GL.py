@@ -910,6 +910,7 @@ class CLDraw:
 
         elif 'lens' in shaders[i]:
             draw = ctx.program(vertex_shader=ts, fragment_shader=lens)
+            draw['mul'].write(np.float32(shaders[i]['lens']))
 
         elif 'SSR' in shaders[i]:
             if shaders[i]['SSR'] == '0':

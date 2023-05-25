@@ -363,171 +363,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if 'Sandstone' in v:
                 self.sandstoneBricksTex = self.vtNames[v]
 
-    def changeMusic(self):
-        self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
-                             (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
-
-        reverb = PATH+"../Sound/Forest4_Reverb.wav"
-
-        # Front L/R
-        self.si.put({"Play":(reverb, self.volm, True,
-                             (np.array((10,3,40.)), 12, 8, True))})
-        self.si.put({"Play":(reverb, self.volm, True,
-                             (np.array((10,3,0.)), 12, 8, True))})
-        # Back L/R
-        self.si.put({"Play":(reverb, self.volm, True,
-                             (np.array((-40,3,40.)), 12, 8, True))})
-        self.si.put({"Play":(reverb, self.volm, True,
-                             (np.array((-40,3,0.)), 12, 8, True))})
-        self.changedMusic = 2
-
-    def changeNoise(self):
-        self.si.put({"Play":(PATH+"../Sound/ForestNoise.wav", self.volmFX, True,
-                             (np.array((55, 12, 20.)), 70, 16, 1.0))})
-        self.changedMusic = 1
-
-    def testTempleTrans(self):
-        try:
-            t = time.time() - self.transStart
-        except:
-            t = -1
-            for p in self.actPlayers:
-                if self.isClient: break
-                pos = self.players[p]['b1'].offset[:3]
-                if Phys.eucDist(pos, (-14.5, 2.4, 20)) < 1:
-                    self.lightTest()
-                    t = 0
-
-        self.draw.setUVOff(self.flameMTL, (0,0), (1,1),
-                           (-int(t*14)//5*0.2, int(t*14-1)*0.2))
-
-        if t > 12:
-            # Fade out sky light if inside temple
-            di = np.array(self.directionalLights[4]['i'])
-            do = np.array([0.1,0.25,0.4])
-            pos = self.players[self.selchar]['b1'].offset[:3]
-
-            # Border x: (-30, 7)
-            f = max(0, min(1, (pos[0] - 5)/8)) + max(0, min(1, (-30 - pos[0])/8))
-            # Border z: (3, 35)
-            f += max(0, min(1, (pos[2] - 32)/8)) + max(0, min(1, (5 - pos[2])/8))
-
-            f = min(1, f)
-            self.directionalLights[4]['i'] = di * 0.8 + do * max(0.3, f) * 0.2
-
-            di[:] = self.directionalLights[3]['i']
-            do[:] = [0.04,0.12,0.18]
-            self.directionalLights[3]['i'] = di * 0.7 + do * max(0.6, f) * 0.3
-
-            # Fade out bounce light too
-            di[:] = self.directionalLights[1]['i']
-            do[:] = [0.22,0.24,0.2]
-            self.directionalLights[1]['i'] = di * 0.7 + do * max(0.7, f) * 0.3
-
-            # Fade out fog too
-            di = self.matShaders[self.fogMTL]['fogDist']
-            do = 40
-            fdist = di * 0.9 + do * max(0.7, 1-f) * 0.1
-            self.matShaders[self.fogMTL]['fogDist'] = fdist
-
-            return
-
-        if t > 6 and self.changedMusic == 1:
-            self.changeMusic()
-        if t > 6 and not self.changedShader:
-            sbt = self.sandstoneBricksTex
-            self.matShaders[sbt] = {'normal':'sand_blocks'}
-            self.draw.changeShaderZ(self.sandstoneBricksTex, {})
-            self.draw.changeShader(sbt, {'normal':'sand_blocks'}, stage=self.stage)
-            self.changedShader = True
-        if t > 2.2 and self.changedMusic == 0:
-            self.changeNoise()
-        if t > 2:
-            self.matShaders[self.clouds.texNum]['add'] = 0.05
-        if 6 > t > 0:
-            self.matShaders[self.sandstoneBricksTex] = {
-                'dissolve':{'origin':(-14.5,0.5,20),
-                            'fact':np.float32(8 * t)}}
-            self.draw.changeShaderZ(self.sandstoneBricksTex,
-                                    self.matShaders[self.sandstoneBricksTex])
-
-        # rest 1, peak 600
-        pointKF = [(0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
-                   (5, 90), (6, 42), (7, 20), (8.5, 5), (10, 1)]
-        self.envPointLights[2]['i'] = np.array((1,1,1.)) * Anim.interpAttr(t, pointKF)
-
-
-        d = self.directionalLights[0]
-        dirKF = [(0, np.array([0.6,0.6,0.6])), (1, np.array([3.,3.,3.])),
-                 (4, np.array([2.,2.,2.])), (10, np.array([1.8,1.5,0.7]) * 1.4)]
-
-        d['i'] = Anim.interpAttr(t, dirKF)
-
-        fogKF = [(0,   np.array((0.4, 0.2,400, 1))),
-                 (0.8, np.array((1.6, 0.3,400, 1))),
-                 (2,   np.array((1.6, 0.2,400, 1))),
-                 (5, np.array((0.1, 0.01, 80,  0.6))),
-                 (9, np.array((0.02,0.002,40,  0)))]
-
-        fparams = Anim.interpAttr(t, fogKF)
-
-        s = dict(self.matShaders[self.fogMTL])
-        s['fog'] = fparams[0]
-        s['fogAbsorb'] = fparams[1]
-        s['fogDist'] = fparams[2]
-        s['fogScatter'] = fparams[3]
-        self.matShaders[self.fogMTL] = s
-
-        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
-
-        if 0 < t < 3:
-            tempObjs = np.array(self.castObjs)
-            tempObjs = tempObjs * (1 - np.array(self.testRM()))
-            self.shadowMap(0, tempObjs, bias=0.5)
-
-        for p in self.actPlayers:
-            a = self.players[p]
-            dist = Phys.eucDist(a['b1'].offset[:3], (-14.5, 2, 20))
-            if t > (dist/40) and 'poseFlash' in a \
-               and a['poseFlash'] <= self.flashKF[-1][0]:
-                a['moving'] = False
-                a['animTrans'] = -1
-
-                step = self.frameTime / (1 + dist/30 * (1 - (t > 4)))
-                self.stepPoseLoop(a, a['obj'], self.flashKF, step,
-                                  loop=False, timer='poseFlash')
 
     def testRM(self, rm=None):
         if rm is None:
             rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
         if self.stage < 4:
             return rm
-
-        if self.stage == 5:
-            return self.STAGECONFIG.getRenderMask(self, rm)
-
-        try: t = time.time() - self.transStart
-        except: t = 0
-
-        if t > 2:
-            r = list(rm)
-            if t > 3:
-                for f in self.vtNames:
-                    if 'rocks_ground_test' in f:
-                        r[self.vtNames[f]] = True
-            return r
-        else:
-            r = list(rm)
-            for f in self.vtNames:
-                if '3DRock004' in f or 'None' in f or 'Blank2' in f:
-                    r[self.vtNames[f]] = False
-                elif 'rocks_ground_test' in f or 'Cloud' in f:
-                    r[self.vtNames[f]] = False
-                elif self.vtNames[f] > self.players[-1]['obj'].texNum:
-                    r[self.vtNames[f]] = True
-            if t > 0.5:
-                r[self.sandstoneBricksTex] = False
-            return r
+        return self.STAGECONFIG.getRenderMask(self, rm)
 
 
     # ==== Respawning / recovery ====
@@ -1225,7 +1067,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         fogParams = {2: (0.36,0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
-                     4: (0.02,0.002,40,0, (0,0,0)),
+                     4: (0.02,0.002,40,0, np.array((0.05,0.1,0.2)) * 0.003),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
             fog, fabs, fdist, fheight, famb = fogParams[self.stage]
@@ -1928,9 +1770,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     self.uInfo["End"] = endText[0]
                 else: self.uInfo["End"] = endText[1]
             elif alive == 0: self.uInfo["End"] = endText[2]
-
-        if self.stage == 4:
-            self.testTempleTrans()
 
         self.testRest()
 

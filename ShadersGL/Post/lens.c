@@ -38,6 +38,7 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D db;
 
+uniform float mul;
 
 out vec4 f_color;
 
@@ -49,6 +50,9 @@ void main() {
 	vec2 tc = gl_FragCoord.xy;
 	float cx = tc.x;
 	float cy = tc.y;
+
+  float intensity = 1.f;
+  if (mul != 0) intensity = mul;
 
 	float d = texture(db, tc*wh).r;
 
@@ -119,7 +123,7 @@ void main() {
 
 
   col += 0.00000001 * maxZ;
-  col *= (1-shadow);
+  col *= (1-shadow) * intensity;
 
   f_color = vec4(col, 1.);
 

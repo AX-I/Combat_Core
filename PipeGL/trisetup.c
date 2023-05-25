@@ -74,7 +74,7 @@ void main() {
 
 
     if (stage == 1) {
-	  // Window
+      // Window
       float atriumbgx = 42.;
       float atriumLight = 2 * max(0, (18 + in_vert.x - atriumbgx)) / 18;
 
@@ -82,9 +82,16 @@ void main() {
       light += max(0.f, min(1.2f, atriumLight));
 
       // Lights
-	  float rd = 5 - in_vert.y;
+      float rd = 5 - in_vert.y;
       if (rd < 0) rd = (in_vert.y - 5) * 10;
       light += 1.1 * max(0, 0.5 + dot(-in_norm, vec3(0,1,0))) / 1.5 / (0.8 + rd);
+    }
+
+    if (stage == 4) {
+      // Sky plant boost
+      float fac = max(0., min(1., (in_vert.x - 7) / 16)) + max(0, min(1, (-32 - in_vert.x)/16));
+      fac += max(0., min(1., (in_vert.z - 34)/16)) + max(0., min(1., (3 - in_vert.z)/16));
+      light += min(1., fac) * vec3(0.01, 0.08, 0.03);
     }
 
 
