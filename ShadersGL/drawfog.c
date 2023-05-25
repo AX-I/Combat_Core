@@ -7,7 +7,7 @@
 
 #define NSAMPLES 32
 #define G 0.5f
-#define GBACK -0.1f
+#define GBACK -0.2f
 
 uniform mat3 vmat;
 uniform vec3 vpos;
@@ -106,7 +106,8 @@ void main() {
 
 	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
 
-  stepDist *= 1/stepFac + R[rid1] * (1 - 1/stepFac);
+  stepDist *= 1 + stepFac * R[rid1] * (1 - 1/stepFac);
+  stepDist *= 1.5;
 	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 	vec3 light = vec3(0);
