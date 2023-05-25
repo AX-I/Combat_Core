@@ -330,7 +330,7 @@ class RigidBody:
         """forces -> python list of vectors"""
         self.colliders = []
         self.wIndex = False
-        self.M = np.float(mass)
+        self.M = float(mass)
         self.drag = drag
         self.pos = np.array(xyz, dtype="float")
         self.rot = np.array([0, 0, 0])

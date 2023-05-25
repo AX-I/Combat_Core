@@ -496,7 +496,7 @@ class CLDraw:
 
         try:
             PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
-        except moderngl.error.Error:
+        except moderngl.Error:
             return False
 
         self.PSvao = ctx.vertex_array(self.psProg, PSvbo, 'in_vert')
