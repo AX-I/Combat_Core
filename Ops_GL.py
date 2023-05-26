@@ -900,7 +900,7 @@ class CLDraw:
                 draw = self.DRAW[i]
             draw['rlight'].write(np.float32(shaders[i]['fog'] / 8))
 
-            for key in ('Absorb', 'Dist', 'Scatter', 'Height'):
+            for key in ('Absorb', 'Dist', 'Scatter', 'Height', 'AmbDistFac'):
                 if 'fog' + key in shaders[i]:
                     dkey = 'r' + key.lower()
                     draw[dkey].write(np.float32(shaders[i]['fog' + key]))

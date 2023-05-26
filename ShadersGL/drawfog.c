@@ -44,6 +44,8 @@ uniform float rlight;
 uniform float rdist;
 uniform float rscatter;
 uniform float rheight;
+
+uniform float rambdistfac;
 uniform vec3 ramb;
 
 
@@ -85,10 +87,14 @@ void main() {
     maxZ += aspect + vpos.x;
     if (maxZ != d) maxZ = d;
 
+    float ambDistFac = 1.;
+    if (rambdistfac != 0) ambDistFac = rambdistfac;
+
     float stepDist = 0.5;
     float stepFac = 1.2;
     if (rdist != 0) {
       stepDist = rdist * (1-stepFac) / (1-pow(stepFac,NSAMPLES));
+      maxZ = min(maxZ, rdist * ambDistFac);
     }
 
 	vec3 Vd = vmat[0];

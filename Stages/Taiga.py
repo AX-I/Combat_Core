@@ -213,7 +213,7 @@ def setupStage(self):
             useShaders={'2d':1, 'lens':1})
 
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
-    self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=2)
+    self.skyBox = TexSkyBox(self, 12, PATH+fn, hdrScale=4)
     self.skyBox.created()
 
     skyShader = self.matShaders[self.skyBox.texNum]
