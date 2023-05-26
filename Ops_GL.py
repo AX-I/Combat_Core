@@ -953,8 +953,11 @@ class CLDraw:
             draw['RAND'] = 2
 
         if 'normal' in shaders[i]:
-            draw['useNM'] = 1
-            draw['NM'] = 7
+            try:
+                draw['useNM'] = 1
+                draw['NM'] = 7
+            except KeyError:
+                pass
 
         try:
             if 'stage' in kwargs:

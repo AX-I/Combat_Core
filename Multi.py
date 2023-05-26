@@ -221,7 +221,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.tonemap = 'aces'
         self.doSSAO = False
-        self.showAINav = False
+        self.showDebug = False
         self.doMB = True
 
         self.camAvg = False
@@ -275,7 +275,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("g", self.foc1)
         self.bindKey("G", self.foc2)
         self.bindKey("h", self.tgAO)
-        self.bindKey("n", self.tgNav)
+        self.bindKey("n", self.tgDebug)
         self.bindKey("y", self.tgMB)
         self.bindKey('t', self.tgTM1)
         self.bindKey('T', self.tgTM2)
@@ -523,7 +523,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def foc2(self):
         self.exposure /= 1.1
         print(self.exposure)
-    def tgNav(self): self.showAINav = not self.showAINav
+    def tgDebug(self): self.showDebug = not self.showDebug
 
     def gesture(self, pn, n, gi=None):
         p = self.players[pn]
@@ -947,7 +947,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Zelda2/Test5b.obj",
                            animated=True,
-                           texMul=2.5, useShaders={'spec': 1},
+                           texMul=2.5, useShaders={'spec': 1, 'normal':'Zelda'},
                            scale=0.33, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
@@ -1189,8 +1189,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             c = [(b1, 0, b1), (b1, 0, b1), (b2, 0, b1), (b1, 0, b2)]
             h = [(ss, 0, 0), (0, 0, ss), (0, 0, ss), (ss, 0, 0)]
             for i in range(4):
-                self.addVertObject(VertPlane, c[i], n=12,
-                                   h1=h[i], h2=[0, 20, 0],
+                self.addVertObject(VertPlane, np.array(c[i]) - np.array([0,2,0]),
+                                   n=15, h1=h[i], h2=[0, 22, 0],
                                    texture=PATH+"../Assets/Magenta.png",
                                    useShaders={"border":0.1})
 
@@ -1403,6 +1403,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.noisePos = np.zeros((3,), 'float32')
 
         self.addNrmMap(PATH + '../Models/L3/Atlas1Nrm.png', 'Link')
+        self.addNrmMap(PATH + '../Models/Zelda2/Atlas1Nrm.png', 'Zelda')
 
     def shadowChar(self):
         sc = self.shadowCams[1]
@@ -2438,7 +2439,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
     def debugOverlay(self):
-        if not self.showAINav: return
+        if not self.showDebug: return
 
         self.rgb = np.array(self.rgb)
         fps = int((1 / self.frameTime))
@@ -2454,6 +2455,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.rgb[:8,5*30-2:5*31+2] = [[0,0,0]]
         self.rgb[:8,5*30:5*31] = [[0,255,0]]
 
+        self.showAINav()
+
+    def showAINav(self):
         if self.stage not in (1, 3): return
 
         hm = self.atriumNav['map']
