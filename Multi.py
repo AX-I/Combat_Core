@@ -33,6 +33,8 @@ import multiprocessing as mp
 import os, sys
 PLATFORM = sys.platform
 
+import importlib
+
 import json
 
 from Rig import Rig
@@ -301,6 +303,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('0', self.testColor)
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
+
+        self.bindKey('<Control-r>', self.reload)
+
+    def reload(self):
+        self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
+        print('Reloaded')
 
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
