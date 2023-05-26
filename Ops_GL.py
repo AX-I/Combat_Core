@@ -47,28 +47,15 @@ if True: #if sys.platform == 'darwin':
     trisetup = trisetup.replace('[128]', '[12]')
     trisetupAnim = trisetupAnim.replace('[128]', '[12]')
 
-drawBase = makeProgram("drawbase.c")
-drawSh = makeProgram("drawsh.c")
-drawAlpha = makeProgram("drawshalpha.c")
-drawSky = makeProgram("drawsky.c")
-drawSub = makeProgram("drawsub.c")
-drawBorder = makeProgram("drawborder.c")
-drawEm = makeProgram("drawemissive.c")
-drawMin = makeProgram("drawmin.c")
-drawMinAlpha = makeProgram("drawminalpha.c")
-drawZ = makeProgram("drawZ.c")
-drawZA = makeProgram("drawZalpha.c")
 
-drawDissolve = makeProgram('drawdissolve.c')
-drawZDissolve = makeProgram('drawZdissolve.c')
+DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
+DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
 
-drawFog = makeProgram('drawfog.c')
-drawSSR = makeProgram('drawwater.c')
-drawGlass = makeProgram('drawglass.c')
-drawSSRopaque = makeProgram('drawSSRopaque.c')
-drawMetal = makeProgram('drawmetallic.c')
+def loadShaders():
+    for f in DRAW_SHADERS.split(' '):
+        globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
 
-drawSpecial = makeProgram('drawspecial.c')
+loadShaders()
 
 gamma = makeProgram("Post/gamma.c")
 bloom1 = makeProgram('Post/bloom1.c')
@@ -223,6 +210,13 @@ class CLDraw:
         self.noiseDist = 0
 
         self.stTime = time.time()
+
+    def reloadShaders(self, **kwargs):
+        loadShaders()
+        for i in range(len(self.VBO)):
+            self.changeShader(i, self.oldShaders[i], **kwargs)
+        try: del self.psProg
+        except: pass
 
     def setupNoise(self):
         from PIL import Image
@@ -855,7 +849,7 @@ class CLDraw:
             if 'rotY' in ss:
                 draw['rotY'] = ss['rotY']
         elif 'alpha' in shaders[i]:
-            draw = ctx.program(vertex_shader=ts, fragment_shader=drawAlpha)
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawShAlpha)
             sa = shaders[i]['alpha']
             draw['TA'] = 2
             self.TA[sa].use(location=2)
@@ -867,7 +861,7 @@ class CLDraw:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
 
         elif 'emissive' in shaders[i]:
-            draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawEmissive)
             draw['vPow'].write(np.float32(shaders[i]['emissive']))
 
         elif 'add' in shaders[i]:
@@ -876,7 +870,7 @@ class CLDraw:
             elif 'add' in self.oldShaders[i]:
                 draw = self.DRAW[i]
             else:
-                draw = ctx.program(vertex_shader=ts, fragment_shader=drawEm)
+                draw = ctx.program(vertex_shader=ts, fragment_shader=drawEmissive)
             draw['vPow'].write(np.float32(shaders[i]['add']))
             if 'fadeDist' in shaders[i]:
                 draw['fadeDist'] = shaders[i]['fadeDist']
@@ -939,7 +933,7 @@ class CLDraw:
             draw['fadeFact'].write(shaders[i]['dissolve']['fact'])
 
         elif 'metal' in shaders[i]:
-            draw = ctx.program(vertex_shader=ts, fragment_shader=drawMetal)
+            draw = ctx.program(vertex_shader=ts, fragment_shader=drawMetallic)
             draw['isMetal'] = 1
             draw['roughness'] = shaders[i]['metal']['roughness']
 
@@ -991,7 +985,7 @@ class CLDraw:
         i = tn
         p = self.VBO[i]
         if 'alpha' in shader:
-            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZA)
+            draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZAlpha)
             draw['TA'] = 2
             vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
         elif 'dissolve' in shader:
@@ -1039,7 +1033,7 @@ class CLDraw:
                         [(p, '3f4 5x4 /v', 'in_vert'),
                          (self.BN[i], '1f /v', 'boneNum')])
                 elif 'alpha' in shaders[i]:
-                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZA)
+                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZAlpha)
                     draw['TA'] = 2
                     vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
                 else:

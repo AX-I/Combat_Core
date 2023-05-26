@@ -308,7 +308,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def reload(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
-        print('Reloaded')
+        print('Reloaded stage config')
+
+        self.draw.reloadShaders(stage=self.stage)
+        print('Reloaded draw shaders')
+
 
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
