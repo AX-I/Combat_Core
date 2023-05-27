@@ -81,7 +81,7 @@ def setupStage(self):
             self.matShaders[self.flameMTL] = {'add': 5, 'noline': 1}
             self.vertObjects[self.flameMTL].castShadow = False
         if 'Sandstone' in f:
-            tm = self.vtextures[self.vtNames[f]] * 0.8
+            tm = self.vtextures[self.vtNames[f]] * 0.9
             self.vtextures[self.vtNames[f]] = tm.astype('uint16')
         if 'SandFloor' in f:
             self.matShaders[self.vtNames[f]]['normal'] = 'sand_floor'
@@ -89,6 +89,8 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['normal'] = '3DRock'
         if '095' in f:
             self.matShaders[self.vtNames[f]]['normal'] = '096'
+        if 'Ground' in f:
+            self.matShaders[self.vtNames[f]]['normal'] = 'Grass'
 
 
     pp1 = np.array((-14.5,15,24.))
@@ -230,7 +232,7 @@ def testTempleTrans(self):
     if t > 2.2 and self.changedMusic == 0:
         changeNoise(self)
     if t > 2:
-        self.matShaders[self.clouds.texNum]['add'] = 0.05
+        self.matShaders[self.clouds.texNum]['add'] = 0.02
     if 6 > t > 0:
         self.matShaders[self.sandstoneBricksTex] = {
             'dissolve':{'origin':(-14.5,0.5,20),
@@ -288,8 +290,10 @@ def frameUpdate(self):
     testTempleTrans(self)
 
     if self.frameNum == 1:
-        self.addNrmMap(PATH + '../Models/Temple/SandstoneBricks_nrm.jpg', 'sand_blocks', mip=True)
-        self.addNrmMap(PATH + '../Models/Temple/sandstone_cracks_nor_gl_1k.png', 'sand_floor')
+        tpath = PATH + '../Models/Temple/'
+        self.addNrmMap(tpath + 'SandstoneBricks_nrm.jpg', 'sand_blocks', mip=True)
+        self.addNrmMap(tpath + 'sandstone_cracks_nor_gl_1k.png', 'sand_floor')
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
-        self.addNrmMap(PATH + '../Models/Temple/096.png', '096')
+        self.addNrmMap(tpath + '096.png', '096')
+        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True)
         self.matShaders[self.fogMTL]['fogAmbDistFac'] = 4

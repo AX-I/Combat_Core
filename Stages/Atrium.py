@@ -15,7 +15,7 @@ def getHeight(self, pos):
 
 def setupStage(self):
     self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
-                       filename=PATH+"../Atrium/Atrium8Atlas.obj",
+                       filename=PATH+"../Atrium/Atrium8AtlasOpt.obj",
                        scale=1.2, mip=2,
                        useShaders={"cull":1},
                        subDiv=1, shadow="CR")
@@ -29,6 +29,17 @@ def setupStage(self):
             self.matShaders[self.vtNames[f]]['cull'] = 1
         if "FieldBackground" in f:
             self.matShaders[self.vtNames[f]]['emissive'] = 2.0
+        if 'AtlasG_opt' in f:
+            self.matShaders[self.vtNames[f]]['spec'] = 1
+            self.matShaders[self.vtNames[f]]['normal'] = 'AtlasG'
+        if 'Copy' in f:
+            self.ssrMTL = self.vtNames[f]
+            self.matShaders[self.ssrMTL]['SSR'] = 2
+            self.matShaders[self.ssrMTL]['roughness'] = 0.1
+            self.matShaders[self.ssrMTL]['normal'] = 'AtlasG'
+        if 'AtlasW' in f:
+            self.matShaders[self.vtNames[f]]['spec'] = 1
+            self.matShaders[self.vtNames[f]]['roughness'] = 0.4
 
     self.terrain = VertTerrain0([0,-0.6,0],
                                 PATH+"../Atrium/AtriumNav.png",
@@ -53,6 +64,18 @@ def setupStage(self):
     # Local lights are getting out of hand
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
 
-    self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
+    self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     self.skyBox.created()
+
+    skyShader = self.matShaders[self.skyBox.texNum]
+    skyShader['isEqui'] = 1
+    skyShader['rotY'] = 3.27
+
+    self.matShaders[self.ssrMTL]['envFallback'] = self.skyBox.texNum
+    self.matShaders[self.ssrMTL]['rotY'] = skyShader['rotY']
+
+def frameUpdate(self):
+    if self.frameNum == 0:
+        tpath = PATH + '../Atrium/'
+        self.addNrmMap(tpath + 'AtlasG_opt_nrm.png', 'AtlasG', mip=True)

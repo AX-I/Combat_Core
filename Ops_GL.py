@@ -906,15 +906,18 @@ class CLDraw:
             draw = ctx.program(vertex_shader=ts, fragment_shader=lens)
             draw['mul'].write(np.float32(shaders[i]['lens']))
 
-        elif 'SSR' in shaders[i]:
-            if shaders[i]['SSR'] == '0':
-                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
-            elif shaders[i]['SSR'] == 1:
-                draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
-            elif shaders[i]['SSR'] == 2:
-                draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
-                del shaders[i]['SSR']
-                shaders[i]['SSRopaque'] = 1
+        elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
+            if 'SSR' not in self.oldShaders[i] and 'SSRopaque' not in self.oldShaders[i]:
+                if shaders[i]['SSR'] == '0':
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
+                elif shaders[i]['SSR'] == 1:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
+                elif shaders[i]['SSR'] == 2:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
+                    del shaders[i]['SSR']
+                    shaders[i]['SSRopaque'] = 1
+            else:
+                draw = self.DRAW[i]
             if 'envFallback' in shaders[i]:
                 draw['useEquiEnv'] = 1
                 draw['rotY'] = shaders[i]['rotY']
@@ -944,6 +947,9 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
+            if 'roughness' in shaders[i]:
+                draw['roughness'] = shaders[i]['roughness']
+
             draw['RAND'] = 2
 
         if 'normal' in shaders[i]:

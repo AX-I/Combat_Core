@@ -62,7 +62,7 @@ in vec3 vertLight;
 uniform vec3 vpos;
 
 uniform float specular;
-#define roughness 0.6f
+uniform float roughness;
 
 uniform vec3 VV;
 uniform int useNoise;
@@ -157,24 +157,19 @@ void main() {
 		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
 	}
 
-	for (int i = 0; i < lenP; i++) {
-      vec3 pl = v_pos * tz - PPos[i];
-      if (dot(norm, pl) > 0.0) {
-	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
-      }
-    }
+  vec3 spec = vec3(0);
+  vec3 a = v_pos*tz - vpos;
+  float theta;
 
-    light += vertLight;
+  float rough = (roughness == 0) ? 0.6 : roughness;
+  int specPow = int(exp2(12*(1.f - rough)));
+	float fac = (specPow + 2) / (2*8 * 3.1416f);
 
-    light += highColor;
-
-    // Rim light
-    vec3 a = v_pos*tz - vpos;
+	// Rim light
     float nd = dot(a, norm);
     vec3 refl = normalize(a - 2 * nd * norm);
-    float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
-    vec3 spec = theta * theta * vec3(0.008);
-    spec *= specular;
+    theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
+    spec += specular * (theta * theta * vec3(0.008));
 
 	// Sun specular
 	a = normalize(a);
@@ -185,11 +180,23 @@ void main() {
 	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
     fr *= fr; fr *= fr; fr *= fr;
 
-	int specPow = int(exp2(12*(1.f - roughness)));
-	float fac = (specPow + 2) / (2*8 * 3.1416f);
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 
 
+  for (int i = 0; i < lenP; i++) {
+    vec3 pl = v_pos * tz - PPos[i];
+    if (dot(norm, pl) > 0.0) {
+	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
+
+      vec3 h = normalize(normalize(pl) + a);
+      theta = max(0.f, dot(h,norm));
+      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl));
+    }
+  }
+
+    light += vertLight;
+
+    light += highColor;
 
     light *= (1 + highMult);
 

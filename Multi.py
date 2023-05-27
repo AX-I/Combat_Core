@@ -304,12 +304,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
-        self.bindKey('<Control-r>', self.reload)
+        self.bindKey('<Control-r>', self.reloadStage)
+        self.bindKey('<Control-t>', self.reloadShaders)
 
-    def reload(self):
+    def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         print('Reloaded stage config')
 
+    def reloadShaders(self):
         self.draw.reloadShaders(stage=self.stage)
         print('Reloaded draw shaders')
 
@@ -1096,7 +1098,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
                                filename=PATH+"../Models/Temple/Clouds.obj",
                                shadow="",
-                               useShaders={'add':0.08, 'noline':True,
+                               useShaders={'add':0.04, 'noline':True,
                                            'fadeDist':2})
             self.clouds = self.vertObjects[-1]
 
