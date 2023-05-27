@@ -383,10 +383,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
 
     def screenshot(self, e=None):
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
-        i = PngImagePlugin.PngInfo()
-        #i.add_text("pos", " ".join([str(round(x, 3)) for x in self.pos]))
-        #i.add_text("dir", " ".join([str(round(x, 3)) for x in self.vv]))
-        self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".png", pnginfo=i)
+        self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".jpg", quality=91)
 
     def sendKey(self, key):
         try: self.evtQ.put_nowait(("eventk", key))

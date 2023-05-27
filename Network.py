@@ -94,8 +94,6 @@ class TCPServer:
                     p["getAll"] = 1
                     data = requests.post(self.HOST + "/GameDat", data=p, **self.TO)
                 self.processData(data)
-                if self.frameNum & 7 == 0:
-                    print('Ping: {:.3}'.format(time.perf_counter() - st), end='\r')
             except (Timeout, ReadTimeout, ConnectionError): pass
 
             dt = time.time() - self.startTime

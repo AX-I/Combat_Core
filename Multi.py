@@ -308,6 +308,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('<Control-R>', self.reloadStageHard)
         self.bindKey('<Control-t>', self.reloadShaders)
 
+        self.bindKey('u', self.tgDof)
+        self.apFac = 1
+
+    def tgDof(self):
+        self.apFac = 0.1 if self.apFac == 1 else 1
+
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         print('Reloaded stage config')
@@ -1261,6 +1267,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         ap = 0.7 / np.tan(self.fovX*pi/360)
         ap *= self.W / 752
+        ap *= self.apFac
 
         self.draw.dof(self.dofFoc, aperture=8*ap if self.cam1P else 12*ap)
         if self.doBloom:
