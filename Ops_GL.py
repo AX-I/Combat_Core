@@ -51,17 +51,15 @@ if True: #if sys.platform == 'darwin':
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
 DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
 
+POST_SHADERS = 'gamma lens FXAA'
+
 def loadShaders():
     for f in DRAW_SHADERS.split(' '):
         globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
+    for f in POST_SHADERS.split(' '):
+        globals()[f.lower()] = makeProgram(f'Post/{f}.c')
 
 loadShaders()
-
-gamma = makeProgram("Post/gamma.c")
-bloom1 = makeProgram('Post/bloom1.c')
-bloom2 = makeProgram('Post/bloom2.c')
-
-lens = makeProgram('Post/lens.c')
 
 fsr_frag = makeProgram('Post/fsr.c')
 fsr_frag = fsr_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
@@ -72,9 +70,6 @@ fsr_rcas_frag = makeProgram('Post/fsr_rcas.c')
 fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
 fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
 ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
-
-fxaa = makeProgram('Post/FXAA.c')
-ctx.program(vertex_shader=trisetup2d, fragment_shader=fxaa)
 
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
@@ -215,8 +210,10 @@ class CLDraw:
         loadShaders()
         for i in range(len(self.VBO)):
             self.changeShader(i, self.oldShaders[i], **kwargs)
-        try: del self.psProg
-        except: pass
+
+        for s in 'psProg dProg moProg ssaoProg'.split(' '):
+            try: self.__delattr(s)
+            except: pass
 
     def setupNoise(self):
         from PIL import Image

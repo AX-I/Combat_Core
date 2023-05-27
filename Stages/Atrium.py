@@ -64,9 +64,8 @@ def setupStage(self):
     # Local lights are getting out of hand
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
 
-    self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
-                            rot=(0,0,0), hdrScale=48)
-    self.skyBox.created()
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
+                                  rot=(0,0,0), hdrScale=48)
 
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['isEqui'] = 1

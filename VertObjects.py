@@ -474,6 +474,7 @@ class VertModel(VertObject):
             self.path = ""
         self.mtlName = None
         self.nextMtl = None
+        self.prevMtl = None
         alpha = None
         mip = False
         c = False
@@ -553,6 +554,7 @@ class VertModel(VertObject):
                                              animated=animated,
                                              mtlNum=mtlNum+1, blender=blender,
                                              **ex)
+                    self.nextMtl.prevMtl = self
                     args[0].vertObjects.append(self.nextMtl)
         if not c:
             self.mtlTex = "../Assets/Magenta.png"

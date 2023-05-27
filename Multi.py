@@ -305,11 +305,30 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.useFxaa = 1
 
         self.bindKey('<Control-r>', self.reloadStage)
+        self.bindKey('<Control-R>', self.reloadStageHard)
         self.bindKey('<Control-t>', self.reloadShaders)
 
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         print('Reloaded stage config')
+
+    def dummyAddVertObject(self, *args, **kwargs):
+        self.vertObjects.append(self.oldVertObjects.pop(self.baseVertObjN))
+        if type(self.vertObjects[-1]) is VertModel:
+            if self.vertObjects[-1].prevMtl is not None:
+                self.dummyAddVertObject()
+        return True
+    def reloadStageHard(self):
+        self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
+        self.directionalLights = []
+        self.envPointLights = []
+        self.oldVertObjects = list(self.vertObjects)
+        self.vertObjects = self.oldVertObjects[:self.baseVertObjN]
+        self.addVertObject = self.dummyAddVertObject
+        self.makeSkybox = lambda *args, **kwargs: self.skyBox
+        self.STAGECONFIG.setupStage(self)
+        self.frameNum = 0
+        print('Reloaded stage config hard')
 
     def reloadShaders(self):
         self.draw.reloadShaders(stage=self.stage)
@@ -1013,6 +1032,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addPlayer(self.vertObjects[-1])
             self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
 
+        self.baseVertObjN = len(self.vertObjects)
 
         # Setup stage
         STAGENAMES = 'Desert Atrium Taiga NewStage Forest Strachan'.split(' ')
@@ -1061,7 +1081,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.restRings = self.vertObjects[-1]
 
         self.addVertObject(VertSphere, [0,0,0], scale=0.06,
-                           n=8, texture=PATH+"../Models/Strachan/Window.png",
+                           n=8, texture=PATH+"../Assets/LightBlue.png",
                            useShaders={'emissive':1})
         self.testSphere = self.vertObjects[-1]
 

@@ -30,9 +30,8 @@ def setupStage(self):
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
     self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.32,0.1]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-    self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
-                            rot=(0,-pi/3,0), hdrScale=12)
-    self.skyBox.created()
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
+                                  rot=(0,-pi/3,0), hdrScale=12)
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 

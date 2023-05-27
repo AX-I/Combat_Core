@@ -218,9 +218,11 @@ def setupStage(self):
             useShaders={'2d':1, 'lens':1})
 
 
-    self.skyBox = TexSkyBox(self, 12, PATH+"../Skyboxes/Autumn_Park_2k.ahdr",
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
-    self.skyBox.created()
+    skyShader = self.matShaders[self.skyBox.texNum]
+    skyShader['isEqui'] = 1
+    skyShader['rotY'] = 3.27
 
     self.showPillars = -1
     self.showPlatforms = False

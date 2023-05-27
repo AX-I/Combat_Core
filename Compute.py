@@ -247,7 +247,7 @@ class ThreeDBackend:
         self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
 
         for i in range(len(self.vtextures)):
-            tex = self.vtextures[0]
+            tex = self.vtextures[i]
             if "mip" in self.matShaders[i] and not GL:
                 t = createMips(tex)
                 self.draw.addTextureGroup(
@@ -263,7 +263,7 @@ class ThreeDBackend:
                     self.vertNorms[i].reshape((-1,3)),
                     tex[:,:,0], tex[:,:,1], tex[:,:,2],
                     self.matShaders[i])
-            del self.vtextures[0]
+            self.vtextures[i] = np.array([1])
 
         for tex in self.texAlphas:
             self.draw.addTexAlpha(tex)
@@ -321,6 +321,10 @@ class ThreeDBackend:
         self.estWedges += thing.estWedges
         self.vertObjects.append(thing)
         return True
+    def makeSkybox(self, objClass, *args, **kwargs):
+        thing = objClass(self, *args, **kwargs)
+        thing.created()
+        return thing
     def addParticleSystem(self, ps, isCloud=False):
         ps.setup()
         self.particleSystems.append(ps)
