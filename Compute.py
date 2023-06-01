@@ -329,12 +329,12 @@ class ThreeDBackend:
         ps.setup()
         self.particleSystems.append(ps)
 
-    def addNrmMap(self, tex, name, mip=False):
+    def addNrmMap(self, tex, name, **kwargs):
         nrm = np.array(Image.open(tex).rotate(-90))
         if nrm.shape[2] == 4:
             nrm = np.array(nrm[:,:,:3])
 
-        self.draw.addNrmMap(nrm, name, mip)
+        self.draw.addNrmMap(nrm, name, **kwargs)
 
     def render(self):
 

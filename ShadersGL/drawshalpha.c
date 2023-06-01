@@ -47,6 +47,7 @@ uniform int translucent;
 // Normal map
 uniform int useNM;
 uniform sampler2D NM;
+uniform float NMmipBias;
 
 in vec3 vertLight;
 
@@ -117,7 +118,10 @@ void main() {
     vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
     vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
 
-    vec3 tgvec = texture(NM, v_UV*tz, -0.8f).rgb * 2.0 - 1.0;
+    float nmBias = -0.8f;
+    if (NMmipBias != 0) nmBias = NMmipBias;
+
+    vec3 tgvec = texture(NM, v_UV*tz, nmBias).rgb * 2.0 - 1.0;
     tgvec = normalize(tgvec);
 
     norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;

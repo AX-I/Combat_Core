@@ -236,10 +236,10 @@ class CLDraw:
         if name is None: name = len(self.TA)
         self.TA[name] = a
 
-    def addNrmMap(self, nrm, name, mip=True):
+    def addNrmMap(self, nrm, name, mip=True, mipLvl=2):
         t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
         if mip:
-            t.build_mipmaps(0, 2)
+            t.build_mipmaps(0, mipLvl)
         self.NM[name] = t
 
     def addPSTex(self, tex, name):
@@ -954,6 +954,7 @@ class CLDraw:
             try:
                 draw['useNM'] = 1
                 draw['NM'] = 7
+                draw['NMmipBias'] = shaders[i]['NMmipBias']
             except KeyError:
                 pass
 

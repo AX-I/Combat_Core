@@ -1477,7 +1477,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + '../Models/'
         self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
         self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
-        self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True)
+        self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
         self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
         self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
 
