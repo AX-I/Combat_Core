@@ -212,7 +212,7 @@ class CLDraw:
             self.changeShader(i, self.oldShaders[i], **kwargs)
 
         for s in 'psProg dProg moProg ssaoProg'.split(' '):
-            try: self.__delattr(s)
+            try: self.__delattr__(s)
             except: pass
 
     def setupNoise(self):

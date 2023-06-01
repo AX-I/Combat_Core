@@ -85,6 +85,9 @@ class ParticleSystem:
         
         self.L = lifespan
         self.started = False
+
+        self.rand = nr.randn(self.N, 3)
+        self.rand2 = nr.randn(self.N, 3)
         
     def setup(self):
         self.ll = 0
@@ -145,13 +148,15 @@ class AttractParticleSystem(ParticleSystem):
 
 class ContinuousParticleSystem(ParticleSystem):
     """Continous emission"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, circular=False, **kwargs):
         super().__init__(*args, **kwargs)
 
         if (self.L % self.N) == 0:
             pass
         elif (self.N % self.L) > 0:
             raise ValueError("# must be divisible by lifespan!")
+
+        self.circular = circular
 
     def setup(self):
         super().setup()
@@ -166,9 +171,10 @@ class ContinuousParticleSystem(ParticleSystem):
 
         self.started = False
 
-    def step(self):
+    def step(self, emit=True, circular=False):
         self.started = True
-        self.pl += min(1, self.L/self.N)
+        if emit:
+            self.pl += min(1, self.L/self.N)
         self.Rpc[self.pe] += self.Rpv[self.pe]
         self.Rpv[self.pe] *= (1-self.drag)
         self.Rpv[self.pe] += self.force
@@ -177,6 +183,13 @@ class ContinuousParticleSystem(ParticleSystem):
 
         self.pc = self.Rpc[self.pe]
         self.pv = self.Rpv[self.pe]
+
+        if circular or self.circular:
+            e = self.pl >= self.L
+            if np.any(e):
+                self.Rpc[e] = self.rand[e] * self.randPos + self.pos
+                self.Rpv[e] = self.rand2[e] * self.randVel + self.dv
+                self.pl[e] -= np.max(self.pl[e]) + 1
 
         self.pe = (self.pl > 0) & (self.pl < self.L)
 

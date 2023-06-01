@@ -1705,7 +1705,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       randPos=0.25,
                                       lifespan=1200,
                                       size=0.15, opacity=0.3,
-                                      color=(0.08,0.4,0.06), randColor=0)
+                                      color=(0.08,0.4,0.06), randColor=0,
+                                      circular=True)
         self.addParticleSystem(ps)
         i['ps'] = ps
 

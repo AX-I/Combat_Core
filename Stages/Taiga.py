@@ -292,9 +292,9 @@ def frameUpdateAfter(self):
 
         if ((i + active)&1) and (p['moving'] or (CURRTIME - p['animTrans'] < 0.1)):
             ps.changePos(pos + 0.5*vv)
-            ps.step()
-        elif (CURRTIME - p['animTrans'] > 0.1) and ps.started:
-            ps.reset()
+            ps.step(circular=True)
+        else:
+            ps.step(emit=False)
 
     tn = self.skis[0].texNum
     self.draw.translateBatch({tn: batchT1})
