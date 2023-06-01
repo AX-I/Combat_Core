@@ -751,8 +751,13 @@ def charLayout(self):
                   method='gauss', blurWidth=bWidth)
 
 def getCharCoord(self, i):
-    yc = self.H * (0.4 + 0.15*(i//3))
-    xc = self.W2 + self.H * 1.4 * 0.25*((i%3) - 1)
+    if i < self.NSPECIAL:
+        yc = self.H * (0.32 + 0.15*(i//3))
+        xc = self.W2 + self.H * 1.4 * 0.25*((1.5-self.NSPECIAL*0.5 + i%3) - 1)
+    else:
+        j = i - self.NSPECIAL
+        yc = self.H * (0.32 + 0.15*(1 + j//3))
+        xc = self.W2 + self.H * 1.4 * 0.25*((j%3) - 1)
     return (yc, xc)
 
 

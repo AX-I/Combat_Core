@@ -623,7 +623,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         else:
             self.gameList = {gd:[]}
 
-        self.charNames = ["Samus", "Zelda BotW",   "Link BotW",
+        self.NSPECIAL = 1
+        self.charNames = ["Amber",
+                          "Samus", "Zelda BotW",   "Link BotW",
                           "Louis", "Zelda TP",     "Link TP",
                           "Ahri",  "Stormtrooper", "Vader"]
 
@@ -632,7 +634,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                 lambda: self.selChar(2), lambda: self.selChar(3),
                 lambda: self.selChar(4), lambda: self.selChar(5),
                 lambda: self.selChar(6), lambda: self.selChar(7),
-                lambda: self.selChar(8)]
+                lambda: self.selChar(8), lambda: self.selChar(9)]
 
         for i in range(len(self.charNames)):
             self.stb.append(Button(self, text=self.charNames[i],

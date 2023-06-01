@@ -917,7 +917,8 @@ class CLDraw:
                 draw = self.DRAW[i]
             if 'envFallback' in shaders[i]:
                 draw['useEquiEnv'] = 1
-                draw['rotY'] = shaders[i]['rotY']
+                try: draw['rotY'] = shaders[i]['rotY']
+                except KeyError: pass
                 draw['equiEnv'] = 6
             if 'roughness' in shaders[i]:
                 ra = np.random.rand(64)

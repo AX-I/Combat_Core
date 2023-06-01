@@ -964,7 +964,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
+        self.rpi = [(mpath + "Body/B10R.rig", 0.2, 1.47),
+                    (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
                     (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
                     (mpath + "L3/L3.rig", 0.75, 1.16),
                     (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
@@ -974,7 +975,32 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
                     (mpath + "Vader/Vader5.rig", 1.6, 1.56),
                     ]
-        self.footSize = (0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
+        self.footSize = (0.2, 0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
+
+
+        self.addVertObject(VertModel, [0,0,0],
+                       filename=mpath+'Body/B10R3.obj',
+                       animated=True, mip=1, texMode=None,
+                       scale=0.2, rot=(0,0,0),
+                       shadow='R')
+        for f in self.vtNames:
+            mat = self.matShaders[self.vtNames[f]]
+            if 'Cornea' in f:
+                mat.update({'SSR':2, 'fresnelExp':3})
+                self.corneaMtl = self.vtNames[f]
+            if 'Gold' in f:
+                mat['metal'] = {'roughness':0.3}
+            if 'Hair' in f:
+                mat.update({'spec':1, 'normal':'Hair',
+                            'NMmipBias':0.1, 'translucent':1})
+            if 'Face' in f:
+                mat.update({'spec':1, 'normal':'Face'})
+            if 'Skin' in f:
+                mat.update({'spec':1, 'normal':'Body'})
+            if 'Metal' in f:
+                mat['metal'] = {'roughness':0.6}
+
+        self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
@@ -1047,6 +1073,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         cs.setupStage(self)
         self.STAGECONFIG = cs
+
+        try:
+            self.matShaders[self.corneaMtl]['envFallback'] = self.skyBox.texNum
+            self.matShaders[self.corneaMtl]['rotY'] = self.matShaders[self.skyBox.texNum]['rotY']
+        except (AttributeError, KeyError): pass
 
         # Add projectiles and game elements
         self.spheres = []
@@ -1443,8 +1474,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.draw.noisePos = np.zeros((3,), 'float32')
 
-        self.addNrmMap(PATH + '../Models/L3/Atlas1Nrm.png', 'Link')
-        self.addNrmMap(PATH + '../Models/Zelda2/Atlas1Nrm.png', 'Zelda')
+        mpath = PATH + '../Models/'
+        self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
+        self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
+        self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True)
+        self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
+        self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
 
     def shadowChar(self):
         sc = self.shadowCams[1]
@@ -2297,7 +2332,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
                 breathRate = 0.5 # Between 0.5 and 1 is best
 
-                breathRate *= (0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
+                breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
 
                 self.stepPoseLoop(a, a['obj'], self.idlingTest,
                                   self.frameTime * (breathRate + 0.6)/2,
