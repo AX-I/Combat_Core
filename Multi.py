@@ -300,7 +300,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.bindKey('k', self.tgSpec)
 
-        self.bindKey('0', self.testColor)
+        self.bindKey('0', self.pause)
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
@@ -308,11 +308,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('<Control-R>', self.reloadStageHard)
         self.bindKey('<Control-t>', self.reloadShaders)
 
-        self.bindKey('u', self.tgDof)
+        self.bindKey('u', self.dofLess)
+        self.bindKey('U', self.dofMore)
         self.apFac = 1
 
-    def tgDof(self):
-        self.apFac = 0.1 if self.apFac == 1 else 1
+    def dofLess(self): self.apFac /= 1.1
+    def dofMore(self): self.apFac *= 1.1
 
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
@@ -328,6 +329,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         self.directionalLights = []
         self.envPointLights = []
+        self.spotLights = []
         self.oldVertObjects = list(self.vertObjects)
         self.vertObjects = self.oldVertObjects[:self.baseVertObjN]
         self.addVertObject = self.dummyAddVertObject
@@ -343,13 +345,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
-    def testColor(self):
-        import tkinter.colorchooser
-        c = tkinter.colorchooser.askcolor()
-        if c[0] is None: return
-        d = self.directionalLights[0]
-        d['i'] = np.array(c[0]) / 255 * 2
-        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+    def pause(self):
+        input('Continue: ')
 
     def tgBlack1(self):
         self.blackPoint += 0.01
@@ -1059,7 +1056,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                animated=True, useShaders={'spec':1},
                                scale=1.6, shadow="R")
             self.addPlayer(self.vertObjects[-1])
-            self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
 
         self.baseVertObjN = len(self.vertObjects)
 
