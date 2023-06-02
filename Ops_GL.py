@@ -917,6 +917,8 @@ class CLDraw:
                     shaders[i]['SSRopaque'] = 1
             else:
                 draw = self.DRAW[i]
+            if 'fresnelExp' in shaders[i]:
+                draw['fresnelExp'] = shaders[i]['fresnelExp']
             if 'envFallback' in shaders[i]:
                 draw['useEquiEnv'] = 1
                 try: draw['rotY'] = shaders[i]['rotY']
@@ -1155,7 +1157,7 @@ class CLDraw:
                 if 'SSRopaque' in shaders[i]:
                     self.fbo.depth_mask = True
                     ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
-                    ctx.depth_func = '=='
+                    ctx.depth_func = '<='
                 else:
                     ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD

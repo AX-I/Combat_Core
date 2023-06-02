@@ -182,7 +182,7 @@ void main() {
 	theta = max(0.f, dot(h, norm));
 
 	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
-    fr *= fr; fr *= fr; fr *= fr;
+    fr *= fr; fr *= fr; //fr *= fr;
 
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 

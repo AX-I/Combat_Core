@@ -48,6 +48,8 @@ uniform sampler2D equiEnv;
 uniform float roughness;
 uniform float R[64];
 
+uniform int fresnelExp;
+
 uint rand_xorshift(uint rng_state) {
     rng_state ^= (rng_state << 13);
     rng_state ^= (rng_state >> 17);
@@ -111,7 +113,9 @@ void main() {
 
 
     float fr = 1 - 0.8 * abs(dot(normalize(pos - vp), normalize(norm)));
-    fr *= fr; fr *= fr; fr *= fr; //fr *= fr; fr *= fr; fr *= fr;
+    int frExp = 8;
+    if (fresnelExp != 0) frExp = fresnelExp;
+    fr = pow(fr, frExp);
 
     //float scatter = 0.2;//exp(ABSORB * (tz - texture(db, tc*wh).r));
     // is actually transmittance
