@@ -359,8 +359,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print('black point', self.blackPoint)
     def tgSpec(self):
         tn = self.players[self.selchar]['obj'].texNum
-        self.matShaders[tn]['spec'] = 1 - self.matShaders[tn]['spec']
-        self.draw.changeShader(tn, self.matShaders[tn])
+        if 'spec' in self.matShaders[tn]:
+            self.matShaders[tn]['spec'] = 1 - self.matShaders[tn]['spec']
+            self.draw.changeShader(tn, self.matShaders[tn])
         d = self.directionalLights[0]
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
@@ -460,12 +461,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc = self.restPlayer
         a = self.players[sc]
         for xn in a["ctexn"]:
-            if 'sub' in self.matShaders[xn]:
-                temp = dict(self.matShaders[xn])
-                del temp["sub"]
-                self.matShaders[xn] = temp
-            if "alphaTemp" in self.matShaders[xn]:
-                self.matShaders[xn]['alpha'] = self.matShaders[xn]["alphaTemp"]
+            if "temp" in self.matShaders[xn]:
+                self.matShaders[xn] = self.matShaders[xn]["temp"]
 
             self.draw.changeShader(xn, self.matShaders[xn], stage=self.stage)
 
@@ -1902,15 +1899,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             tn = a["id"]
             if self.getHealth(tn) <= 0:
-                if "deathTime" not in a: a["deathTime"] = time.time()
+                if "deathTime" not in a:
+                    a["deathTime"] = time.time()
+                    for xn in a["ctexn"]:
+                        self.matShaders[xn] = {'temp': self.matShaders[xn]}
                 a["pv"].pos[:] = -10.
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
                     self.matShaders[xn]["sub"] = tr
-                    if "alpha" in self.matShaders[xn]:
-                        self.matShaders[xn]['alphaTemp'] = self.matShaders[xn]["alpha"]
-                        del self.matShaders[xn]["alpha"]
                 g = a["ghost"]
                 if (not self.VRMode) or (self.frameNum & 1):
                     g.changePos(a["b1"].offset[:3])
