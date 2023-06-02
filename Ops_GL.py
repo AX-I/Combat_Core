@@ -645,7 +645,7 @@ class CLDraw:
         self.blurProg2['width'].write(np.float32(self.W//2))
         self.blurProg2['height'].write(np.float32(self.H//2))
 
-    def blur(self):
+    def blur(self, ex):
 
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
@@ -657,6 +657,7 @@ class CLDraw:
         self.blurProg1['width'].write(np.float32(self.W//2))
         self.blurProg1['height'].write(np.float32(self.H//2))
         self.blurProg1['useLum'].write(np.int32(1))
+        self.blurProg1['exposure'] = ex
         self.FB.use(location=0)
 
         self.blurVao1.render(moderngl.TRIANGLES)

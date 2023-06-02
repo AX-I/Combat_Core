@@ -1295,7 +1295,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.draw.dof(self.dofFoc, aperture=8*ap if self.cam1P else 12*ap)
         if self.doBloom:
-            self.draw.blur()
+            self.draw.blur(self.exposure)
 
         self.oldVMat = np.array(self.vMat)
         self.oldVPos = np.array(self.pos)
