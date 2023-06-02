@@ -1130,7 +1130,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.24,0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
+        fogParams = {2: (0.14,0.01, 40,10,np.array((0.1,0.15,0.4)) * 0.016),
                      4: (0.02,0.002,40,0, np.array((0.05,0.1,0.2)) * 0.0025),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:

@@ -57,7 +57,8 @@ def setupStage(self):
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
-    self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":[2.0,1.77,1.33]})
+    DIR0I = np.array([2.0,1.77,1.33]) * 1.5
+    self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DIR0I})
     self.directionalLights.append({"dir":[pi*2/3, 2.5+pi], "i":[0.3,0.2,0.15]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.075,0.15,0.3]})
 

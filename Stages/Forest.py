@@ -62,8 +62,9 @@ def setupStage(self):
                        shadow="CR")
 
     for f in self.vtNames:
+        mat = self.matShaders[self.vtNames[f]]
         if 'Water' in f:
-            self.matShaders[self.vtNames[f]]['SSR'] = '0'
+            mat['SSR'] = '0'
             self.vertObjects[self.vtNames[f]].castShadow = False
             self.water = VertWater0(
                 (0,0,0), self, pScale=0.04,
@@ -73,9 +74,9 @@ def setupStage(self):
                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
             self.water.texNum = self.vtNames[f]
         if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
-            self.matShaders[self.vtNames[f]]['translucent'] = 1
+            mat['translucent'] = 1
         if 'Flower' in f or 'ce0a' in f:
-            self.matShaders[self.vtNames[f]]['translucent'] = 1
+            mat['translucent'] = 1
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
             self.matShaders[self.flameMTL] = {'add': 5, 'noline': 1}
@@ -84,13 +85,13 @@ def setupStage(self):
             tm = self.vtextures[self.vtNames[f]] * 0.9
             self.vtextures[self.vtNames[f]] = tm.astype('uint16')
         if 'SandFloor' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = 'sand_floor'
+            mat['normal'] = 'sand_floor'
         if '3DRock' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = '3DRock'
+            mat['normal'] = '3DRock'
         if '095' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = '096'
+            mat['normal'] = '096'
         if 'Ground' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = 'Grass'
+            mat['normal'] = 'Grass'
 
 
     pp1 = np.array((-14.5,15,24.))

@@ -189,15 +189,14 @@ def setupStage(self):
                            useShaders={'add': 1, 'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6 * 1.5
+    LInt = np.array([1,0.3,0.24]) * 2.5
     #LInt = np.array([0.1,0.3,0.9]) * 1
     #LInt = np.array([0.5,0.6,0.9])
     #LInt = np.array([1,0.4,0.2])
     # 255, 122, 2
     # 63, 125, 252, black point 0.15
     LDir = pi*1.45
-    skyI = np.array([0.2,0.25,0.5]) * 0.8 * 0.6
-    #skyI = np.array([0.1,0.15,0.5]) * 0.3
+    skyI = np.array([0.1,0.15,0.5]) * 0.4
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
     self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
                                    np.array([0.08,0.06,0.1]) * 0.6})
