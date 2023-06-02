@@ -442,9 +442,9 @@ class ThreeDBackend:
             self.draw.addShadowMap(i, s["size"], s["scale"],
                                    self.ambLight, g)
 
-    def updateShadowCam(self, i):
+    def updateShadowCam(self, i, **kwargs):
         s = self.shadowCams[i]
-        self.draw.placeShadowMap(i, s["pos"], s["dir"], self.ambLight)
+        self.draw.placeShadowMap(i, s["pos"], s["dir"], self.ambLight, **kwargs)
 
     def shadowMap(self, i, castObjs=None, bias=0.2):
         if castObjs is None:

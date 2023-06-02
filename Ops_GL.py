@@ -1244,7 +1244,7 @@ class CLDraw:
                                        [(vbo, '3f4 5x4', 'in_vert')])
                 self.SVA.append(vao)
 
-    def placeShadowMap(self, i, pos, facing, ambLight=None):
+    def placeShadowMap(self, i, pos, facing, ambLight=None, updateShaders=False):
         sm = self.SHADOWMAP[i]
         sm['pos'] = pos.astype('float32')
         f = viewMat(*facing)
@@ -1252,9 +1252,10 @@ class CLDraw:
         f = np.array(f.T, order='C')
         sm['vec'] = f.astype('float32')
 
+        if not updateShaders: return
+
         for n in range(len(self.VBO)):
             if n in self.BN:
-                if n in self.drawSB: continue
                 vbo = self.VBO[n]
                 if 'alpha' in self.oldShaders[n]:
                     dm = drawMinAlpha
@@ -1264,6 +1265,8 @@ class CLDraw:
                     vbosetup = (vbo, '3f 5x4 /v', 'in_vert')
                 self.drawSB[n] = ctx.program(vertex_shader=trisetupOrthoAnim,
                                              fragment_shader=dm)
+                if 'alpha' in self.oldShaders[n]:
+                    self.drawSB[n]['TA'] = 2
 
                 vao = ctx.vertex_array(self.drawSB[n],
                                        [vbosetup, (self.BN[n], '1f /v', 'boneNum')])
@@ -1301,8 +1304,8 @@ class CLDraw:
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        for n in range(len(self.SVA)):
-            if n < len(whichCast) and whichCast[n]:
+        for n in range(min(len(whichCast), len(self.SVA))):
+            if whichCast[n]:
                 if 'alpha' in shaders[n]:
                     ta = shaders[n]['alpha']
                     self.drawSA['TA'] = 2
