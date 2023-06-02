@@ -209,7 +209,7 @@ class CLDraw:
     def reloadShaders(self, **kwargs):
         loadShaders()
         for i in range(len(self.VBO)):
-            self.changeShader(i, self.oldShaders[i], **kwargs)
+            self.changeShader(i, {}, **kwargs)
 
         for s in 'psProg dProg moProg ssaoProg'.split(' '):
             try: self.__delattr__(s)
@@ -905,7 +905,9 @@ class CLDraw:
 
         elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
             if 'SSR' not in self.oldShaders[i] and 'SSRopaque' not in self.oldShaders[i]:
-                if shaders[i]['SSR'] == '0':
+                if 'SSRopaque' in shaders[i]:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
+                elif shaders[i]['SSR'] == '0':
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
                 elif shaders[i]['SSR'] == 1:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
@@ -1032,18 +1034,22 @@ class CLDraw:
             try: _ = self.DRAWZ[i]
             except KeyError:
                 p = self.VBO[i]
+
+                dZ = drawZAlpha if 'alpha' in shaders[i] else drawZ
+                va1 = (p, '3f4 5x4 /v', 'in_vert')
+                if 'alpha' in shaders[i]:
+                    va1 = (p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')
+
                 if i in self.BO:
-                    draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=drawZ)
+                    draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=dZ)
                     vao = ctx.vertex_array(draw,
-                        [(p, '3f4 5x4 /v', 'in_vert'),
-                         (self.BN[i], '1f /v', 'boneNum')])
-                elif 'alpha' in shaders[i]:
-                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZAlpha)
-                    draw['TA'] = 2
-                    vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
+                        [va1, (self.BN[i], '1f /v', 'boneNum')])
                 else:
-                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
-                    vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
+                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=dZ)
+                    vao = ctx.vertex_array(draw, [va1])
+
+                if 'alpha' in shaders[i]:
+                    draw['TA'] = 2
                 draw['aspect'].write(np.float32(self.H/self.W))
                 self.DRAWZ[i] = (vao, draw)
             if 'cull' in shaders[i]:
