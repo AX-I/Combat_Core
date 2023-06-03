@@ -1,9 +1,9 @@
-// with square dof
+// Stochastic circle dof
 
 #version 330
 
-#define MAXCOC 4.f
-#define MAXSKIP 4.f
+#define DOF_SAMPLES 16
+#define MAX_UINT 4294967295.f
 #define PI2 6.283f
 
 #define CHROM
@@ -15,12 +15,21 @@ out vec3 f_color;
 uniform float width;
 uniform float height;
 uniform float exposure;
+
 uniform float focus;
 uniform float aperture;
 
 uniform int tonemap;
 
 uniform float blackPoint;
+
+
+uint rand_xorshift(uint rng_state) {
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
 
 
 vec3 ACESFilm(vec3 x)
@@ -62,41 +71,42 @@ void main() {
 
 	float d = texture(db, tc*wh).r;
 
-    float coc = aperture * abs(d-focus) / focus / d;
+  float coc = aperture * abs(d-focus) / focus / d;
 
 	vec3 color = vec3(0);
 
-	float nsamples = 0;
+  uint rng_state = uint(tc.y * height + tc.x);
 	float cover;
-	int skip = min(int(MAXSKIP), max(1, int(coc / MAXCOC)));
-    float radius = min(MAXCOC * MAXSKIP, coc);
+  float nsamples = 0;
+  float ri,rj,si,sj;
+	for (int k = 0; k<DOF_SAMPLES; k++) {
 
-	for (int i = -int(radius); i <= int(radius); i += skip) {
-		for (int j = -int(radius); j <= int(radius); j += skip) {
-			if (abs(i)+abs(j) <= int(coc * 1.5)) {
-				cover = 1;
+    ri = float(rng_state & 31u) / 31;
+    rng_state = rand_xorshift(rng_state);
+    rj = float(rng_state & 31u) / 31;
+    rng_state = rand_xorshift(rng_state);
 
-				vec2 target = tc + vec2(i, j);
+    si = coc * 1.07 * sqrt(ri) * cos(PI2 * rj);
+    sj = coc * 1.07 * sqrt(ri) * sin(PI2 * rj);
 
-				if ((target.x < 0) || (target.x >= width) || (target.y < 0) || (target.y >= height)) cover = 0;
+    cover = 1;
 
-				float sz = texture(db, target * wh).r;
-				float ecoc = aperture * abs(sz-focus) / focus / sz;
-				ecoc = min(MAXCOC, ecoc);
+    vec2 target = tc + vec2(si, sj);
 
-				if (radius > ecoc) cover *= ecoc / radius;
-				nsamples += cover;
+    float sz = texture(db, target * wh).r;
+    float ecoc = aperture * abs(sz-focus) / focus / sz;
 
-        #ifdef CHROM
-        vec2 coord = tc + vec2(i, j) - center;
-        color.r += cover * texture(tex1, (coord*0.996 + center)*wh).r;
-        color.g += cover * texture(tex1, (coord + center)*wh).g;
-        color.b += cover * texture(tex1, (coord*1.003 + center)*wh).b;
-        #else
-        color += cover * texture(tex1, (tc + vec2(i, j))*wh).rgb;
-        #endif
-		    }
-		}
+    if (coc > ecoc) cover *= ecoc / coc;
+    nsamples += cover;
+
+    #ifdef CHROM
+    vec2 coord = tc + vec2(si, sj) - center;
+    color.r += cover * texture(tex1, (coord*0.996 + center)*wh).r;
+    color.g += cover * texture(tex1, (coord + center)*wh).g;
+    color.b += cover * texture(tex1, (coord*1.003 + center)*wh).b;
+    #else
+    color += cover * texture(tex1, (tc + vec2(si, sj))*wh).rgb;
+    #endif
 	}
 	color /= nsamples;
 
