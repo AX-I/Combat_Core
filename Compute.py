@@ -265,8 +265,11 @@ class ThreeDBackend:
                     self.matShaders[i])
             self.vtextures[i] = np.array([1])
 
-        for tex in self.texAlphas:
-            self.draw.addTexAlpha(tex)
+        for f in self.matShaders:
+            mat = self.matShaders[f]
+            if 'alpha' not in mat: continue
+            tex = self.texAlphas[mat['alpha']]
+            self.draw.addTexAlpha(tex, mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
 
         del self.texAlphas
 

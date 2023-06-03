@@ -75,6 +75,8 @@ def setupStage(self):
             self.water.texNum = self.vtNames[f]
         if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
             mat['translucent'] = 1
+        if 'Plant' in f:
+            mat['alphaMip'] = 2
         if 'Flower' in f or 'ce0a' in f:
             mat['translucent'] = 1
         if 'Flame' in f:

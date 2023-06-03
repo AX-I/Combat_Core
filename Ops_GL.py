@@ -250,10 +250,10 @@ class CLDraw:
 
     def setReflTex(self, name, r, g, b, size):
         pass
-    def addTexAlpha(self, tex, name=None):
+    def addTexAlpha(self, tex, name=None, mipLvl=8):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
-        a.build_mipmaps()
+        a.build_mipmaps(0, mipLvl)
         if name is None: name = len(self.TA)
         self.TA[name] = a
 
