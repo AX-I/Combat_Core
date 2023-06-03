@@ -21,25 +21,27 @@ def setupStage(self):
                        subDiv=1, shadow="CR")
 
     for f in self.vtNames:
+        mat = self.matShaders[self.vtNames[f]]
         if "CV" in f:
-            self.matShaders[self.vtNames[f]]['emissive'] = 1.0
+            mat['emissive'] = 1.0
         if "BackgroundLight" in f:
-            self.matShaders[self.vtNames[f]]['add'] = 0.5
-            self.matShaders[self.vtNames[f]]['noline'] = True
-            self.matShaders[self.vtNames[f]]['cull'] = 1
+            mat['add'] = 0.5
+            mat['noline'] = True
+            mat['cull'] = 1
         if "FieldBackground" in f:
-            self.matShaders[self.vtNames[f]]['emissive'] = 2.0
+            mat['emissive'] = 2.0
         if 'AtlasG_opt' in f:
-            self.matShaders[self.vtNames[f]]['spec'] = 1
-            self.matShaders[self.vtNames[f]]['normal'] = 'AtlasG'
+            mat['spec'] = 1
+            mat['normal'] = 'AtlasG'
         if 'Copy' in f:
             self.ssrMTL = self.vtNames[f]
             self.matShaders[self.ssrMTL]['SSR'] = 2
             self.matShaders[self.ssrMTL]['roughness'] = 0.1
             self.matShaders[self.ssrMTL]['normal'] = 'AtlasG'
+            self.matShaders[self.ssrMTL]['cull'] = 1
         if 'AtlasW' in f:
-            self.matShaders[self.vtNames[f]]['spec'] = 1
-            self.matShaders[self.vtNames[f]]['roughness'] = 0.4
+            mat['spec'] = 1
+            mat['roughness'] = 0.4
 
     self.terrain = VertTerrain0([0,-0.6,0],
                                 PATH+"../Atrium/AtriumNav.png",

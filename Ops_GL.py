@@ -194,6 +194,7 @@ class CLDraw:
             except: pass
 
         self.setupPost()
+        self.setupSSAO()
 
     def setupPost(self):
         w, h = self.outW, self.outH
@@ -448,7 +449,7 @@ class CLDraw:
         d = self.DRAW[tn]
         try:
             d['pScale'].write(np.float32(pScale))
-            d['pTime'].write(np.float32(time.time() - stTime))
+            d['pTime'].write(self.currTime)
         except KeyError:
             draw = ctx.program(vertex_shader=trisetupWave,
                                fragment_shader=drawSSR)
@@ -1043,6 +1044,8 @@ class CLDraw:
             if shaders[i] != self.oldShaders[i]:
                 self.changeShader(i, shaders[i], **kwargs)
 
+        self.currTime = np.float32(time.time() - self.stTime)
+
         # Write to readable depth buffer
         self.fboZ.use()
         self.fboZ.clear(red=2048.0, depth=1.0)
@@ -1162,7 +1165,7 @@ class CLDraw:
                 if 'special' in shaders[i]:
                     self.DRAW[i]['VV'].write(self.rawVM[0])
                 try:
-                    self.DRAW[i]['iTime'].write(np.float32(time.time() - self.stTime))
+                    self.DRAW[i]['iTime'].write(self.currTime)
                 except KeyError:
                     pass
 
@@ -1213,6 +1216,10 @@ class CLDraw:
                 self.DRAW[i]['vmat'].write(self.rawVM)
             else:
                 continue
+            if 'cull' in shaders[i]:
+                ctx.enable(moderngl.CULL_FACE)
+            else:
+                ctx.disable(moderngl.CULL_FACE)
 
             self.DRAW[i]['tex1'] = 0
             self.TEX[i].use(location=0)

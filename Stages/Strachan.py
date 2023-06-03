@@ -260,11 +260,12 @@ def showPlatforms(self):
     for p in self.stagePlatforms:
         self.w.addCollider(Phys.CircleCollider(0.6, p))
         ps = CentripetalParticleSystem(p, (0, 0),
-                                       nParticles=60, lifespan=1200,
+                                       nParticles=30, lifespan=1200,
                                        randPos=0.08, vel=0.0, randVel=0.0,
-                                       size=0.1, opacity=0.05,
-                                       color=(0.2,0.2,0.2), randColor=0,
+                                       size=0.08, opacity=0.9,
+                                       color=(0.1,0.1,0.1), randColor=0,
                                        f=0.001, r=0.6, cc=1)
+        ps.shader = 2
         self.addParticleSystem(ps)
         self.stagePlatformPS.append(ps)
 
