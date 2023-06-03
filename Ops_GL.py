@@ -54,10 +54,18 @@ DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
 POST_SHADERS = 'gamma lens FXAA'
 
 def loadShaders():
-    for f in DRAW_SHADERS.split(' '):
-        globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
-    for f in POST_SHADERS.split(' '):
-        globals()[f.lower()] = makeProgram(f'Post/{f}.c')
+    while True:
+        try:
+            for f in DRAW_SHADERS.split(' '):
+                globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
+            for f in POST_SHADERS.split(' '):
+                globals()[f.lower()] = makeProgram(f'Post/{f}.c')
+        except moderngl.Error as e:
+            print(e)
+            input('Try again: ')
+        else:
+            break
+
 
 loadShaders()
 
@@ -159,40 +167,10 @@ class CLDraw:
         y = np.array([1, -1, 1, 1, -1, -1])
         z = np.ones(6)*-0.9999
         vertices = np.dstack([x, y, z])
-
         self.post_vbo = ctx.buffer(vertices.astype('float32').tobytes())
-        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
-        self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
-        self.post_prog['tex1'] = 0
-        self.post_prog['db'] = 1
 
-        self.post_prog['width'].write(np.float32(w))
-        self.post_prog['height'].write(np.float32(h))
-
-        if self.USE_FSR:
-            self.post_prog['width'].write(np.float32(self.W))
-            self.post_prog['height'].write(np.float32(self.H))
-
-            self.fsr_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
-            self.fsr_vao = ctx.vertex_array(self.fsr_prog, self.post_vbo, 'in_vert')
-            self.fsr_prog['Source'] = 0
-            self.fsr_prog['width_in'].write(np.float32(self.W))
-            self.fsr_prog['height_in'].write(np.float32(self.H))
-            self.fsr_prog['width_out'].write(np.float32(w))
-            self.fsr_prog['height_out'].write(np.float32(h))
-
-            self.fsr_rcas_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
-            self.fsr_rcas_vao = ctx.vertex_array(self.fsr_rcas_prog, self.post_vbo, 'in_vert')
-
-        self.fxaa_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fxaa)
-        self.fxaa_vao = ctx.vertex_array(self.fxaa_prog, self.post_vbo, 'in_vert')
-        self.fxaa_prog['tex1'] = 0
-        if self.USE_FSR:
-            self.fxaa_prog['width'].write(np.float32(self.W))
-            self.fxaa_prog['height'].write(np.float32(self.H))
-        else:
-            self.fxaa_prog['width'].write(np.float32(w))
-            self.fxaa_prog['height'].write(np.float32(h))
+        self.setupPost()
+        self.setupFSR()
 
         self.oldShaders = {}
 
@@ -215,6 +193,48 @@ class CLDraw:
             try: self.__delattr__(s)
             except: pass
 
+        self.setupPost()
+
+    def setupPost(self):
+        w, h = self.outW, self.outH
+
+        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
+        self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
+        self.post_prog['tex1'] = 0
+        self.post_prog['db'] = 1
+
+        self.post_prog['width'].write(np.float32(w))
+        self.post_prog['height'].write(np.float32(h))
+
+        if self.USE_FSR:
+            self.post_prog['width'].write(np.float32(self.W))
+            self.post_prog['height'].write(np.float32(self.H))
+
+    def setupFSR(self):
+        w, h = self.outW, self.outH
+
+        if self.USE_FSR:
+            self.fsr_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+            self.fsr_vao = ctx.vertex_array(self.fsr_prog, self.post_vbo, 'in_vert')
+            self.fsr_prog['Source'] = 0
+            self.fsr_prog['width_in'].write(np.float32(self.W))
+            self.fsr_prog['height_in'].write(np.float32(self.H))
+            self.fsr_prog['width_out'].write(np.float32(w))
+            self.fsr_prog['height_out'].write(np.float32(h))
+
+            self.fsr_rcas_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+            self.fsr_rcas_vao = ctx.vertex_array(self.fsr_rcas_prog, self.post_vbo, 'in_vert')
+
+        self.fxaa_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fxaa)
+        self.fxaa_vao = ctx.vertex_array(self.fxaa_prog, self.post_vbo, 'in_vert')
+        self.fxaa_prog['tex1'] = 0
+        if self.USE_FSR:
+            self.fxaa_prog['width'].write(np.float32(self.W))
+            self.fxaa_prog['height'].write(np.float32(self.H))
+        else:
+            self.fxaa_prog['width'].write(np.float32(w))
+            self.fxaa_prog['height'].write(np.float32(h))
+
     def setupNoise(self):
         from PIL import Image
         n = Image.open('../Assets/Noise/NoiseTest.png').convert('RGB')
@@ -232,7 +252,7 @@ class CLDraw:
     def addTexAlpha(self, tex, name=None):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
-        a.build_mipmaps(0, 2)
+        a.build_mipmaps()
         if name is None: name = len(self.TA)
         self.TA[name] = a
 

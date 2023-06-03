@@ -89,9 +89,9 @@ void main() {
 
         #ifdef CHROM
         vec2 coord = tc + vec2(i, j) - center;
-        color.r += cover * texture(tex1, (coord*0.994 + center)*wh).r;
+        color.r += cover * texture(tex1, (coord*0.996 + center)*wh).r;
         color.g += cover * texture(tex1, (coord + center)*wh).g;
-        color.b += cover * texture(tex1, (coord*1.006 + center)*wh).b;
+        color.b += cover * texture(tex1, (coord*1.003 + center)*wh).b;
         #else
         color += cover * texture(tex1, (tc + vec2(i, j))*wh).rgb;
         #endif
@@ -105,7 +105,7 @@ void main() {
 
   float vignette = dot((tc - center) * wh, (tc - center) * wh);
 
-  j *= 1 - vignette*vignette * 3;
+  j *= 1 - vignette*vignette * 2.5;
 
   if (tonemap == 0) {
     // Basic gamma
