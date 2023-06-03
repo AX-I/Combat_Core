@@ -941,6 +941,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addParticleSystem(ps)
         a['projFX'] = ps
         a['projFXstart'] = -1
+        ps.shader = 2
 
 
     def createObjects(self):
@@ -1737,6 +1738,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       circular=True)
         self.addParticleSystem(ps)
         i['ps'] = ps
+        i['ps'].shader = 2
 
     def resetPickup(self):
         i = self.pickups[0]

@@ -364,7 +364,10 @@ class ThreeDBackend:
 
         for i in range(len(cc)):
             ps = cc[i][0]
-            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex)
+            try: shader = ps.shader
+            except AttributeError: shader=1
+            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex,
+                             shader)
 
 
         self.postProcess()

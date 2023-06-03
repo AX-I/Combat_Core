@@ -453,7 +453,7 @@ class CLDraw:
             draw['lenW2'].write(self.WNUM[1])
 
 
-    def drawPS(self, xyz, color, opacity, size, tex=None):
+    def drawPS(self, xyz, color, opacity, size, tex=None, shader=1):
         try: _ = self.psProg
         except:
             ctx.point_size = 4
@@ -477,7 +477,7 @@ class CLDraw:
             self.PSTEX[tex].use(location=0)
         else:
             self.psProg['useTex'] = 0
-            self.psProg['fadeUV'] = 1
+            self.psProg['fadeUV'] = shader
 
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)
