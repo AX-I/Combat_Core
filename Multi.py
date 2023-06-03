@@ -2133,6 +2133,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a["vertVel"] -= self.frameTime * 9.81
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    vx,vy = a['pv'].v[::2]
+                    if vx*vx+vy*vy > 0.0001:
+                        a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
+                        a['pv'].v[::2] *= 0
+
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
@@ -2145,6 +2150,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["isHit"] = self.frameNum
 
             a['pv'].v *= 0.9
+            if Phys.eucLen(a['pv'].v) < 0.01:
+                a['pv'].v *= 0
 
             if a["gesturing"]:
                 a["moving"] = 0
