@@ -1,6 +1,7 @@
 // Particles
 
 #version 330
+#define s2 1.414
 
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
@@ -24,16 +25,16 @@ void main() {
 
     v_norm = vec3(1,0,0);
 
-    gl_Position = gl_in[0].gl_Position + vec4(-dimx, -dimy, 0.0, 0.0);
+    gl_Position = gl_in[0].gl_Position + vec4(0, -s2*dimy, 0.0, 0.0);
     v_UV = vec2(0,0);
     EmitVertex();
-    gl_Position = gl_in[0].gl_Position + vec4( dimx, -dimy, 0.0, 0.0);
+    gl_Position = gl_in[0].gl_Position + vec4(s2*dimx, 0, 0.0, 0.0);
     v_UV = vec2(1,0) * gs_in[0].depth;
     EmitVertex();
-    gl_Position = gl_in[0].gl_Position + vec4(-dimx, dimy, 0.0, 0.0);
+    gl_Position = gl_in[0].gl_Position + vec4(-s2*dimx, 0, 0.0, 0.0);
     v_UV = vec2(0,1) * gs_in[0].depth;
     EmitVertex();
-    gl_Position = gl_in[0].gl_Position + vec4( dimx, dimy, 0.0, 0.0);
+    gl_Position = gl_in[0].gl_Position + vec4(0, s2*dimy, 0.0, 0.0);
     v_UV = vec2(1,1) * gs_in[0].depth;
     EmitVertex();
 

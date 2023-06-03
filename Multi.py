@@ -935,8 +935,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 0.4, (0,0,0.), 6,
                 (0,0,0.), (0,0),
                 vel=0.0, randVel=0.0,
-                nParticles=60,
-                size=0.05, opacity=0.5,
+                nParticles=40,
+                size=0.1, opacity=0.5,
                 color=(0.2,0.2,0.2), randColor=0)
         self.addParticleSystem(ps)
         a['projFX'] = ps

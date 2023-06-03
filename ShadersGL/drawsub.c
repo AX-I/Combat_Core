@@ -17,6 +17,10 @@ uniform int fadeUV; // 0 none, 1 circle, 2 star
 
 uniform int useTex;
 
+mat2 rot(float t) {
+  return mat2(cos(t),-sin(t),sin(t),cos(t));
+}
+
 void main() {
   vec3 norm = v_norm / depth;
   vec3 light = (LInt + LDir + norm) * 0.001;
@@ -30,6 +34,7 @@ void main() {
   }
   if (fadeUV == 2) {
     vec2 d = v_UV / depth - vec2(0.5);
+    d *= rot(3.1415 / 4) * 0.8;
     float m = 2*length(d);
     m = exp(-7*m);
     m += 6*max(0., 0.5-2.*sqrt(abs(d.x))) * m;

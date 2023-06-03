@@ -165,9 +165,10 @@ def setupStage(self):
         ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
                                       vel=0.03/ts, force=(0,-0.01/ts/ts,0),
                                       lifespan=90*ts, nParticles=30,
-                                      randPos=0.02, randVel=0.01/ts,
-                                      size=0.15, opacity=0.15,
+                                      randPos=0.02, randVel=0.0/ts,
+                                      size=0.15, opacity=0.5,
                                       color=np.array([1,0.3,0.24]) * 0.3)
+        ps.shader = 2
         self.addParticleSystem(ps)
         self.skiParticles.append(ps)
 
