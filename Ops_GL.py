@@ -51,20 +51,13 @@ if True: #if sys.platform == 'darwin':
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
 DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
 
-POST_SHADERS = 'gamma lens FXAA'
+POST_SHADERS = 'gamma lens FXAA dof ssao'
 
 def loadShaders():
-    while True:
-        try:
-            for f in DRAW_SHADERS.split(' '):
-                globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
-            for f in POST_SHADERS.split(' '):
-                globals()[f.lower()] = makeProgram(f'Post/{f}.c')
-        except moderngl.Error as e:
-            print(e)
-            input('Try again: ')
-        else:
-            break
+    for f in DRAW_SHADERS.split(' '):
+        globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
+    for f in POST_SHADERS.split(' '):
+        globals()[f.lower()] = makeProgram(f'Post/{f}.c')
 
 
 loadShaders()
@@ -185,16 +178,24 @@ class CLDraw:
         self.stTime = time.time()
 
     def reloadShaders(self, **kwargs):
-        loadShaders()
-        for i in range(len(self.VBO)):
-            self.changeShader(i, {}, **kwargs)
+        while True:
+            try:
+                loadShaders()
+                for i in range(len(self.VBO)):
+                    self.changeShader(i, {}, **kwargs)
 
-        for s in 'psProg dProg moProg ssaoProg'.split(' '):
-            try: self.__delattr__(s)
-            except: pass
+                for s in 'psProg dProg moProg ssaoProg'.split(' '):
+                    try: self.__delattr__(s)
+                    except: pass
 
-        self.setupPost()
-        self.setupSSAO()
+                self.setupPost()
+                self.setupSSAO()
+                self.setupDoF()
+            except moderngl.Error as e:
+                print(e)
+                input('Try again: ')
+            else:
+                break
 
     def setupPost(self):
         w, h = self.outW, self.outH
@@ -202,7 +203,6 @@ class CLDraw:
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
-        self.post_prog['db'] = 1
 
         self.post_prog['width'].write(np.float32(w))
         self.post_prog['height'].write(np.float32(h))
@@ -563,7 +563,7 @@ class CLDraw:
 
         self.dVao.render(moderngl.TRIANGLES)
 
-        # Blend with frame
+        # Copy to frame
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def motionBlur(self, oldPos, oldVMat):
@@ -611,12 +611,12 @@ class CLDraw:
         # Copy to oldbuf
         self.blit(self.OLDFBO, self.FB, self.W, self.H)
 
-        # Blend with frame
+        # Copy to frame
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def setupSSAO(self):
         self.ssaoProg = ctx.program(vertex_shader=trisetup2d,
-            fragment_shader=makeProgram('Post/ssao.c'))
+            fragment_shader=ssao)
         self.ssaoProg['width'].write(np.float32(self.W))
         self.ssaoProg['height'].write(np.float32(self.H))
         self.ssaoProg['vscale'].write(np.float32(self.sScale))
@@ -630,10 +630,39 @@ class CLDraw:
         except: self.setupSSAO()
         self.doSSAO = True
 
+    def setupDoF(self):
+        self.dofProg = ctx.program(vertex_shader=trisetup2d,
+                                   fragment_shader=dof)
+        self.dofProg['width'] = self.W
+        self.dofProg['height'] = self.H
+        self.dofProg['tex1'] = 0
+        self.dofProg['db'] = 1
+        self.dofVao = ctx.vertex_array(self.dofProg, self.post_vbo, 'in_vert')
+
     def dof(self, focus, aperture=None):
+        try: _ = self.dofProg
+        except: self.setupDoF()
         self.dofFocus = np.float32(focus)
         if aperture is not None:
             self.dofAperture = np.float32(aperture)
+
+        ctx.disable(moderngl.BLEND)
+        ctx.disable(moderngl.DEPTH_TEST)
+
+        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO.use()
+        self.dofProg['focus'] = self.dofFocus
+        self.dofProg['aperture'] = self.dofAperture * self.IRES
+        self.FB.use(location=0)
+        self.DBT.use(location=1)
+
+        self.dofVao.render(moderngl.TRIANGLES)
+
+        # Copy to frame
+        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+        ctx.enable(moderngl.DEPTH_TEST)
+        ctx.enable(moderngl.BLEND)
+
 
     def setupBlur(self):
         # Temp
@@ -730,8 +759,6 @@ class CLDraw:
         else:
             self.fs.clear(0.0, 0.0, 0.0, 0.0)
             self.fs.use()
-        self.post_prog['focus'] = self.dofFocus
-        self.post_prog['aperture'] = self.dofAperture * self.IRES
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.post_prog['blackPoint'] = np.float32(blackPoint)
@@ -1152,7 +1179,7 @@ class CLDraw:
 
             self.ssaoVao.render(moderngl.TRIANGLES)
 
-            # Blend with frame
+            # Copy to frame
             self.blit(self.fbo, self.POSTBUF, self.W, self.H)
             ctx.enable(moderngl.DEPTH_TEST)
             self.doSSAO = False
