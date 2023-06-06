@@ -135,7 +135,7 @@ def setupStage(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':0.5})
+            useShaders={'2d':1, 'lens':0.4})
 
 
     fn = "../Skyboxes/approaching_storm_1k.ahdr"

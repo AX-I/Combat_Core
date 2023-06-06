@@ -130,7 +130,7 @@ def setupStage(self):
 
     # Background Mountain
     pfile = tgpath + "Mountain.obj"
-    opts = {'filename':pfile, 'mip':2, 'useShaders':
+    opts = {'filename':pfile, 'mip':2, 'texMul':0.8, 'useShaders':
             {'spec':0.4, 'normal':'mountain', 'ignoreShadow':1},
             'shadow':'', 'static':True}
     self.addVertObject(VertModel, [22,32,-271], rot=(0,0,0), scale=2,

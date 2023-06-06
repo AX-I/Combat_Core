@@ -85,9 +85,10 @@ void main() {
     rng_state = rand_xorshift(rng_state);
     rj = float(rng_state & 31u) / 31;
     rng_state = rand_xorshift(rng_state);
+    float rq = sqrt(ri) * ((k == 0)?0:1);
 
-    si = coc * 1.07 * sqrt(ri) * cos(PI2 * rj);
-    sj = coc * 1.07 * sqrt(ri) * sin(PI2 * rj);
+    si = coc * 1.07 * rq * cos(PI2 * rj);
+    sj = coc * 1.07 * rq * sin(PI2 * rj);
 
     cover = 1;
 
@@ -96,7 +97,7 @@ void main() {
     float sz = texture(db, target * wh).r;
     float ecoc = aperture * abs(sz-focus) / focus / sz;
 
-    if (coc > ecoc) cover *= ecoc / coc;
+    if (coc * 1.07 * rq > ecoc) cover *= 0;
     nsamples += cover;
 
     #ifdef CHROM

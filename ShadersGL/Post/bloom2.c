@@ -8,7 +8,7 @@ uniform int axis;
 
 void main() {
 	vec2 wh = 1 / vec2(width, height);
-	vec2 tc = gl_FragCoord.xy;
+	vec2 tc = gl_FragCoord.xy + 0.5;
 
     int cx = int(tc.x);
     int cy = int(tc.y);
@@ -16,7 +16,7 @@ void main() {
 
     vec3 a = vec3(0);
 
-    float off = 1.32;
+    float off = 2;
     vec2 offset = vec2(0, off);
     if (axis == 1) offset = vec2(off, 0);
 

@@ -380,6 +380,7 @@ class CLDraw:
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
             tb = batch[tn]
+            if len(tb) == 0: continue
             size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
@@ -769,12 +770,14 @@ class CLDraw:
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s)
         for draw in self.DRAW:
-            draw['vscale'].write(self.sScale)
+            try: draw['vscale'].write(self.sScale)
+            except: pass
 
     def setPos(self, vc):
         self.vc = vc.astype('float32')
         for draw in self.DRAW:
-            draw['vpos'].write(self.vc)
+            try: draw['vpos'].write(self.vc)
+            except: pass
 
     def setVM(self, vM):
         self.rawVM = vM.astype('float32')
@@ -782,7 +785,8 @@ class CLDraw:
         vmat = np.array(vmat.T, order='C')
         self.vmat = vmat.astype('float32')
         for draw in self.DRAW:
-            draw['vmat'].write(self.vmat)
+            try: draw['vmat'].write(self.vmat)
+            except: pass
 
     def setAnisotropy(self, a):
         for tex in self.TEX:
@@ -993,9 +997,10 @@ class CLDraw:
             draw['width'].write(np.float32(self.W))
             draw['height'].write(np.float32(self.H))
         except: pass
-
-        draw['vscale'].write(self.sScale)
-        draw['aspect'].write(np.float32(self.H/self.W))
+        try:
+            draw['vscale'].write(self.sScale)
+            draw['aspect'].write(np.float32(self.H/self.W))
+        except: pass
 
         self.DRAW[i] = draw
 

@@ -263,8 +263,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.bgNoise = self.makeCL('BgNoise', nm)
 
         ci = Image.open('../Assets/Cursor.png')
-        ci = ci.resize((int(ci.size[0] * resScale * 1.15),
-                        int(ci.size[1] * resScale * 1.15)), Image.BILINEAR)
+        ci = ci.resize((int(ci.size[0] * resScale * 1.15 / 2),
+                        int(ci.size[1] * resScale * 1.15 / 2)), Image.BILINEAR)
         self.cursor = np.array(ci, 'float32')
         self.cursor[:,:,:3] = self.cursor[:,:,:3] / 255. * self.cursor[:,:,:3]
 
