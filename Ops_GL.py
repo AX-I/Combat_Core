@@ -189,6 +189,7 @@ class CLDraw:
                     except: pass
 
                 self.setupPost()
+                self.setupBlur()
                 self.setupSSAO()
                 self.setupDoF()
             except moderngl.Error as e:

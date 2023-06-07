@@ -10,15 +10,20 @@ void main() {
 	vec2 wh = 1 / vec2(width, height);
 	vec2 tc = gl_FragCoord.xy + 0.5;
 
-    int cx = int(tc.x);
-    int cy = int(tc.y);
-    int hF = int(height);
+    int cy;
+    int hF;
 
     vec3 a = vec3(0);
 
     float off = 2;
     vec2 offset = vec2(0, off);
-    if (axis == 1) offset = vec2(off, 0);
+    cy = int(tc.y);
+    hF = int(height);
+    if (axis == 1) {
+      offset = vec2(off, 0);
+      cy = int(tc.x);
+      hF = int(width);
+    }
 
 	a = (cy<9) ? a : a + 0.00816f * texture(tex1, (tc - 9*offset) * wh).rgb;
 	a = (cy<8) ? a : a + 0.01384f * texture(tex1, (tc - 8*offset) * wh).rgb;
