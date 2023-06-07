@@ -640,11 +640,13 @@ class CLDraw:
         self.dofVao = ctx.vertex_array(self.dofProg, self.post_vbo, 'in_vert')
 
     def dof(self, focus, aperture=None):
-        try: _ = self.dofProg
-        except: self.setupDoF()
         self.dofFocus = np.float32(focus)
         if aperture is not None:
             self.dofAperture = np.float32(aperture)
+
+    def applyDoF(self):
+        try: _ = self.dofProg
+        except: self.setupDoF()
 
         ctx.disable(moderngl.BLEND)
         ctx.disable(moderngl.DEPTH_TEST)
@@ -1139,7 +1141,7 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque', 'lens'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque', 'lens', 'DoF'}
             if all(t not in shaders[i] for t in trans):
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
@@ -1246,6 +1248,10 @@ class CLDraw:
                 self.DRAW[i]['SM2'] = 5
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['vmat'].write(self.rawVM)
+            elif 'DoF' in shaders[i]:
+                self.applyDoF()
+                self.fbo.use()
+                continue
             else:
                 continue
             if 'cull' in shaders[i]:

@@ -1259,6 +1259,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    texture=PATH+"../Assets/Magenta.png",
                                    useShaders={"border":0.1})
 
+        self.addVertObject(VertPlane, [-1,-1,0],
+                           h1=[0,2,0], h2=[2,0,0], n=1,
+                           texture=PATH+"../Assets/Circle.png",
+                           useShaders={"2d":1, 'DoF':1})
+
+        try: self.STAGECONFIG.setupPostprocess(self)
+        except AttributeError: pass
+
         sr = self.shRes
         fact = (1,1,1,0.9,0.5,1)[self.stage]
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],

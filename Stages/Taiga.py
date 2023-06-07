@@ -205,13 +205,6 @@ def setupStage(self):
                                    np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
 
-
-    # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':1})
-
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=4)
 
@@ -225,6 +218,13 @@ def setupStage(self):
 
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            useShaders={'2d':1, 'lens':1})
 
 def frameUpdate(self):
     if self.frameNum == 0:

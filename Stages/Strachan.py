@@ -207,13 +207,6 @@ def setupStage(self):
     self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ),
                             'vec':sv})
 
-
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':0.6})
-
-
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
@@ -226,6 +219,13 @@ def setupStage(self):
 
     self.trackTime = -1
     self.pillarTrackTime = -1
+
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            useShaders={'2d':1, 'lens':0.6})
 
 def movePillars(self, i):
     btn = self.buttons[i]

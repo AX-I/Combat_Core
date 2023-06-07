@@ -131,12 +131,6 @@ def setupStage(self):
     self.DIR4I = np.array([0.1,0.25,0.4]) * 0.4
     self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":self.DIR4I})
 
-    # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':0.4})
-
 
     fn = "../Skyboxes/approaching_storm_1k.ahdr"
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=16)
@@ -152,6 +146,12 @@ def setupStage(self):
                             PATH+"../Sound/NoiseOpen.wav",
                             PATH+"../Sound/ForestNoise.wav"]})
 
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            useShaders={'2d':1, 'lens':0.4})
 
 def changeMusic(self):
     self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
