@@ -280,6 +280,9 @@ class ThreeDBackend:
                 self.vertBones.append(np.zeros((i.shape[0], 3), dtype="int"))
 
         for i in range(len(self.vertBones)):
+            if 'genBone' in self.matShaders[i]:
+                self.vertBones[i] = np.ones((self.vertLight[i].shape[0], 3),
+                                            dtype="int") * self.matShaders[i]['genBone']
             if len(self.vertBones[i]) > 0:
                 self.draw.addBoneWeights(i, self.vertBones[i])
 

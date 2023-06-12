@@ -989,9 +989,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 mat.update({'spec':0.8, 'normal':'Hair',
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
-                            'hairShading':1})
+                            'hairShading':1, 'genBone':8})
             if 'Face' in f:
-                mat.update({'spec':1, 'normal':'Face'})
+                mat.update({'spec':1, 'normal':'Face',
+                            'genBone':8})
             if 'Skin' in f:
                 mat.update({'spec':1, 'normal':'Body'})
             if 'Metal' in f:
