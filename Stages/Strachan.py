@@ -225,7 +225,7 @@ def setupPostprocess(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            useShaders={'2d':1, 'lens':0.6})
+            texMul=0.4, useShaders={'2d':1, 'lens':0.8})
 
 def movePillars(self, i):
     btn = self.buttons[i]

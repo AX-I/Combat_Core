@@ -151,7 +151,7 @@ def setupPostprocess(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            useShaders={'2d':1, 'lens':0.4})
+            texMul=0.4, useShaders={'2d':1, 'lens':0.5})
 
 def changeMusic(self):
     self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
@@ -297,5 +297,5 @@ def frameUpdate(self):
         self.addNrmMap(tpath + 'sandstone_cracks_nor_gl_1k.png', 'sand_floor')
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
         self.addNrmMap(tpath + '096.png', '096')
-        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True)
+        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True, mipLvl=4)
         self.matShaders[self.fogMTL]['fogAmbDistFac'] = 4

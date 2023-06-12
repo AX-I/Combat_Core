@@ -269,7 +269,8 @@ class ThreeDBackend:
             mat = self.matShaders[f]
             if 'alpha' not in mat: continue
             tex = self.texAlphas[mat['alpha']]
-            self.draw.addTexAlpha(tex, mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
+            self.draw.addTexAlpha(tex, name=mat['alpha'],
+                                  mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
 
         del self.texAlphas
 
