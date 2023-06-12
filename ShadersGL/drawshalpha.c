@@ -56,6 +56,10 @@ uniform vec3 vpos;
 uniform float specular;
 #define roughness 0.6f
 
+uniform float f0;
+uniform int hairShading;
+uniform int tangentDir;
+
 void main() {
 	float tz = 1.0/depth;
 
@@ -77,10 +81,13 @@ void main() {
 	float si2 = 1-sr2;
 
 	float shadow = 0;
+  float shadow0 = 0;
+  float shadowDepth = 0;
 	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
 	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
 	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
 	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  shadow0 = shadow;
 
 	sxyz = SV2 * (v_pos*tz - SPos2);
 	sz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
@@ -101,11 +108,15 @@ void main() {
 	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
 	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
 	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
+    shadowDepth = max(0, sxyz.z - ((texture(SM2, sxy).r - 0.5)*FAR + NEAR + SBIAS) * 2);
     }
 
     shadow = clamp(shadow, 0, 1);
 
 	vec3 norm = normalize(v_norm * tz);
+
+  vec3 tangent;
+  vec3 bitangent;
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
     vec2 dUV2 = dFdy(v_UV*tz);
@@ -115,8 +126,8 @@ void main() {
     float det = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
     float rdet = 1.0 / det;
 
-    vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
-    vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
+    tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
+    bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
 
     float nmBias = -0.8f;
     if (NMmipBias != 0) nmBias = NMmipBias;
@@ -128,11 +139,14 @@ void main() {
   }
 
     vec3 light;
-    if (translucent == 1)
-      light = 0.6 * abs(dot(norm, LDir)) * (1-shadow) * LInt;
-    else
+    if (translucent == 1) {
+      if (hairShading == 0) {
+        light = 0.6 * abs(dot(norm, LDir)) * (1-shadow) * LInt;
+      }
+    }
+    else {
       light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
-
+    }
 
 
 	for (int i = 1; i < lenD; i++) {
@@ -156,24 +170,64 @@ void main() {
 	vec3 refl = normalize(a - 2 * nd * norm);
 	float theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
 	vec3 spec = theta * theta * vec3(0.008);
-    spec *= specular;
 
   // Sun specular
 	a = normalize(a);
 	vec3 h = normalize(a + LDir);
-	//theta = min(1.f, max(0.f, dot(h, norm) + 0.1f));
 	theta = max(0.f, dot(h, norm));
 
-	float fr = 1 - max(0.f, dot(normalize(v_pos*tz - vpos), norm));
+	float fr = 1 - (1-f0)*max(0.f, dot(normalize(v_pos*tz - vpos), norm));
     fr *= fr; fr *= fr; //fr *= fr;
 
+  vec3 tg = tangentDir * bitangent + (1-tangentDir) * tangent;
+
 	int specPow = int(exp2(12*(1.f - roughness)));
-	float fac = (specPow + 2) / (2*8 * 3.1416f);
+	float fac = (specPow + 2) / (2*8*1.5 * 3.1416f);
+  if (hairShading == 1) {
+    // R
+    h = normalize(a + LDir - 0.1 * tg);
+    theta = max(0.f, dot(h, norm));
+    fr *= (1-shadow0);
+    spec += fac * specular * fr * pow(theta, specPow) * exp(-32.f*shadowDepth) * LInt;
+  } else {
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
+  }
+
+  if (hairShading == 1) {
+    // TRT
+    h = normalize(a + LDir + 0.2 * tg);
+    theta = max(0.f, dot(h, norm));
+	  specPow = int(specPow / 3);
+	  fac = (specPow + 2) / (2*8 * 3.1416f);
+    spec += fac * fr * pow(theta, specPow) * exp(-32.f*shadowDepth) * LInt * texture(tex1, v_UV/depth).rgb * 64;
+
+    // TT
+    float azimuthalTheta = max(0, dot(normalize(LDir * dot(a, LDir) + tg * dot(a, tg)), -LDir));
+    azimuthalTheta = pow(azimuthalTheta, specPow);
+    float longitudinalTheta = max(0, dot(normalize(-normalize(a - dot(a, tg)) + LDir + 0.06 * tg), normalize(v_norm * tz)));
+    longitudinalTheta = pow(longitudinalTheta, specPow);
+    spec += fac * fr * azimuthalTheta * longitudinalTheta * 0.25 * exp(-32.f*shadowDepth) * LInt * sqrt(texture(tex1, v_UV/depth).rgb * 8);
+
+    // Forward scatter
+    theta = max(0.f, dot(a, -LDir));
+	  specPow = int(exp2(12*(1.f - roughness)));
+	  fac = (specPow + 2) / (2*8 * 3.1416f);
+    spec += fac * fr * pow(theta, specPow) * 0.25 * exp(-32.f*shadowDepth) * LInt * sqrt(texture(tex1, v_UV/depth).rgb * 8);
+
+    // Multiple scatter
+    spec += fac * fr * pow(theta, specPow) * 0.25 * exp(-12.f*shadowDepth) * LInt * texture(tex1, v_UV/depth).rgb * 8;
+
+    // Back scatter
+    theta = max(0.f, dot(a, norm));
+	  specPow = int(exp2(12*(1.f - roughness * 2)));
+	  fac = (specPow + 2) / (2*8 * 3.1416f);
+    spec += fac * fr * pow(theta, specPow) * exp(-32.f*shadowDepth) * LInt * texture(tex1, v_UV/depth).rgb * 8;
+  }
+
 
 
     light *= (1 + highMult);
 
-    vec3 rgb = texture(tex1, v_UV / depth).rgb * light + spec;
+    vec3 rgb = texture(tex1, v_UV / depth).rgb * light + spec * specular;
     f_color = vec4(rgb, 0.5);
 }

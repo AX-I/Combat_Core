@@ -912,6 +912,11 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
+            if 'hairShading' in shaders[i]:
+                draw['hairShading'] = shaders[i]['hairShading']
+                draw['f0'] = shaders[i]['f0']
+            if 'tangentDir' in shaders[i]:
+                draw['tangentDir'] = shaders[i]['tangentDir']
 
         elif 'emissive' in shaders[i]:
             draw = ctx.program(vertex_shader=ts, fragment_shader=drawEmissive)
