@@ -300,7 +300,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.bindKey('k', self.tgSpec)
 
-        self.bindKey('0', self.testColor)
+        self.bindKey('0', self.pause)
         self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
@@ -308,11 +308,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('<Control-R>', self.reloadStageHard)
         self.bindKey('<Control-t>', self.reloadShaders)
 
-        self.bindKey('u', self.tgDof)
+        self.bindKey('u', self.dofLess)
+        self.bindKey('U', self.dofMore)
         self.apFac = 1
 
-    def tgDof(self):
-        self.apFac = 0.1 if self.apFac == 1 else 1
+    def dofLess(self): self.apFac /= 1.1
+    def dofMore(self): self.apFac *= 1.1
 
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
@@ -320,20 +321,31 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def dummyAddVertObject(self, *args, **kwargs):
         self.vertObjects.append(self.oldVertObjects.pop(self.baseVertObjN))
+        vo = self.vertObjects[-1]
+        if Phys.eucDist(args[1], vo.coords) > 0.001:
+            self.draw.translate(np.array(args[1]) - vo.coords,
+                                vo.cStart*3, vo.cEnd*3, vo.texNum)
+            vo.coords = args[1]
         if type(self.vertObjects[-1]) is VertModel:
             if self.vertObjects[-1].prevMtl is not None:
-                self.dummyAddVertObject()
+                self.dummyAddVertObject(*args)
         return True
     def reloadStageHard(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         self.directionalLights = []
         self.envPointLights = []
+        self.spotLights = []
+        self.particleSystems = []
         self.oldVertObjects = list(self.vertObjects)
         self.vertObjects = self.oldVertObjects[:self.baseVertObjN]
         self.addVertObject = self.dummyAddVertObject
         self.makeSkybox = lambda *args, **kwargs: self.skyBox
         self.STAGECONFIG.setupStage(self)
         self.frameNum = 0
+        self.rotateLight()
+        for i in self.actPlayers:
+            try: del self.players[i]['isHit']
+            except KeyError: pass
         print('Reloaded stage config hard')
 
     def reloadShaders(self):
@@ -343,13 +355,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
-    def testColor(self):
-        import tkinter.colorchooser
-        c = tkinter.colorchooser.askcolor()
-        if c[0] is None: return
-        d = self.directionalLights[0]
-        d['i'] = np.array(c[0]) / 255 * 2
-        self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+    def pause(self):
+        input('Continue: ')
 
     def tgBlack1(self):
         self.blackPoint += 0.01
@@ -359,8 +366,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print('black point', self.blackPoint)
     def tgSpec(self):
         tn = self.players[self.selchar]['obj'].texNum
-        self.matShaders[tn]['spec'] = 1 - self.matShaders[tn]['spec']
-        self.draw.changeShader(tn, self.matShaders[tn])
+        if 'spec' in self.matShaders[tn]:
+            self.matShaders[tn]['spec'] = 1 - self.matShaders[tn]['spec']
+            self.draw.changeShader(tn, self.matShaders[tn])
         d = self.directionalLights[0]
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
@@ -460,12 +468,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc = self.restPlayer
         a = self.players[sc]
         for xn in a["ctexn"]:
-            if 'sub' in self.matShaders[xn]:
-                temp = dict(self.matShaders[xn])
-                del temp["sub"]
-                self.matShaders[xn] = temp
-            if "alphaTemp" in self.matShaders[xn]:
-                self.matShaders[xn]['alpha'] = self.matShaders[xn]["alphaTemp"]
+            if "temp" in self.matShaders[xn]:
+                self.matShaders[xn] = self.matShaders[xn]["temp"]
 
             self.draw.changeShader(xn, self.matShaders[xn], stage=self.stage)
 
@@ -860,7 +864,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc = self.shadowCams[0]
         sc["dir"] = self.directionalLights[0]["dir"]
         sc["pos"] = -40 * viewVec(*sc["dir"]) + numpy.array([20, 5, 20])
-        self.updateShadowCam(0)
+        self.updateShadowCam(0, updateShaders=True)
         sc["bias"] = (0.18 * abs(cos(ti)) + 0.12) * 2560 / self.shRes
 
         tempObjs = np.array(self.castObjs)
@@ -941,12 +945,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 0.4, (0,0,0.), 6,
                 (0,0,0.), (0,0),
                 vel=0.0, randVel=0.0,
-                nParticles=60,
-                size=0.05, opacity=0.5,
+                nParticles=40,
+                size=0.1, opacity=0.5,
                 color=(0.2,0.2,0.2), randColor=0)
         self.addParticleSystem(ps)
         a['projFX'] = ps
         a['projFXstart'] = -1
+        ps.shader = 2
 
 
     def createObjects(self):
@@ -964,7 +969,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
+        self.rpi = [(mpath + "Body/B10R.rig", 0.2, 1.47),
+                    (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
                     (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
                     (mpath + "L3/L3.rig", 0.75, 1.16),
                     (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
@@ -974,7 +980,35 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
                     (mpath + "Vader/Vader5.rig", 1.6, 1.56),
                     ]
-        self.footSize = (0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
+        self.footSize = (0.2, 0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
+
+
+        self.addVertObject(VertModel, [0,0,0],
+                       filename=mpath+'Body/B10R3.obj',
+                       animated=True, mip=1, texMode=None,
+                       scale=0.2, rot=(0,0,0),
+                       shadow='R')
+        for f in self.vtNames:
+            mat = self.matShaders[self.vtNames[f]]
+            if 'Cornea' in f:
+                mat.update({'SSR':2, 'fresnelExp':3})
+                self.corneaMtl = self.vtNames[f]
+            if 'Gold' in f:
+                mat['metal'] = {'roughness':0.3}
+            if 'Hair' in f:
+                mat.update({'spec':0.8, 'normal':'Hair',
+                            'NMmipBias':0.1, 'translucent':1,
+                            'roughness':0.12, 'f0':0.6,
+                            'hairShading':1, 'genBone':8})
+            if 'Face' in f:
+                mat.update({'spec':1, 'normal':'Face',
+                            'genBone':8})
+            if 'Skin' in f:
+                mat.update({'spec':1, 'normal':'Body'})
+            if 'Metal' in f:
+                mat['metal'] = {'roughness':0.6}
+
+        self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
@@ -1036,7 +1070,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                animated=True, useShaders={'spec':1},
                                scale=1.6, shadow="R")
             self.addPlayer(self.vertObjects[-1])
-            self.matShaders[self.vertObjects[-3].texNum]["phong"] = 1
 
         self.baseVertObjN = len(self.vertObjects)
 
@@ -1047,6 +1080,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         cs.setupStage(self)
         self.STAGECONFIG = cs
+
+        try:
+            self.matShaders[self.corneaMtl]['envFallback'] = self.skyBox.texNum
+            self.matShaders[self.corneaMtl]['rotY'] = self.matShaders[self.skyBox.texNum]['rotY']
+        except (AttributeError, KeyError): pass
 
         # Add projectiles and game elements
         self.spheres = []
@@ -1106,7 +1144,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.24,0.01, 40,10, np.array((0.1,0.15,0.4)) * 0.02),
+        fogParams = {2: (0.14,0.01, 40,10,np.array((0.1,0.15,0.4)) * 0.016),
                      4: (0.02,0.002,40,0, np.array((0.05,0.1,0.2)) * 0.0025),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
@@ -1234,6 +1272,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    texture=PATH+"../Assets/Magenta.png",
                                    useShaders={"border":0.1})
 
+        self.addVertObject(VertPlane, [-1,-1,0],
+                           h1=[0,2,0], h2=[2,0,0], n=1,
+                           texture=PATH+"../Assets/Circle.png",
+                           useShaders={"2d":1, 'DoF':1})
+
+        try: self.STAGECONFIG.setupPostprocess(self)
+        except AttributeError: pass
+
         sr = self.shRes
         fact = (1,1,1,0.9,0.5,1)[self.stage]
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
@@ -1271,7 +1317,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.draw.dof(self.dofFoc, aperture=8*ap if self.cam1P else 12*ap)
         if self.doBloom:
-            self.draw.blur()
+            self.draw.blur(self.exposure)
 
         self.oldVMat = np.array(self.vMat)
         self.oldVPos = np.array(self.pos)
@@ -1443,8 +1489,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.draw.noisePos = np.zeros((3,), 'float32')
 
-        self.addNrmMap(PATH + '../Models/L3/Atlas1Nrm.png', 'Link')
-        self.addNrmMap(PATH + '../Models/Zelda2/Atlas1Nrm.png', 'Zelda')
+        mpath = PATH + '../Models/'
+        self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
+        self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
+        self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
+        self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
+        self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
 
     def shadowChar(self):
         sc = self.shadowCams[1]
@@ -1709,6 +1759,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       circular=True)
         self.addParticleSystem(ps)
         i['ps'] = ps
+        i['ps'].shader = 2
 
     def resetPickup(self):
         i = self.pickups[0]
@@ -1867,15 +1918,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             tn = a["id"]
             if self.getHealth(tn) <= 0:
-                if "deathTime" not in a: a["deathTime"] = time.time()
+                if "deathTime" not in a:
+                    a["deathTime"] = time.time()
+                    for xn in a["ctexn"]:
+                        self.matShaders[xn] = {'temp': self.matShaders[xn]}
                 a["pv"].pos[:] = -10.
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
                     self.matShaders[xn]["sub"] = tr
-                    if "alpha" in self.matShaders[xn]:
-                        self.matShaders[xn]['alphaTemp'] = self.matShaders[xn]["alpha"]
-                        del self.matShaders[xn]["alpha"]
                 g = a["ghost"]
                 if (not self.VRMode) or (self.frameNum & 1):
                     g.changePos(a["b1"].offset[:3])
@@ -2103,6 +2154,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a["vertVel"] -= self.frameTime * 9.81
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    vx,vy = a['pv'].v[::2]
+                    if vx*vx+vy*vy > 0.0001:
+                        a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
+                        a['pv'].v[::2] *= 0
+
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
@@ -2115,6 +2171,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["isHit"] = self.frameNum
 
             a['pv'].v *= 0.9
+            if Phys.eucLen(a['pv'].v) < 0.01:
+                a['pv'].v *= 0
 
             if a["gesturing"]:
                 a["moving"] = 0
@@ -2297,7 +2355,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
                 breathRate = 0.5 # Between 0.5 and 1 is best
 
-                breathRate *= (0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
+                breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
 
                 self.stepPoseLoop(a, a['obj'], self.idlingTest,
                                   self.frameTime * (breathRate + 0.6)/2,

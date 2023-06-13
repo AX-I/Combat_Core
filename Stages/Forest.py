@@ -62,8 +62,9 @@ def setupStage(self):
                        shadow="CR")
 
     for f in self.vtNames:
+        mat = self.matShaders[self.vtNames[f]]
         if 'Water' in f:
-            self.matShaders[self.vtNames[f]]['SSR'] = '0'
+            mat['SSR'] = '0'
             self.vertObjects[self.vtNames[f]].castShadow = False
             self.water = VertWater0(
                 (0,0,0), self, pScale=0.04,
@@ -73,9 +74,11 @@ def setupStage(self):
                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
             self.water.texNum = self.vtNames[f]
         if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
-            self.matShaders[self.vtNames[f]]['translucent'] = 1
+            mat['translucent'] = 1
+        if 'Plant' in f:
+            mat['alphaMip'] = 2
         if 'Flower' in f or 'ce0a' in f:
-            self.matShaders[self.vtNames[f]]['translucent'] = 1
+            mat['translucent'] = 1
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
             self.matShaders[self.flameMTL] = {'add': 5, 'noline': 1}
@@ -84,13 +87,13 @@ def setupStage(self):
             tm = self.vtextures[self.vtNames[f]] * 0.9
             self.vtextures[self.vtNames[f]] = tm.astype('uint16')
         if 'SandFloor' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = 'sand_floor'
+            mat['normal'] = 'sand_floor'
         if '3DRock' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = '3DRock'
+            mat['normal'] = '3DRock'
         if '095' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = '096'
+            mat['normal'] = '096'
         if 'Ground' in f:
-            self.matShaders[self.vtNames[f]]['normal'] = 'Grass'
+            mat['normal'] = 'Grass'
 
 
     pp1 = np.array((-14.5,15,24.))
@@ -128,12 +131,6 @@ def setupStage(self):
     self.DIR4I = np.array([0.1,0.25,0.4]) * 0.4
     self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":self.DIR4I})
 
-    # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':0.5})
-
 
     fn = "../Skyboxes/approaching_storm_1k.ahdr"
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=16)
@@ -149,6 +146,12 @@ def setupStage(self):
                             PATH+"../Sound/NoiseOpen.wav",
                             PATH+"../Sound/ForestNoise.wav"]})
 
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            texMul=0.4, useShaders={'2d':1, 'lens':0.5})
 
 def changeMusic(self):
     self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
@@ -294,5 +297,5 @@ def frameUpdate(self):
         self.addNrmMap(tpath + 'sandstone_cracks_nor_gl_1k.png', 'sand_floor')
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
         self.addNrmMap(tpath + '096.png', '096')
-        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True)
+        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True, mipLvl=4)
         self.matShaders[self.fogMTL]['fogAmbDistFac'] = 4

@@ -265,8 +265,12 @@ class ThreeDBackend:
                     self.matShaders[i])
             self.vtextures[i] = np.array([1])
 
-        for tex in self.texAlphas:
-            self.draw.addTexAlpha(tex)
+        for f in self.matShaders:
+            mat = self.matShaders[f]
+            if 'alpha' not in mat: continue
+            tex = self.texAlphas[mat['alpha']]
+            self.draw.addTexAlpha(tex, name=mat['alpha'],
+                                  mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
 
         del self.texAlphas
 
@@ -276,6 +280,9 @@ class ThreeDBackend:
                 self.vertBones.append(np.zeros((i.shape[0], 3), dtype="int"))
 
         for i in range(len(self.vertBones)):
+            if 'genBone' in self.matShaders[i]:
+                self.vertBones[i] = np.ones((self.vertLight[i].shape[0], 3),
+                                            dtype="int") * self.matShaders[i]['genBone']
             if len(self.vertBones[i]) > 0:
                 self.draw.addBoneWeights(i, self.vertBones[i])
 
@@ -329,12 +336,12 @@ class ThreeDBackend:
         ps.setup()
         self.particleSystems.append(ps)
 
-    def addNrmMap(self, tex, name, mip=False):
+    def addNrmMap(self, tex, name, **kwargs):
         nrm = np.array(Image.open(tex).rotate(-90))
         if nrm.shape[2] == 4:
             nrm = np.array(nrm[:,:,:3])
 
-        self.draw.addNrmMap(nrm, name, mip)
+        self.draw.addNrmMap(nrm, name, **kwargs)
 
     def render(self):
 
@@ -364,7 +371,10 @@ class ThreeDBackend:
 
         for i in range(len(cc)):
             ps = cc[i][0]
-            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex)
+            try: shader = ps.shader
+            except AttributeError: shader=1
+            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex,
+                             shader)
 
 
         self.postProcess()
@@ -442,9 +452,9 @@ class ThreeDBackend:
             self.draw.addShadowMap(i, s["size"], s["scale"],
                                    self.ambLight, g)
 
-    def updateShadowCam(self, i):
+    def updateShadowCam(self, i, **kwargs):
         s = self.shadowCams[i]
-        self.draw.placeShadowMap(i, s["pos"], s["dir"], self.ambLight)
+        self.draw.placeShadowMap(i, s["pos"], s["dir"], self.ambLight, **kwargs)
 
     def shadowMap(self, i, castObjs=None, bias=0.2):
         if castObjs is None:

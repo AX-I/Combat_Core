@@ -47,42 +47,38 @@ def setupStage(self):
                        shadow="CR")
 
     for f in self.vtNames:
+        mat = self.matShaders[self.vtNames[f]]
         if "Chandelier" in f:
-            self.matShaders[self.vtNames[f]]['emissive'] = 4.0
+            mat['emissive'] = 4.0
             self.chandelierMat = self.vtNames[f]
         if "Glass" in f:
-            self.matShaders[self.vtNames[f]]['add'] = 0.04
-            self.matShaders[self.vtNames[f]]['noline'] = True
-            self.matShaders[self.vtNames[f]]['cull'] = 1
+            mat.update({'add': 0.04, 'noline': True, 'cull': 1})
         if "Window" in f:
             if "Fro" in f or "Sid" in f:
-                self.matShaders[self.vtNames[f]]['emissive'] = 4.0
+                mat['emissive'] = 4.0
             else:
-                self.matShaders[self.vtNames[f]]['add'] = 1
-                self.matShaders[self.vtNames[f]]['noline'] = True
+                mat.update({'add': 1, 'noline': True})
             self.vertObjects[self.vtNames[f]].castShadow = False
         if "Metal" in f:
-            self.matShaders[self.vtNames[f]]['spec'] = 0.6
+            mat['spec'] = 0.6
         if "Wood066" in f:
-            self.matShaders[self.vtNames[f]]['SSR'] = 2
+            mat['SSR'] = 2
         elif "Wood_Ceil" in f:
-            self.matShaders[self.vtNames[f]]['noise'] = 1
-            self.matShaders[self.vtNames[f]]['normal'] = 'wood_coffers'
+            mat.update({'noise': 1, 'normal': 'wood_coffers'})
         elif "Wood" in f:
-            self.matShaders[self.vtNames[f]]['spec'] = 0.5
-            self.matShaders[self.vtNames[f]]['noise'] = 1
+            mat.update({'noise': 1})#, 'spec': 0.02, 'roughness': 0.002})
         elif 'Wtest' in f or 'Material' in f or 'GraySt' in f or 'Turq' in f:
-            self.matShaders[self.vtNames[f]]['noise'] = 1
+            mat['noise'] = 1
         if 'Wtest' in f:
             self.vtextures[self.vtNames[f]] = (self.vtextures[self.vtNames[f]]*1.2).astype('uint16')
-
+            #mat.update({'spec': 0.02, 'roughness': 0.002})
         if "Silver" in f:
-            self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.4}
+            mat['metal'] = {'roughness':0.4}
         if "Transparent" in f:
-            self.matShaders[self.vtNames[f]]['add'] = 0.002
+            mat['add'] = 0.002
 
         if 'floor' in f:
-            self.matShaders[self.vtNames[f]]['noise'] = 1
+            mat['noise'] = 1
 
 
     self.buttons = []
@@ -175,7 +171,7 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    DInt = np.array([2.0,1.77,1.33])
+    DInt = np.array([2.0,1.6,1.]) * 1.5
     RInt = np.array([0.2,0.15,0.1])
     RInt2 = np.array([0.08,0.06,0.04])
     self.directionalLights.append({"dir":[pi*2/3, 2.5], "i":DInt})
@@ -211,13 +207,6 @@ def setupStage(self):
     self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ),
                             'vec':sv})
 
-
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':1})
-
-
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
@@ -230,6 +219,13 @@ def setupStage(self):
 
     self.trackTime = -1
     self.pillarTrackTime = -1
+
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            texMul=0.4, useShaders={'2d':1, 'lens':0.8})
 
 def movePillars(self, i):
     btn = self.buttons[i]
@@ -264,11 +260,12 @@ def showPlatforms(self):
     for p in self.stagePlatforms:
         self.w.addCollider(Phys.CircleCollider(0.6, p))
         ps = CentripetalParticleSystem(p, (0, 0),
-                                       nParticles=60, lifespan=1200,
+                                       nParticles=30, lifespan=1200,
                                        randPos=0.08, vel=0.0, randVel=0.0,
-                                       size=0.1, opacity=0.05,
-                                       color=(0.2,0.2,0.2), randColor=0,
+                                       size=0.08, opacity=0.9,
+                                       color=(0.1,0.1,0.1), randColor=0,
                                        f=0.001, r=0.6, cc=1)
+        ps.shader = 2
         self.addParticleSystem(ps)
         self.stagePlatformPS.append(ps)
 

@@ -15,7 +15,7 @@ def getHeight(self, pos):
 def setupStage(self):
     self.addVertObject(VertTerrain, [-10, 0, -10],
                     heights=PATH+"../Assets/TerrainA.png",
-                    texture=PATH+"../Assets/aerial_beach_01_diff_2k.png",
+                    texture=PATH+"../Assets/aerial_beach_01_diff_2k.jpg",
                     scale=0.375, vertScale=26,
                     shadow="CR", mip=2,
                     uvspread=20, useShaders={'normal':'sand'})

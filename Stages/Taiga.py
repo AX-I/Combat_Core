@@ -130,7 +130,7 @@ def setupStage(self):
 
     # Background Mountain
     pfile = tgpath + "Mountain.obj"
-    opts = {'filename':pfile, 'mip':2, 'useShaders':
+    opts = {'filename':pfile, 'mip':2, 'texMul':0.8, 'useShaders':
             {'spec':0.4, 'normal':'mountain', 'ignoreShadow':1},
             'shadow':'', 'static':True}
     self.addVertObject(VertModel, [22,32,-271], rot=(0,0,0), scale=2,
@@ -165,9 +165,10 @@ def setupStage(self):
         ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
                                       vel=0.03/ts, force=(0,-0.01/ts/ts,0),
                                       lifespan=90*ts, nParticles=30,
-                                      randPos=0.02, randVel=0.01/ts,
-                                      size=0.15, opacity=0.15,
+                                      randPos=0.02, randVel=0.0/ts,
+                                      size=0.15, opacity=0.5,
                                       color=np.array([1,0.3,0.24]) * 0.3)
+        ps.shader = 2
         self.addParticleSystem(ps)
         self.skiParticles.append(ps)
 
@@ -189,28 +190,20 @@ def setupStage(self):
                            useShaders={'add': 1, 'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.3,0.24]) * 0.9 * 0.8 * 1.6 * 1.5
+    LInt = np.array([1,0.3,0.24]) * 2.5
     #LInt = np.array([0.1,0.3,0.9]) * 1
     #LInt = np.array([0.5,0.6,0.9])
     #LInt = np.array([1,0.4,0.2])
     # 255, 122, 2
     # 63, 125, 252, black point 0.15
     LDir = pi*1.45
-    skyI = np.array([0.2,0.25,0.5]) * 0.8 * 0.6
-    #skyI = np.array([0.1,0.15,0.5]) * 0.3
+    skyI = np.array([0.1,0.15,0.5]) * 0.4
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
     self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
                                    np.array([0.08,0.06,0.1]) * 0.6})
     self.directionalLights.append({"dir":[LDir, 0.1], "i":
                                    np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
-
-
-    # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTextureExample.webp',
-            useShaders={'2d':1, 'lens':1})
 
     fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=4)
@@ -225,6 +218,13 @@ def setupStage(self):
 
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
+
+def setupPostprocess(self):
+    # Sun glare
+    self.addVertObject(VertPlane, [-1,-1,0],
+            h1=[2,0,0], h2=[0,2,0], n=1,
+            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+            texMul=0.4, useShaders={'2d':1, 'lens':1})
 
 def frameUpdate(self):
     if self.frameNum == 0:

@@ -51,13 +51,14 @@ if True: #if sys.platform == 'darwin':
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
 DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
 
-POST_SHADERS = 'gamma lens FXAA'
+POST_SHADERS = 'gamma lens FXAA dof ssao'
 
 def loadShaders():
     for f in DRAW_SHADERS.split(' '):
         globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
     for f in POST_SHADERS.split(' '):
         globals()[f.lower()] = makeProgram(f'Post/{f}.c')
+
 
 loadShaders()
 
@@ -159,12 +160,52 @@ class CLDraw:
         y = np.array([1, -1, 1, 1, -1, -1])
         z = np.ones(6)*-0.9999
         vertices = np.dstack([x, y, z])
-
         self.post_vbo = ctx.buffer(vertices.astype('float32').tobytes())
+
+        self.setupPost()
+        self.setupFSR()
+
+        self.oldShaders = {}
+
+        self.dofFocus = 3
+        self.dofAperture = 12
+        self.doSSAO = False
+
+        self.setupBlur()
+        self.setupNoise()
+        self.noiseDist = 0
+
+        self.stTime = time.time()
+
+    def reloadShaders(self, **kwargs):
+        while True:
+            try:
+                loadShaders()
+                tmpOldShaders = dict(self.oldShaders)
+                for i in range(len(self.VBO)):
+                    self.changeShader(i, {}, **kwargs)
+                    self.changeShader(i, tmpOldShaders[i], **kwargs)
+
+                for s in 'psProg dProg moProg ssaoProg'.split(' '):
+                    try: self.__delattr__(s)
+                    except: pass
+
+                self.setupPost()
+                self.setupBlur()
+                self.setupSSAO()
+                self.setupDoF()
+            except moderngl.Error as e:
+                print(e)
+                input('Try again: ')
+            else:
+                break
+
+    def setupPost(self):
+        w, h = self.outW, self.outH
+
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
-        self.post_prog['db'] = 1
 
         self.post_prog['width'].write(np.float32(w))
         self.post_prog['height'].write(np.float32(h))
@@ -173,6 +214,10 @@ class CLDraw:
             self.post_prog['width'].write(np.float32(self.W))
             self.post_prog['height'].write(np.float32(self.H))
 
+    def setupFSR(self):
+        w, h = self.outW, self.outH
+
+        if self.USE_FSR:
             self.fsr_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
             self.fsr_vao = ctx.vertex_array(self.fsr_prog, self.post_vbo, 'in_vert')
             self.fsr_prog['Source'] = 0
@@ -194,27 +239,6 @@ class CLDraw:
             self.fxaa_prog['width'].write(np.float32(w))
             self.fxaa_prog['height'].write(np.float32(h))
 
-        self.oldShaders = {}
-
-        self.dofFocus = 3
-        self.dofAperture = 12
-        self.doSSAO = False
-
-        self.setupBlur()
-        self.setupNoise()
-        self.noiseDist = 0
-
-        self.stTime = time.time()
-
-    def reloadShaders(self, **kwargs):
-        loadShaders()
-        for i in range(len(self.VBO)):
-            self.changeShader(i, self.oldShaders[i], **kwargs)
-
-        for s in 'psProg dProg moProg ssaoProg'.split(' '):
-            try: self.__delattr__(s)
-            except: pass
-
     def setupNoise(self):
         from PIL import Image
         n = Image.open('../Assets/Noise/NoiseTest.png').convert('RGB')
@@ -229,17 +253,17 @@ class CLDraw:
 
     def setReflTex(self, name, r, g, b, size):
         pass
-    def addTexAlpha(self, tex, name=None):
+    def addTexAlpha(self, tex, name=None, mipLvl=8):
         ta = tex.astype('uint8') * 255
         a = ctx.texture(tex.shape[::-1], 1, ta)
-        a.build_mipmaps(0, 2)
+        a.build_mipmaps(0, mipLvl)
         if name is None: name = len(self.TA)
         self.TA[name] = a
 
-    def addNrmMap(self, nrm, name, mip=True):
+    def addNrmMap(self, nrm, name, mip=True, mipLvl=2):
         t = ctx.texture((nrm.shape[1],nrm.shape[0]), 3, nrm)
         if mip:
-            t.build_mipmaps(0, 2)
+            t.build_mipmaps(0, mipLvl)
         self.NM[name] = t
 
     def addPSTex(self, tex, name):
@@ -359,6 +383,7 @@ class CLDraw:
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
             tb = batch[tn]
+            if len(tb) == 0: continue
             size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
@@ -428,7 +453,7 @@ class CLDraw:
         d = self.DRAW[tn]
         try:
             d['pScale'].write(np.float32(pScale))
-            d['pTime'].write(np.float32(time.time() - stTime))
+            d['pTime'].write(self.currTime)
         except KeyError:
             draw = ctx.program(vertex_shader=trisetupWave,
                                fragment_shader=drawSSR)
@@ -453,7 +478,7 @@ class CLDraw:
             draw['lenW2'].write(self.WNUM[1])
 
 
-    def drawPS(self, xyz, color, opacity, size, tex=None):
+    def drawPS(self, xyz, color, opacity, size, tex=None, shader=1):
         try: _ = self.psProg
         except:
             ctx.point_size = 4
@@ -477,7 +502,7 @@ class CLDraw:
             self.PSTEX[tex].use(location=0)
         else:
             self.psProg['useTex'] = 0
-            self.psProg['fadeUV'] = 1
+            self.psProg['fadeUV'] = shader
 
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)
@@ -541,7 +566,7 @@ class CLDraw:
 
         self.dVao.render(moderngl.TRIANGLES)
 
-        # Blend with frame
+        # Copy to frame
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def motionBlur(self, oldPos, oldVMat):
@@ -589,12 +614,12 @@ class CLDraw:
         # Copy to oldbuf
         self.blit(self.OLDFBO, self.FB, self.W, self.H)
 
-        # Blend with frame
+        # Copy to frame
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def setupSSAO(self):
         self.ssaoProg = ctx.program(vertex_shader=trisetup2d,
-            fragment_shader=makeProgram('Post/ssao.c'))
+            fragment_shader=ssao)
         self.ssaoProg['width'].write(np.float32(self.W))
         self.ssaoProg['height'].write(np.float32(self.H))
         self.ssaoProg['vscale'].write(np.float32(self.sScale))
@@ -608,10 +633,41 @@ class CLDraw:
         except: self.setupSSAO()
         self.doSSAO = True
 
+    def setupDoF(self):
+        self.dofProg = ctx.program(vertex_shader=trisetup2d,
+                                   fragment_shader=dof)
+        self.dofProg['width'] = self.W
+        self.dofProg['height'] = self.H
+        self.dofProg['tex1'] = 0
+        self.dofProg['db'] = 1
+        self.dofVao = ctx.vertex_array(self.dofProg, self.post_vbo, 'in_vert')
+
     def dof(self, focus, aperture=None):
         self.dofFocus = np.float32(focus)
         if aperture is not None:
             self.dofAperture = np.float32(aperture)
+
+    def applyDoF(self):
+        try: _ = self.dofProg
+        except: self.setupDoF()
+
+        ctx.disable(moderngl.BLEND)
+        ctx.disable(moderngl.DEPTH_TEST)
+
+        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+        self.POSTFBO.use()
+        self.dofProg['focus'] = self.dofFocus
+        self.dofProg['aperture'] = self.dofAperture * self.IRES
+        self.FB.use(location=0)
+        self.DBT.use(location=1)
+
+        self.dofVao.render(moderngl.TRIANGLES)
+
+        # Copy to frame
+        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+        ctx.enable(moderngl.DEPTH_TEST)
+        ctx.enable(moderngl.BLEND)
+
 
     def setupBlur(self):
         # Temp
@@ -645,7 +701,7 @@ class CLDraw:
         self.blurProg2['width'].write(np.float32(self.W//2))
         self.blurProg2['height'].write(np.float32(self.H//2))
 
-    def blur(self):
+    def blur(self, ex):
 
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
@@ -657,6 +713,7 @@ class CLDraw:
         self.blurProg1['width'].write(np.float32(self.W//2))
         self.blurProg1['height'].write(np.float32(self.H//2))
         self.blurProg1['useLum'].write(np.int32(1))
+        self.blurProg1['exposure'] = ex
         self.FB.use(location=0)
 
         self.blurVao1.render(moderngl.TRIANGLES)
@@ -707,8 +764,6 @@ class CLDraw:
         else:
             self.fs.clear(0.0, 0.0, 0.0, 0.0)
             self.fs.use()
-        self.post_prog['focus'] = self.dofFocus
-        self.post_prog['aperture'] = self.dofAperture * self.IRES
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.post_prog['blackPoint'] = np.float32(blackPoint)
@@ -747,12 +802,14 @@ class CLDraw:
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s)
         for draw in self.DRAW:
-            draw['vscale'].write(self.sScale)
+            try: draw['vscale'].write(self.sScale)
+            except: pass
 
     def setPos(self, vc):
         self.vc = vc.astype('float32')
         for draw in self.DRAW:
-            draw['vpos'].write(self.vc)
+            try: draw['vpos'].write(self.vc)
+            except: pass
 
     def setVM(self, vM):
         self.rawVM = vM.astype('float32')
@@ -760,7 +817,8 @@ class CLDraw:
         vmat = np.array(vmat.T, order='C')
         self.vmat = vmat.astype('float32')
         for draw in self.DRAW:
-            draw['vmat'].write(self.vmat)
+            try: draw['vmat'].write(self.vmat)
+            except: pass
 
     def setAnisotropy(self, a):
         for tex in self.TEX:
@@ -856,6 +914,11 @@ class CLDraw:
                 draw['highMult'].write(np.array(shaders[i]['highlight'], 'float32'))
             if 'spec' in shaders[i]:
                 draw['specular'].write(np.float32(shaders[i]['spec']))
+            if 'hairShading' in shaders[i]:
+                draw['hairShading'] = shaders[i]['hairShading']
+                draw['f0'] = shaders[i]['f0']
+            if 'tangentDir' in shaders[i]:
+                draw['tangentDir'] = shaders[i]['tangentDir']
 
         elif 'emissive' in shaders[i]:
             draw = ctx.program(vertex_shader=ts, fragment_shader=drawEmissive)
@@ -905,7 +968,9 @@ class CLDraw:
 
         elif 'SSR' in shaders[i] or 'SSRopaque' in shaders[i]:
             if 'SSR' not in self.oldShaders[i] and 'SSRopaque' not in self.oldShaders[i]:
-                if shaders[i]['SSR'] == '0':
+                if 'SSRopaque' in shaders[i]:
+                    draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSRopaque)
+                elif shaders[i]['SSR'] == '0':
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawSSR)
                 elif shaders[i]['SSR'] == 1:
                     draw = ctx.program(vertex_shader=ts, fragment_shader=drawGlass)
@@ -915,9 +980,12 @@ class CLDraw:
                     shaders[i]['SSRopaque'] = 1
             else:
                 draw = self.DRAW[i]
+            if 'fresnelExp' in shaders[i]:
+                draw['fresnelExp'] = shaders[i]['fresnelExp']
             if 'envFallback' in shaders[i]:
                 draw['useEquiEnv'] = 1
-                draw['rotY'] = shaders[i]['rotY']
+                try: draw['rotY'] = shaders[i]['rotY']
+                except KeyError: pass
                 draw['equiEnv'] = 6
             if 'roughness' in shaders[i]:
                 ra = np.random.rand(64)
@@ -953,6 +1021,7 @@ class CLDraw:
             try:
                 draw['useNM'] = 1
                 draw['NM'] = 7
+                draw['NMmipBias'] = shaders[i]['NMmipBias']
             except KeyError:
                 pass
 
@@ -965,9 +1034,10 @@ class CLDraw:
             draw['width'].write(np.float32(self.W))
             draw['height'].write(np.float32(self.H))
         except: pass
-
-        draw['vscale'].write(self.sScale)
-        draw['aspect'].write(np.float32(self.H/self.W))
+        try:
+            draw['vscale'].write(self.sScale)
+            draw['aspect'].write(np.float32(self.H/self.W))
+        except: pass
 
         self.DRAW[i] = draw
 
@@ -1016,6 +1086,8 @@ class CLDraw:
             if shaders[i] != self.oldShaders[i]:
                 self.changeShader(i, shaders[i], **kwargs)
 
+        self.currTime = np.float32(time.time() - self.stTime)
+
         # Write to readable depth buffer
         self.fboZ.use()
         self.fboZ.clear(red=2048.0, depth=1.0)
@@ -1030,18 +1102,22 @@ class CLDraw:
             try: _ = self.DRAWZ[i]
             except KeyError:
                 p = self.VBO[i]
+
+                dZ = drawZAlpha if 'alpha' in shaders[i] else drawZ
+                va1 = (p, '3f4 5x4 /v', 'in_vert')
+                if 'alpha' in shaders[i]:
+                    va1 = (p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')
+
                 if i in self.BO:
-                    draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=drawZ)
+                    draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=dZ)
                     vao = ctx.vertex_array(draw,
-                        [(p, '3f4 5x4 /v', 'in_vert'),
-                         (self.BN[i], '1f /v', 'boneNum')])
-                elif 'alpha' in shaders[i]:
-                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZAlpha)
-                    draw['TA'] = 2
-                    vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
+                        [va1, (self.BN[i], '1f /v', 'boneNum')])
                 else:
-                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
-                    vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
+                    draw = ctx.program(vertex_shader=trisetup, fragment_shader=dZ)
+                    vao = ctx.vertex_array(draw, [va1])
+
+                if 'alpha' in shaders[i]:
+                    draw['TA'] = 2
                 draw['aspect'].write(np.float32(self.H/self.W))
                 self.DRAWZ[i] = (vao, draw)
             if 'cull' in shaders[i]:
@@ -1073,7 +1149,7 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque', 'lens'}
+            trans = {'add', 'border', 'SSR', 'sub', 'fog', 'SSRopaque', 'lens', 'DoF'}
             if all(t not in shaders[i] for t in trans):
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
@@ -1113,7 +1189,7 @@ class CLDraw:
 
             self.ssaoVao.render(moderngl.TRIANGLES)
 
-            # Blend with frame
+            # Copy to frame
             self.blit(self.fbo, self.POSTBUF, self.W, self.H)
             ctx.enable(moderngl.DEPTH_TEST)
             self.doSSAO = False
@@ -1131,7 +1207,7 @@ class CLDraw:
                 if 'special' in shaders[i]:
                     self.DRAW[i]['VV'].write(self.rawVM[0])
                 try:
-                    self.DRAW[i]['iTime'].write(np.float32(time.time() - self.stTime))
+                    self.DRAW[i]['iTime'].write(self.currTime)
                 except KeyError:
                     pass
 
@@ -1147,7 +1223,7 @@ class CLDraw:
                 if 'SSRopaque' in shaders[i]:
                     self.fbo.depth_mask = True
                     ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
-                    ctx.depth_func = '=='
+                    ctx.depth_func = '<='
                 else:
                     ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 ctx.blend_equation = moderngl.FUNC_ADD
@@ -1180,8 +1256,16 @@ class CLDraw:
                 self.DRAW[i]['SM2'] = 5
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['vmat'].write(self.rawVM)
+            elif 'DoF' in shaders[i]:
+                self.applyDoF()
+                self.fbo.use()
+                continue
             else:
                 continue
+            if 'cull' in shaders[i]:
+                ctx.enable(moderngl.CULL_FACE)
+            else:
+                ctx.disable(moderngl.CULL_FACE)
 
             self.DRAW[i]['tex1'] = 0
             self.TEX[i].use(location=0)
@@ -1233,7 +1317,7 @@ class CLDraw:
                                        [(vbo, '3f4 5x4', 'in_vert')])
                 self.SVA.append(vao)
 
-    def placeShadowMap(self, i, pos, facing, ambLight=None):
+    def placeShadowMap(self, i, pos, facing, ambLight=None, updateShaders=False):
         sm = self.SHADOWMAP[i]
         sm['pos'] = pos.astype('float32')
         f = viewMat(*facing)
@@ -1241,9 +1325,10 @@ class CLDraw:
         f = np.array(f.T, order='C')
         sm['vec'] = f.astype('float32')
 
+        if not updateShaders: return
+
         for n in range(len(self.VBO)):
             if n in self.BN:
-                if n in self.drawSB: continue
                 vbo = self.VBO[n]
                 if 'alpha' in self.oldShaders[n]:
                     dm = drawMinAlpha
@@ -1253,6 +1338,8 @@ class CLDraw:
                     vbosetup = (vbo, '3f 5x4 /v', 'in_vert')
                 self.drawSB[n] = ctx.program(vertex_shader=trisetupOrthoAnim,
                                              fragment_shader=dm)
+                if 'alpha' in self.oldShaders[n]:
+                    self.drawSB[n]['TA'] = 2
 
                 vao = ctx.vertex_array(self.drawSB[n],
                                        [vbosetup, (self.BN[n], '1f /v', 'boneNum')])
@@ -1290,8 +1377,8 @@ class CLDraw:
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        for n in range(len(self.SVA)):
-            if n < len(whichCast) and whichCast[n]:
+        for n in range(min(len(whichCast), len(self.SVA))):
+            if whichCast[n]:
                 if 'alpha' in shaders[n]:
                     ta = shaders[n]['alpha']
                     self.drawSA['TA'] = 2
