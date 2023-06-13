@@ -321,21 +321,31 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def dummyAddVertObject(self, *args, **kwargs):
         self.vertObjects.append(self.oldVertObjects.pop(self.baseVertObjN))
+        vo = self.vertObjects[-1]
+        if Phys.eucDist(args[1], vo.coords) > 0.001:
+            self.draw.translate(np.array(args[1]) - vo.coords,
+                                vo.cStart*3, vo.cEnd*3, vo.texNum)
+            vo.coords = args[1]
         if type(self.vertObjects[-1]) is VertModel:
             if self.vertObjects[-1].prevMtl is not None:
-                self.dummyAddVertObject()
+                self.dummyAddVertObject(*args)
         return True
     def reloadStageHard(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
         self.directionalLights = []
         self.envPointLights = []
         self.spotLights = []
+        self.particleSystems = []
         self.oldVertObjects = list(self.vertObjects)
         self.vertObjects = self.oldVertObjects[:self.baseVertObjN]
         self.addVertObject = self.dummyAddVertObject
         self.makeSkybox = lambda *args, **kwargs: self.skyBox
         self.STAGECONFIG.setupStage(self)
         self.frameNum = 0
+        self.rotateLight()
+        for i in self.actPlayers:
+            try: del self.players[i]['isHit']
+            except KeyError: pass
         print('Reloaded stage config hard')
 
     def reloadShaders(self):

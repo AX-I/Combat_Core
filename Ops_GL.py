@@ -181,8 +181,10 @@ class CLDraw:
         while True:
             try:
                 loadShaders()
+                tmpOldShaders = dict(self.oldShaders)
                 for i in range(len(self.VBO)):
                     self.changeShader(i, {}, **kwargs)
+                    self.changeShader(i, tmpOldShaders[i], **kwargs)
 
                 for s in 'psProg dProg moProg ssaoProg'.split(' '):
                     try: self.__delattr__(s)
