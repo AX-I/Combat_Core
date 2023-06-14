@@ -24,7 +24,7 @@ out vec3 f_color;
 
 void main() {
 
-    vec3 vp = Vpos;
+    vec3 vp = Vpos - oldPos;
 	vec3 Vd = VV[0];
 	vec3 Vx = VV[1];
     vec3 Vy = VV[2];
@@ -42,22 +42,32 @@ void main() {
 
 	float d = texture(texd, tc*wh).r;
 
-	vec3 worldPos = vp - oldPos + vec3(d) * (Vd - vec3((cx-wF/2)/sScale) * Vx + vec3((cy-hF/2)/sScale) * Vy);
+	vec3 worldPos = vp + vec3(d) * (Vd - vec3((cx-wF/2)/sScale) * Vx + vec3((cy-hF/2)/sScale) * Vy);
 
 	float oldZ = dot(worldPos, oldVV);
 	float oldX = (dot(worldPos, oldVX) / oldZ) * -sScale + wF/2;
 	float oldY = (dot(worldPos, oldVY) / oldZ) * sScale + hF/2;
 
-	vec3 outRGB = vec3(0);
+	vec3 outRGB = texture(tex1, tc*wh).rgb;
 	float dy = oldY - cy;
 	float dx = oldX - cx;
-	for (float i=0; i <= SAMPLES; i+= 1) {
+  float accum = 1;
+	for (float i=1; i <= SAMPLES; i++) {
 		float sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 1.f, hF-1.f);
 		float sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 1.f, wF-1.f);
 
-		outRGB += texture(tex1, vec2(sx, sy)*wh).rgb;
+    float compd = texture(texd, vec2(sx, sy)*wh).r;
+    worldPos = vp + vec3(compd) * (Vd - vec3((sx-wF/2)/sScale) * Vx + vec3((sy-hF/2)/sScale) * Vy);
+    oldZ = dot(worldPos, oldVV);
+	  oldX = (dot(worldPos, oldVX) / oldZ) * -sScale + wF/2;
+	  oldY = (dot(worldPos, oldVY) / oldZ) * sScale + hF/2;
+    vec2 compDxy = vec2(oldX-sx, oldY-sy);
+    float influence = clamp(dot(vec2(dx,dy), compDxy) / (i * length(vec2(dx,dy))), 0, 1);
+
+		outRGB += texture(tex1, vec2(sx, sy)*wh).rgb * influence;
+    accum += influence;
 	}
 
-	f_color = outRGB / vec3(SAMPLES);
+	f_color = outRGB / accum;
 
 }
