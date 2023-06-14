@@ -181,6 +181,30 @@ def setupStage(self):
         s.prevRot = np.identity(3)
         s.plantDir = None
 
+    effectPos = [(-2.13, 22.27, 17.51),
+                 (0.19, 13.27, 14.96),
+                 (-4.44, 16.27, 20.07)]
+    self.effectPS = []
+    for i in range(len(effectPos)):
+        pos = np.array(effectPos[i]) - np.array([0,0.2,0])
+        self.addVertObject(VertModel, pos,
+                           filename=mpath + 'Effect.obj', cache=False,
+                           mip=2, useShaders={'add': 4, 'noline': True},
+                           scale=0.6, rot=(0,0,0))
+        t1 = self.vertObjects[-1]
+        t1.create()
+        t1.u = np.array(t1.u) + 0.3*i
+        t1.create = lambda: 1
+        ps = ContinuousParticleSystem(pos, (0,-pi/2),
+                                      vel=0.01, force=(0,0,0),
+                                      lifespan=480, nParticles=15,
+                                      randPos=0.2, randVel=0.0,
+                                      size=0.15, opacity=1,
+                                      color=np.array([0.75,0.91,1]) * 0.3)
+        ps.shader = 2
+        self.addParticleSystem(ps)
+        self.effectPS.append(ps)
+    self.effectMtl = self.vertObjects[-1].texNum
 
     for i in range(2000):
         p = nr.rand(3) * np.array([70,12,70]) + np.array([-20,1.5,-20])
@@ -200,7 +224,7 @@ def setupStage(self):
     skyI = np.array([0.1,0.15,0.5]) * 0.4
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
     self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
-                                   np.array([0.08,0.06,0.1]) * 0.6})
+                                   np.array([0.1,0.06,0.1]) * 1})
     self.directionalLights.append({"dir":[LDir, 0.1], "i":
                                    np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
@@ -251,6 +275,10 @@ def frameUpdate(self):
     self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
+    self.draw.setUVOff(self.effectMtl, (-1,-1), (2,2), (-self.frameNum/120, 0))
+
+    for ps in self.effectPS:
+        ps.step(circular=True)
 
 
 def frameUpdateAfter(self):
