@@ -2247,6 +2247,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                  self.volmFX / 2,
                                                  (a['b1'].offset[:3], 6, 1.2))})
                     playerStuck = False
+                elif not borderOk:
+                    if (a["b1"].offset[0] < b1): a["b1"].offset[0] = b1
+                    elif (a["b1"].offset[0] > b2): a["b1"].offset[0] = b2
+                    if (a["b1"].offset[2] < b1): a["b1"].offset[2] = b1
+                    elif (a["b1"].offset[2] > b2): a["b1"].offset[2] = b2
+                    playerStuck = True
                 else:
                     playerStuck = True
 
