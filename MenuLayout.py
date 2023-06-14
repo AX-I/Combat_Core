@@ -113,6 +113,12 @@ def mainMenuSetup(self):
 
 
 def mainMenuLayout(self):
+    mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx())) - self.W2
+    my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty())) - self.H2
+    parx = mx*0.04
+    pary = my*0.04
+    parxy = np.array([parx, pary])
+
     frame = self.frameBuf
     resScale = self.H / 600
 
@@ -120,10 +126,10 @@ def mainMenuLayout(self):
     sTime = time.time() - self.st
 
     self.blend(frame, self.bg,
-               (self.W2, self.H2), 'replace')
+               (self.W2 - parx/6, self.H2 - pary/6), 'replace')
 
     self.blend(frame, self.titleLeaves,
-               (self.W2, self.H*0.4), 'alpha')
+               (self.W2 - parx/4, self.H*0.4 - pary/4), 'alpha')
 
     self.blend(frame, self.bgNoise,
                (self.W2, self.H2), 'alpha',
@@ -138,9 +144,9 @@ def mainMenuLayout(self):
 
 
 
-    xpos = self.W*0.8
+    xpos = self.W*0.8 - parx
 
-    buttonCenters = [(self.H*(0.18 + 0.22*i), xpos) for i in range(4)]
+    buttonCenters = [(self.H*(0.18 + 0.22*i) - pary, xpos) for i in range(4)]
     self.menuButtonCenters = buttonCenters
 
     yc = buttonCenters[-1][0]
@@ -272,8 +278,8 @@ def mainMenuLayout(self):
 
 
 
-    titleX = self.W*0.36
-    titleY = self.H*0.4
+    titleX = self.W*0.36 - parx/2
+    titleY = self.H*0.4 - pary/2
 
 
     titleYTop = titleY - self.H*0.1
@@ -330,7 +336,9 @@ def mainHandleMouse(self, frame, click=False):
 
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
-
+    parx = mx*0.04
+    pary = my*0.04
+    parxy = np.array([parx, pary])
 
     c = self.iconsPos[::-1]
     h = self.H//10
@@ -348,7 +356,7 @@ def mainHandleMouse(self, frame, click=False):
     w = self.menuEntry.shape[1]
     h2 = self.H*0.54
 
-    xc = self.W*0.8 - self.H*0.6
+    xc = self.W*0.8 - self.H*0.6 - parx
     yc = self.menuButtonCenters[-1][0] - 0.053*self.H
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
 
@@ -367,7 +375,6 @@ def mainHandleMouse(self, frame, click=False):
 
             self.blend(frame, self.menuEntryOutline,
                        c[::-1], 'add', effect='mult', effectArg=1.2)
-
 
     h = self.menuButton.shape[0]
     w = self.menuButton.shape[1]
@@ -435,6 +442,12 @@ def stageSelectLayout(self):
     #### Stage select layout
     ####
     """
+    mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx())) - self.W2
+    my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty())) - self.H2
+    parx = mx*0.04
+    pary = my*0.04
+    parxy = np.array([parx, pary])
+
     frame = self.frameBuf
     resScale = self.H / 600
 
@@ -442,21 +455,20 @@ def stageSelectLayout(self):
     sTime = time.time() - self.st
 
     self.blend(frame, self.stageBgs[self.selectedStage],
-               (self.W2, self.H2), 'replace')
+               (self.W2-parx/6, self.H2-pary/6), 'replace')
     self.blend(frame, self.bgNoise,
                (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
 
     bBlur = 1
     bWidth = 5*resScale
-    offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
 
     self.loc = ["Desert", "CB Atrium", "Taiga", "New Stage", "Forest", 'Strachan']
 
     for i in range(len(self.loc)):
-        yc = int(self.H * (0.2 + 0.8*i/len(self.loc)))
+        yc = int(self.H * (0.2 + 0.8*i/len(self.loc))) - pary
 
-        xc = self.W//4 - 30 * resScale
+        xc = self.W//4 - 30 * resScale - parx
 
         xoffset = 40 * (self.selectedStage == i)
 
@@ -480,19 +492,21 @@ def stageSelectLayout(self):
 
 
     self.blend(frame, self.stagePreviews[self.selectedStage],
-               (self.W*0.7, self.H2), 'replace')
+               (self.W*0.7-parx/2, self.H2-pary/2), 'replace')
 
     self.blend(frame, self.menuFrame,
-               (self.W*0.7 - 2*resScale, self.H2 - 8*resScale), 'alpha')
+               (self.W*0.7 - 2*resScale-parx/2, self.H2 - 8*resScale-pary/2), 'alpha')
 
 
     # Back button
+    wp = self.W*0.7-parx
+    hp = self.H*0.85-pary
     self.blend(frame, self.menuButton,
-               (self.W*0.7, self.H*0.85), 'alpha')
+               (wp, hp), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 - bHalfTop), 'alpha')
+               (wp, hp - bHalfTop), 'alpha')
     self.blend(frame, self.menuLights[3:6],
-               (self.W*0.7, self.H*0.85 + bHalfBot), 'alpha')
+               (wp, hp + bHalfBot), 'alpha')
 
 
     stageHandleMouse(self, frame)
@@ -510,25 +524,31 @@ def stageSelectLayout(self):
 
 
     self.drawText(frame, 'Back', yellowFG, self.cFont,
-                  (self.H*0.35, self.W*0.2), blur=1, bFill=yellowBG,
+                  (self.H*0.35-pary, self.W*0.2-parx), blur=1, bFill=yellowBG,
                   method='gauss', blurWidth=bWidth)
 
 
     self.blendCursor(frame)
 
     self.drawText(frame, "Select Location", (255,255,255), self.aFont,
-                  (-self.H*0.36,self.W//5), blur=2, bFill=(180,180,180),
+                  (-self.H*0.36-pary/2,self.W//5-parx/2),
+                  blur=2, bFill=(180,180,180),
                   method='gauss', blurWidth=bWidth)
 
 
 
 def getButtonCoord(self, i):
+    mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
+    my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
+    parx = mx*0.04
+    pary = my*0.04
+
     resScale = self.H / 600
     
     yc = int(self.H * (0.2 + 0.8*i/len(self.loc)))
     xc = self.W//4 - 30 * resScale
     xoffset = 40 * (self.selectedStage == i)
-    return (yc, xc+xoffset)
+    return (yc-pary, xc+xoffset-parx)
 
 
 def stageHandleMouse(self, frame, click=False):
