@@ -262,9 +262,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         
         if PLATFORM != "win32": return
         if not self.activeFS: return
-
-        print('Active FS')
-        return
         
         if self.fs:
             res = sorted(self.getResolutions())

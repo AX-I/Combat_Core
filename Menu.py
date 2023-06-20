@@ -187,7 +187,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def openImageCover(self, fn):
         """opens filename and scales it to cover (self.W, self.H)"""
-        i = Image.open(fn)
+        i = Image.open(fn).convert('RGBA')
         fac = max(self.W / i.size[0], self.H / i.size[1])
         i = i.resize((int(i.size[0] * fac), int(i.size[1] * fac)), Image.BILINEAR)
         return i
@@ -209,7 +209,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.cq = cl.CommandQueue(self.ctx)
 
         resScale = self.H / 600
-        shader = open('Shaders/menu.py').read()
+        shader = open('Shaders/menu.cl').read()
         self.prog = cl.Program(self.ctx, shader).build()
 
         self.si = mp.Queue(64)
@@ -219,6 +219,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         kwargs = OpsConv.getSettings()
         volmFX = float(kwargs["VolumeFX"])
         self.volmFX = np.array((volmFX, volmFX))
+
+        self.activeFS = kwargs["AutoRes"]
 
         self.menuInit()
         self.d.bind("<F2>", self.screenshot)
@@ -382,10 +384,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
         if not USE_CL: return x
-        x = (x * 256).astype('uint16')
-        buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=x.nbytes)
-        cl.enqueue_copy(self.cq, buf, x)
-        return CLObject(name, buf, np.array(x.shape, 'float32'))
+        return CLObject(self.ctx, self.cq, name, x)
 
 
     def blendCursor(self, frame: np.array) -> None:
@@ -593,7 +592,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.setWH(p["W"], p["H"])
         self.rotSensitivity = p["Mouse"] / 20000
-        self.activeFS = p["AutoRes"]
         OpsConv.writeSettings(p)
 
 ##        self.logo.grid_remove()

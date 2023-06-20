@@ -10,10 +10,15 @@ class CLObject:
     buf: cl.Buffer
     shape: np.array
 
-    def __init__(self, name: str, buf: cl.Buffer, shape: np.array):
+    def __init__(self, ctx, cq, name: str, x: np.array):
+        x = x.astype('float32')
+        fmt = cl.ImageFormat(cl.channel_order.RGBA, cl.channel_type.FLOAT)
+        buf = cl.Image(ctx, cl.mem_flags.READ_ONLY, fmt, shape=x.shape[1::-1])
+        cl.enqueue_copy(cq, buf, x, origin=(0,0), region=x.shape[1::-1])
+
         self.name = name
         self.buf = buf
-        self.shape = shape
+        self.shape = np.array(x.shape, dtype='int32')
         self.filters = {}
 
     def __getitem__(self, i):
@@ -64,24 +69,25 @@ class NPCanvas:
         """Draw text onto fr
         coords => offset from center (y, x)
         """
-        coords = (int(coords[0] + self.H//2), int(coords[1] + self.W//2))
+        coords = (coords[0] + self.H//2, coords[1] + self.W//2)
 
         if dText not in self.UItexts:
             b = self.imgText(dText, dFill, dFont, blur, bFill,
                              method, blurWidth)
 
-            b = (b*256).astype('uint16')
+            b = b.astype('float32')
+            fmt = cl.ImageFormat(cl.channel_order.RGBA, cl.channel_type.FLOAT)
+            buf = cl.Image(self.ctx, cl.mem_flags.READ_ONLY, fmt, shape=b.shape[1::-1])
+            cl.enqueue_copy(self.cq, buf, b, origin=(0,0), region=b.shape[1::-1])
 
-            buf = cl.Buffer(self.ctx, mf.READ_ONLY, size=b.nbytes)
-            cl.enqueue_copy(self.cq, buf, b)
-            self.UItexts[dText] = {'buf': buf, 'shape': np.array(b.shape, 'float32')}
+            self.UItexts[dText] = {'buf': buf, 'shape': np.array(b.shape, 'int32')}
 
         b = self.UItexts[dText]
 
         self.prog.blend(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
                         fr, self.W, self.H,
                         b['buf'], *b['shape'],
-                        np.int32(coords[1]), np.int32(coords[0]),
+                        np.float32(coords[1]), np.float32(coords[0]),
                         np.int32(1),
                         np.int32(0),
                         np.float32(0),
@@ -115,7 +121,7 @@ class NPCanvas:
         self.prog.blend(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
                         dest, self.W, self.H,
                         source['buf'], *source['shape'],
-                        np.int32(coords[0]), np.int32(coords[1]),
+                        np.float32(coords[0]), np.float32(coords[1]),
                         np.int32(METHOD[method]),
                         np.int32(effectApplied),
                         np.float32(effectArg),

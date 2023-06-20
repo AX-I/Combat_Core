@@ -23,6 +23,7 @@ redBG = (255,70,70)
 
 smallScale = 0.96
 
+MSCALE = -0.04
 
 def mainMenuSetup(self):
     resScale = self.H / 600
@@ -52,7 +53,7 @@ def mainMenuSetup(self):
     i = self.openImageCover('../Assets/Forest.png')
     i = i.filter(ImageFilter.BoxBlur(4*resScale))
 
-    gray = i.convert('L').convert('RGB')
+    gray = i.convert('L').convert('RGBA')
     gray = np.array(gray)
     gray = (gray / 255.)*gray
 
@@ -98,7 +99,7 @@ def mainMenuSetup(self):
     sw = int(b.size[0]*0.5 * resScale)
     sh = int(b.size[1]*0.5 * resScale)
     b = b.resize((sw,sh), Image.BILINEAR)
-    b = np.array(b)[:,:,3:4] * 0.4
+    b = np.repeat(np.array(b)[:,:,3:4] * 0.4, 4, axis=-1)
     self.titleCircle = self.makeCL('titleCircle', b)
     self.tCircles = 30
     np.random.seed(4)
@@ -115,8 +116,8 @@ def mainMenuSetup(self):
 def mainMenuLayout(self):
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx())) - self.W2
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty())) - self.H2
-    parx = mx*0.04
-    pary = my*0.04
+    parx = mx*MSCALE
+    pary = my*MSCALE
     parxy = np.array([parx, pary])
 
     frame = self.frameBuf
@@ -336,8 +337,8 @@ def mainHandleMouse(self, frame, click=False):
 
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
-    parx = mx*0.04
-    pary = my*0.04
+    parx = mx*MSCALE
+    pary = my*MSCALE
     parxy = np.array([parx, pary])
 
     c = self.iconsPos[::-1]
@@ -428,7 +429,7 @@ def stageSelectSetup(self):
 
     self.stagePreviews = []
     for i in range(len(self.loc)):
-        im = Image.open(PATH+"../Assets/Preview_"+self.loc[i]+".png")
+        im = Image.open(PATH+"../Assets/Preview_"+self.loc[i]+".png").convert('RGBA')
         im = im.resize((int(320*resScale), int(200*resScale)), Image.BILINEAR)
         im = np.array(im)
         im = im / 255. * im * 0.9
@@ -444,8 +445,8 @@ def stageSelectLayout(self):
     """
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx())) - self.W2
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty())) - self.H2
-    parx = mx*0.04
-    pary = my*0.04
+    parx = mx*MSCALE
+    pary = my*MSCALE
     parxy = np.array([parx, pary])
 
     frame = self.frameBuf
@@ -540,8 +541,8 @@ def stageSelectLayout(self):
 def getButtonCoord(self, i):
     mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx()))
     my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty()))
-    parx = mx*0.04
-    pary = my*0.04
+    parx = mx*MSCALE
+    pary = my*MSCALE
 
     resScale = self.H / 600
     
