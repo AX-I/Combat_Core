@@ -39,14 +39,14 @@ uniform float R[64];
 
 out vec4 f_color;
 
-uniform float rabsorb;
-uniform float rlight;
-uniform float rdist;
-uniform float rscatter;
-uniform float rheight;
+uniform float fogAbsorb;
+uniform float fogLight;
+uniform float fogDist;
+uniform float fogScatter;
+uniform float fogHeight;
 
-uniform float rambdistfac;
-uniform vec3 ramb;
+uniform float fogAmbdistfac;
+uniform vec3 fogAmb;
 
 
 uint rand_xorshift(uint rng_state) {
@@ -58,20 +58,20 @@ uint rand_xorshift(uint rng_state) {
 
 void main() {
 	float LIGHT = .2f;
-	if (rlight != 0) LIGHT = rlight;
+	if (fogLight != 0) LIGHT = fogLight / 8.f;
 
 	float ABSORB = 0.06f;
-	if (rabsorb != 0) ABSORB = rabsorb;
+	if (fogAbsorb != 0) ABSORB = fogAbsorb;
 
 	float inscatter = 0.f;
-	if (rscatter != 0) inscatter = rscatter;
+	if (fogScatter != 0) inscatter = fogScatter;
 
-    float fogHeight = 1000.f;
-	if (rheight != 0) fogHeight = rheight;
+    float fHeight = 1000.f;
+	if (fogHeight != 0) fHeight = fogHeight;
 	
-	vec3 fogAmb = LIGHT * LInt * inscatter;
+	vec3 ambient = LIGHT * LInt * inscatter;
 
-  fogAmb += ramb;
+  ambient += fogAmb;
 	
 
     vec2 wh = 1 / vec2(width, height);
@@ -88,13 +88,13 @@ void main() {
     if (maxZ != d) maxZ = d;
 
     float ambDistFac = 1.;
-    if (rambdistfac != 0) ambDistFac = rambdistfac;
+    if (fogAmbdistfac != 0) ambDistFac = fogAmbdistfac;
 
     float stepDist = 0.5;
     float stepFac = 1.2;
-    if (rdist != 0) {
-      stepDist = rdist * (1-stepFac) / (1-pow(stepFac,NSAMPLES));
-      maxZ = min(maxZ, rdist * ambDistFac);
+    if (fogDist != 0) {
+      stepDist = fogDist * (1-stepFac) / (1-pow(stepFac,NSAMPLES));
+      maxZ = min(maxZ, fogDist * ambDistFac);
     }
 
 	vec3 Vd = vmat[0];
@@ -135,7 +135,7 @@ void main() {
 	    sf = clamp(sf, 0.0, 1.0) * wS;
 	    vec2 sxy = floor(sf) / wS;
 
-        float heightFac = (pos.y > fogHeight) ? 0 : 1;
+        float heightFac = (pos.y > fHeight) ? 0 : 1;
 		totDensity += heightFac * stepDist;
 
     // int e^{-cx} dx = -1/c e^{-cx}
@@ -143,22 +143,20 @@ void main() {
 
 		//if ((sx >= 0) && (sx < 2*wS-1) && (sy >= 0) && (sy < 2*wS-1)) {
 			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase * LInt;
-			else light += fogAmb * scatter * phase;
+			else light += ambient * scatter * phase;
 		//}
 		pos += rayDir * stepDist;
 		currDepth = dot(pos - vpos, Vd);
     stepDist *= stepFac;
 	}
 
-	float heightFac = (pos.y > fogHeight) ? 0 : 1;
+	float heightFac = (pos.y > fHeight) ? 0 : 1;
 
-	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * fogAmb * phase * LInt;
+	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * ambient * phase * LInt;
 
 	transmit = exp(-ABSORB * totDensity);
 
 	// Blend mode src.alpha
 	f_color = vec4(max(vec3(0), light), (1.0 - transmit));
-
-
 
 }
