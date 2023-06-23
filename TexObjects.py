@@ -89,7 +89,7 @@ class TexSkyBox:
         self.viewer.vertv.append([])
         self.viewer.vertBones.append([])
 
-        self.viewer.matShaders[self.texNum] = {"sky":1}
+        self.viewer.matShaders[self.texNum] = {'shader':"sky", 'args':{}}
 
         rr = rot
         rotX = numpy.array([[1, 0, 0],

@@ -49,7 +49,10 @@ if True: #if sys.platform == 'darwin':
 
 
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
-DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR Glass SSRopaque Metallic Special'
+DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR SSRglass SSRopaque Metallic Special'
+
+TRANSPARENT_SHADERS = set(
+    'add border SSR SSRopaque SSRglass sub fog lens'.split(' '))
 
 POST_SHADERS = 'gamma lens FXAA dof ssao'
 
@@ -948,8 +951,7 @@ class CLDraw:
             try:
                 draw['useNM'] = 1
                 draw['NM'] = 7
-            except KeyError:
-                pass
+            except KeyError: print(f'Unused normal in shader {tn}')
 
         try:
             if 'stage' in kwargs:
@@ -1022,8 +1024,7 @@ class CLDraw:
 
         for i in range(len(self.VBO)):
             if mask[i]: continue
-            trans = {'add', 'border', 'SSR', 'SSRopaque', 'sub', 'fog', 'lens'}
-            if shaders[i]['shader'] in trans: continue
+            if shaders[i]['shader'] in TRANSPARENT_SHADERS: continue
 
             try: _ = self.DRAWZ[i]
             except KeyError:
@@ -1075,9 +1076,7 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-
-            trans = {'add', 'border', 'SSR', 'SSRopaque', 'sub', 'fog', 'lens', 'DoF'}
-            if not shaders[i]['shader'] in trans:
+            if not shaders[i]['shader'] in TRANSPARENT_SHADERS:
                 self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
 
@@ -1121,6 +1120,8 @@ class CLDraw:
             ctx.enable(moderngl.DEPTH_TEST)
             self.doSSAO = False
 
+        self.fbo.depth_mask = True
+
         ctx.enable(moderngl.BLEND)
 
         # Transparent
@@ -1149,7 +1150,6 @@ class CLDraw:
 
                 self.fbo.use()
                 if shader == 'SSRopaque':
-                    self.fbo.depth_mask = True
                     ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
                     ctx.depth_func = '<='
                 else:
@@ -1197,13 +1197,10 @@ class CLDraw:
             vao.render(moderngl.TRIANGLES)
 
             if shader == 'SSRopaque':
-                self.fbo.depth_mask = False
                 ctx.depth_func = '<'
             if shader == 'add' or shader == 'sub':
                 if 'noline' not in shaders[i]:
                     vao.render(moderngl.LINES)
-
-        self.fbo.depth_mask = True
 
 
     def clearZBuffer(self):
