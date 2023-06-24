@@ -49,20 +49,20 @@ def setupStage(self):
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
         if "Chandelier" in f:
-            mat['emissive'] = 4.0
+            mat.update(shader='emissive', args={'emPow':4.0})
             self.chandelierMat = self.vtNames[f]
         if "Glass" in f:
-            mat.update({'add': 0.04, 'noline': True, 'cull': 1})
+            mat.update(shader='add', noline=True, cull=1, args={'emPow':0.04})
         if "Window" in f:
             if "Fro" in f or "Sid" in f:
-                mat['emissive'] = 4.0
+                mat.update(shader='emissive', args={'emPow':4.0})
             else:
-                mat.update({'add': 1, 'noline': True})
+                mat.update(shader='add', noline=True, args={'emPow':1})
             self.vertObjects[self.vtNames[f]].castShadow = False
         if "Metal" in f:
-            mat['spec'] = 0.6
+            mat['args']['specular'] = 0.6
         if "Wood066" in f:
-            mat['SSR'] = 2
+            mat['shader'] = 'SSRopaque'
         elif "Wood_Ceil" in f:
             mat.update({'noise': 1, 'normal': 'wood_coffers'})
         elif "Wood" in f:
@@ -73,9 +73,9 @@ def setupStage(self):
             self.vtextures[self.vtNames[f]] = (self.vtextures[self.vtNames[f]]*1.2).astype('uint16')
             #mat.update({'spec': 0.02, 'roughness': 0.002})
         if "Silver" in f:
-            mat['metal'] = {'roughness':0.4}
+            mat.update(shader='metallic', args={'roughness':0.4})
         if "Transparent" in f:
-            mat['add'] = 0.002
+            mat.update(shader='add', args={'emPow':0.002})
 
         if 'floor' in f:
             mat['noise'] = 1
@@ -107,9 +107,8 @@ def setupStage(self):
 
     if len(self.stagePlatforms) > 0:
         glass = self.vertObjects[-1].texNum
-        self.matShaders[glass]['add'] = 0.1
-        self.matShaders[glass]['noline'] = True
-        self.matShaders[glass]['special'] = True
+        self.matShaders[glass].update(shader='add', noline=True,
+                                      args={'emPow':0.1}, special=True)
         self.platGlass = glass
 
         self.platTexn = getTexN(self.vertObjects[-3]) + [glass]
@@ -128,7 +127,8 @@ def setupStage(self):
 
     for f in self.vtNames:
         if "Gold" in f:
-            self.matShaders[self.vtNames[f]]['metal'] = {'roughness':0.5}
+            self.matShaders[self.vtNames[f]].update(
+                shader='metallic', args={'roughness':0.5})
 
     self.pillars = []
     for i in range(6):
@@ -145,7 +145,7 @@ def setupStage(self):
 
     for f in self.vtNames:
         if "Wood066" in f and not "066P" in f:
-            self.matShaders[self.vtNames[f]]['SSR'] = 2
+            self.matShaders[self.vtNames[f]]['shader'] = 'SSRopaque'
         if 'WoodT' in f:
             self.matShaders[self.vtNames[f]]['noise'] = 1
 
@@ -210,8 +210,7 @@ def setupStage(self):
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
-    skyShader['isEqui'] = 1
-    skyShader['rotY'] = 3.27
+    skyShader['args'].update(isEqui=1, rotY=3.27)
 
     self.showPillars = -1
     self.showPlatforms = False
@@ -225,7 +224,7 @@ def setupPostprocess(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'lens':0.8})
+            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.8}})
 
 def movePillars(self, i):
     btn = self.buttons[i]
@@ -276,7 +275,7 @@ def showPlatforms(self):
     self.platFullyAppeared = False
 
 def toggleLights(self):
-    self.matShaders[self.chandelierMat]['emissive'] = 0.1
+    self.matShaders[self.chandelierMat].update(shader='emissive', args={'emPow':0.1})
     self.envPointLights = []
     self.directionalLights[2]['i'] *= 4
     FInt = np.array([0.5,0.3,0.1]) * 0.6
@@ -314,8 +313,8 @@ def testPlatforms(self):
     self.matShaders[self.platGlass]['add'] = 0.04 * min(1, (t / 2.5))
 
     for i in self.platTexn[:-1]:
-        self.matShaders[i] = {
-            'dissolve':{'origin':(10,4,6), 'fact':np.float32(5*t)}}
+        self.matShaders[i].update(shader='dissolve',
+            args={'origin':(10,4,6), 'fact':np.float32(5*t)})
         self.draw.changeShaderZ(i, self.matShaders[i])
 
 

@@ -64,7 +64,7 @@ def setupStage(self):
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
         if 'Water' in f:
-            mat['SSR'] = '0'
+            mat['shader'] = 'SSR'
             self.vertObjects[self.vtNames[f]].castShadow = False
             self.water = VertWater0(
                 (0,0,0), self, pScale=0.04,
@@ -74,14 +74,15 @@ def setupStage(self):
                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3)
             self.water.texNum = self.vtNames[f]
         if 'Plant' in f or '093' in f or 'BushTest' in f or 'ForestBg' in f:
-            mat['translucent'] = 1
+            mat['args']['translucent'] = 1
         if 'Plant' in f:
             mat['alphaMip'] = 2
         if 'Flower' in f or 'ce0a' in f:
-            mat['translucent'] = 1
+            mat['args']['translucent'] = 1
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
-            self.matShaders[self.flameMTL] = {'add': 5, 'noline': 1}
+            self.matShaders[self.flameMTL].update(shader='add', noline=1,
+                                                  args={'emPow': 5})
             self.vertObjects[self.flameMTL].castShadow = False
         if 'Sandstone' in f:
             tm = self.vtextures[self.vtNames[f]] * 0.9
@@ -136,8 +137,7 @@ def setupStage(self):
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=16)
 
     skyShader = self.matShaders[self.skyBox.texNum]
-    skyShader['isEqui'] = 1
-    skyShader['rotY'] = 0.25
+    skyShader['args'].update(isEqui=1,rotY=0.25)
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
@@ -151,7 +151,7 @@ def setupPostprocess(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'lens':0.5})
+            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.5}})
 
 def changeMusic(self):
     self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
@@ -216,10 +216,10 @@ def testTempleTrans(self):
         self.directionalLights[1]['i'] = di * 0.8 + do * max(0.4, f) * 0.2
 
         # Fade out fog too
-        di = self.matShaders[self.fogMTL]['fogDist']
+        di = self.matShaders[self.fogMTL]['args']['fogDist']
         do = 40
         fdist = di * 0.9 + do * max(0.7, 1-f) * 0.1
-        self.matShaders[self.fogMTL]['fogDist'] = fdist
+        self.matShaders[self.fogMTL]['args']['fogDist'] = fdist
 
         return
 
@@ -227,18 +227,18 @@ def testTempleTrans(self):
         changeMusic(self)
     if t > 6 and not self.changedShader:
         sbt = self.sandstoneBricksTex
-        self.matShaders[sbt] = {'normal':'sand_blocks'}
+        self.matShaders[sbt] = {'shader':'sh', 'args':{}, 'normal':'sand_blocks'}
         self.draw.changeShaderZ(self.sandstoneBricksTex, {})
-        self.draw.changeShader(sbt, {'normal':'sand_blocks'}, stage=self.stage)
+        self.draw.changeShader(sbt, self.matShaders[sbt], stage=self.stage)
         self.changedShader = True
     if t > 2.2 and self.changedMusic == 0:
         changeNoise(self)
     if t > 2:
-        self.matShaders[self.clouds.texNum]['add'] = 0.02
+        self.matShaders[self.clouds.texNum].update(shader='add', args={'emPow':0.02})
     if 6 > t > 0:
         self.matShaders[self.sandstoneBricksTex] = {
-            'dissolve':{'origin':(-14.5,0.5,20),
-                        'fact':np.float32(8 * t)}}
+            'shader':'dissolve',
+            'args':{'fadeOrigin':(-14.5,0.5,20), 'fadeFact':8 * t}}
         self.draw.changeShaderZ(self.sandstoneBricksTex,
                                 self.matShaders[self.sandstoneBricksTex])
 
@@ -262,12 +262,12 @@ def testTempleTrans(self):
 
     fparams = Anim.interpAttr(t, fogKF)
 
-    s = dict(self.matShaders[self.fogMTL])
-    s['fog'] = fparams[0]
-    s['fogAbsorb'] = fparams[1]
-    s['fogDist'] = fparams[2]
-    s['fogScatter'] = fparams[3]
-    self.matShaders[self.fogMTL] = s
+    self.matShaders[self.fogMTL]['args'].update(
+        fogLight=fparams[0],
+        fogAbsorb=fparams[1],
+        fogDist=fparams[2],
+        fogScatter=fparams[3])
+    self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
     self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 

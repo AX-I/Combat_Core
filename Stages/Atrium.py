@@ -17,31 +17,28 @@ def setupStage(self):
     self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
                        filename=PATH+"../Atrium/Atrium8AtlasOpt.obj",
                        scale=1.2, mip=2,
-                       useShaders={"cull":1},
                        subDiv=1, shadow="CR")
 
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
         if "CV" in f:
-            mat['emissive'] = 1.0
+            mat.update(shader='emissive', args={'emPow':1.0})
         if "BackgroundLight" in f:
-            mat['add'] = 0.5
-            mat['noline'] = True
-            mat['cull'] = 1
+            mat.update(shader='add', noline=1, args={'emPow':0.5}, cull=1)
         if "FieldBackground" in f:
-            mat['emissive'] = 2.0
+            mat.update(shader='emissive', args={'emPow':2.0})
         if 'AtlasG_opt' in f:
-            mat['spec'] = 1
-            mat['normal'] = 'AtlasG'
+            mat.update(args={'specular':1}, normal='AtlasG')
         if 'Copy' in f:
-            self.ssrMTL = self.vtNames[f]
-            self.matShaders[self.ssrMTL]['SSR'] = 2
-            self.matShaders[self.ssrMTL]['roughness'] = 0.1
-            self.matShaders[self.ssrMTL]['normal'] = 'AtlasG'
-            self.matShaders[self.ssrMTL]['cull'] = 1
+            mat.update(shader='SSRopaque', normal='AtlasG',
+                args={'roughness':0.1}, cull=1)
+            self.ssrMTL = mat
         if 'AtlasW' in f:
-            mat['spec'] = 1
-            mat['roughness'] = 0.4
+            mat.update(args={'specular':1, 'roughness':0.4})
+        if 'Lights' in f:
+            mat.update(shader='emissive', args={'emPow':1.4})
+        if 'Glass' in f:
+            mat.update(shader='SSRglass')
 
     self.terrain = VertTerrain0([0,-0.6,0],
                                 PATH+"../Atrium/AtriumNav.png",
@@ -71,11 +68,10 @@ def setupStage(self):
                                   rot=(0,0,0), hdrScale=48)
 
     skyShader = self.matShaders[self.skyBox.texNum]
-    skyShader['isEqui'] = 1
-    skyShader['rotY'] = 3.27
+    skyShader['args'].update(isEqui=1, rotY=3.27)
 
-    self.matShaders[self.ssrMTL]['envFallback'] = self.skyBox.texNum
-    self.matShaders[self.ssrMTL]['rotY'] = skyShader['rotY']
+    self.ssrMTL['envFallback'] = self.skyBox.texNum
+    self.ssrMTL['args']['rotY'] = skyShader['args']['rotY']
 
 def frameUpdate(self):
     if self.frameNum == 0:

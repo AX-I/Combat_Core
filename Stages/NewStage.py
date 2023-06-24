@@ -53,5 +53,4 @@ def setupStage(self):
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
-    skyShader['isEqui'] = 1
-    skyShader['rotY'] = 3.27
+    skyShader['args'].update(isEqui=1, rotY=3.27)
