@@ -11,6 +11,7 @@
 #define EFFECT_ROLL 3
 #define EFFECT_ROT 4
 #define EFFECT_MULT 5
+#define EFFECT_ROLLFADEY 6
 
 #define cropHeight 3.f
 
@@ -79,6 +80,10 @@ __kernel void blend(
           samplecoord = (float2)(srcX, srcY);
           if (((0 > srcX) || (srcX >= sw)) ||
               ((0 > srcY) || (srcY >= sh))) return;
+      }
+      if (effect == EFFECT_ROLLFADEY) {
+        samplecoord.y = fmod(fabs(srcY + effectArg), sh);
+        mult = pown(1 - pown(fabs(srcY - sh/2) / (sh/2), 2), 2);
       }
 
       float3 pix = read_imagef(SRC, smp, samplecoord).xyz;

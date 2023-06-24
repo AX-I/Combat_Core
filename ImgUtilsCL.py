@@ -101,11 +101,11 @@ class NPCanvas:
         Preconditions:
             - method in {'alpha', 'add', 'screen',
                          'replace', 'hard light'}
-            - effect in {None, 'flip', 'crop', 'roll', 'rot', 'mult'}
+            - effect in {None, 'flip', 'crop', 'roll', 'rot', 'mult', 'fadey'}
         """
 
         METHOD = {'alpha':1, 'add':2, 'screen':3, 'replace':4, 'hard light':5}
-        EFFECT = {None:0, 'flip':1, 'crop':2, 'roll':3, 'rot':4, 'mult':5}
+        EFFECT = {None:0, 'flip':1, 'crop':2, 'roll':3, 'rot':4, 'mult':5, 'fadey':6}
 
         effectApplied = EFFECT[effect]
 

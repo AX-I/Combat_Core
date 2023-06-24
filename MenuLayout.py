@@ -95,18 +95,12 @@ def mainMenuSetup(self):
         self.icons.append(self.makeCL(i, b))
 
 
-    b = Image.open('../Assets/Circle.png')
-    sw = int(b.size[0]*0.5 * resScale)
-    sh = int(b.size[1]*0.5 * resScale)
+    b = Image.open('../Assets/Circles.png')
+    sw = int(b.size[0]*0.75 * resScale)
+    sh = int(b.size[1]*0.75 * resScale)
     b = b.resize((sw,sh), Image.BILINEAR)
-    b = np.repeat(np.array(b)[:,:,3:4] * 0.4, 4, axis=-1)
-    self.titleCircle = self.makeCL('titleCircle', b)
-    self.tCircles = 30
-    np.random.seed(4)
-    self.tcPos = np.random.rand(self.tCircles, 2) * 2 - 1
-    self.tcPos *= [[self.H*0.4, self.H*0.1]]
-    self.tcTimes = np.random.rand(self.tCircles)
-
+    b = np.repeat(np.array(b)[:,:,0:1], 4, axis=-1)
+    self.titleCircles = self.makeCL('titleCircle', b)
 
     self.textEntry = 'User'
 
@@ -277,29 +271,15 @@ def mainMenuLayout(self):
                   blur=blurs[3], bFill=yellowBG, method='gauss')
 
 
-
-
     titleX = self.W*0.36 - parx/2
     titleY = self.H*0.4 - pary/2
 
-
     titleYTop = titleY - self.H*0.1
     titleH = self.H*0.25
-    titleYMid = titleYTop + titleH/2
+    titleYC = titleYTop + titleH*0.55
 
-    tcPos = self.tcPos - np.array([[0,20*sTime * resScale]])
-
-    tcPos[:,1] %= titleH
-
-
-    for i in range(self.tCircles):
-        xo, yo = tcPos[i]
-        m = sin((sTime + 10 * self.tcTimes[i]) * 0.8) * 0.5 + 0.5
-        m *= (1 - (abs(yo - titleH/2) / (titleH/2))**2)**2
-        self.blend(frame, self.titleCircle,
-                   (titleX + xo, titleYTop + yo), 'add',
-                   effect='mult', effectArg=m)
-
+    self.blend(frame, self.titleCircles, (titleX, titleYC), 'add',
+               effect='fadey', effectArg=sTime*20*resScale)
 
 
     self.blend(frame, self.menuTitle,
