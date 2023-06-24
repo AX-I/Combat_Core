@@ -1120,8 +1120,6 @@ class CLDraw:
             ctx.enable(moderngl.DEPTH_TEST)
             self.doSSAO = False
 
-        self.fbo.depth_mask = True
-
         ctx.enable(moderngl.BLEND)
 
         # Transparent
@@ -1202,6 +1200,8 @@ class CLDraw:
             if shader == 'add' or shader == 'sub':
                 if 'noline' not in shaders[i]:
                     vao.render(moderngl.LINES)
+
+        self.fbo.depth_mask = True
 
 
     def clearZBuffer(self):
