@@ -152,16 +152,15 @@ class VertObject:
             self.viewer.vertv.append([])
             self.viewer.vertBones.append([])
             
-            s = {}
+            s = {'shader':'sh', 'args':{}}
             if self.mip is not None: s["mip"] = self.mip
             if self.receiveShadow: s["shadow"] = "R"
-            if self.useAlpha is not None: s["alpha"] = self.useAlpha
+            if self.useAlpha is not None:
+                s["alpha"] = self.useAlpha
+                s['shader'] = 'shAlpha'
             if self.reflection: s["refl"] = self.reflection
             
-            if "Lights" in texture: s["emissive"] = 1.4
-            
-            for i in useShaders:
-                s[i] = useShaders[i]
+            s.update(useShaders)
 
             self.viewer.matShaders[self.texNum] = s
             
@@ -589,20 +588,6 @@ class VertModel(VertObject):
         self.mc = mc
         self.blender = blender
 
-        try:
-            if "plant" in self.mtlTex or "as12" in self.mtlTex:
-                self.subDiv = 0; self.mip = None
-        except: pass
-        try:
-            if "plant" in self.mtlTex or "as12" in self.mtlTex:
-                del self.viewer.matShaders[self.texNum]["cull"]
-        except: pass
-        try:
-            if 'Glass' in self.mtlTex:
-                del self.viewer.matShaders[self.texNum]["cull"]
-                self.viewer.matShaders[self.texNum]['SSR'] = 1
-        except: pass
-    
     def create(self):        
         filename = self.filename
         self.hasTex = True
@@ -631,9 +616,6 @@ class VertModel(VertObject):
         if self.animated:
             self.bones = []
         activeMat = False
-        
-        if "plant_01.png" in self.mtlTex or "as12" in self.mtlTex:
-            self.subDiv = False
         
         if self.subDiv: aw = self.appendWedgeSafe
         else: aw = self.appendWedge

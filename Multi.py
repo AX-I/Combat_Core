@@ -889,7 +889,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         e["pos"] = np.array(p)
         e["active"] = True
         e["start"] = time.time()
-        self.matShaders[e["obj"].texNum]["add"] = 4
+        self.matShaders[e["obj"].texNum]['args'].update(emPow=4)
 
         self.draw.translate(e["pos"], e["obj"].cStart*3, e["obj"].cEnd*3,
                             e["obj"].texNum)
@@ -991,43 +991,44 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for f in self.vtNames:
             mat = self.matShaders[self.vtNames[f]]
             if 'Cornea' in f:
-                mat.update({'SSR':2, 'fresnelExp':3})
+                mat.update(shader='SSRopaque', args={'fresnelExp':3})
                 self.corneaMtl = self.vtNames[f]
             if 'Gold' in f:
-                mat['metal'] = {'roughness':0.3}
+                mat.update(shader='metallic', args={'roughness':0.3})
             if 'Hair' in f:
-                mat.update({'spec':0.8, 'normal':'Hair',
+                mat.update(args={'specular':0.8,
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
-                            'hairShading':1, 'genBone':8})
+                            'hairShading':1}, normal='Hair', genBone=8)
             if 'Face' in f:
-                mat.update({'spec':1, 'normal':'Face',
-                            'genBone':8})
+                mat.update(args={'specular':1}, normal='Face', genBone=8)
             if 'Skin' in f:
-                mat.update({'spec':1, 'normal':'Body'})
+                mat.update(args={'specular':1}, normal='Body')
             if 'Metal' in f:
-                mat['metal'] = {'roughness':0.6}
+                mat.update(shader='metallic', args={'roughness':0.6})
 
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Samus_PED/Samus_3B.obj",
                            animated=True, texMul=1, reflect="1a",
-                           useShaders={'spec':1},
+                           useShaders={'args':{'specular':1}},
                            scale=1.33, shadow="")
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Zelda2/Test5b.obj",
                            animated=True,
-                           texMul=2.5, useShaders={'spec': 1, 'normal':'Zelda'},
+                           texMul=2.5, useShaders={'args':{'specular': 1},
+                                                   'normal':'Zelda'},
                            scale=0.33, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"L3/L3.obj",
                            animated=True,
-                           texMul=1, useShaders={'spec': 1, 'normal':'Link'},
+                           texMul=1, useShaders={'args':{'specular': 1},
+                                                 'normal':'Link'},
                            scale=0.75, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
@@ -1082,8 +1083,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.STAGECONFIG = cs
 
         try:
-            self.matShaders[self.corneaMtl]['envFallback'] = self.skyBox.texNum
-            self.matShaders[self.corneaMtl]['rotY'] = self.matShaders[self.skyBox.texNum]['rotY']
+            ms = self.matShaders
+            ms[self.corneaMtl]['envFallback'] = self.skyBox.texNum
+            ms[self.corneaMtl]['args']['rotY'] = ms[self.skyBox.texNum]['args']['rotY']
         except (AttributeError, KeyError): pass
 
         # Add projectiles and game elements
@@ -1093,7 +1095,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = [32, -3+i, 29]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
-                               useShaders={"emissive":2})
+                               useShaders={'shader':"emissive",'args':{'emPow':2}})
             self.spheres.append(("blank", self.vertObjects[-1]))
 
             self.srbs.append(Phys.RigidBody(2, p, vel=[0.,0,0.],
@@ -1107,7 +1109,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = [-30, -3+i, 20]
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
                                texture=PATH+"../Assets/Red.png",
-                               useShaders={"emissive":2.5})
+                               useShaders={'shader':"emissive",'args':{'emPow':2.5}})
             self.spheres.append(("red", self.vertObjects[-1]))
 
             self.srbs.append(Phys.RigidBody(24, p, vel=[0.,0,0.],
@@ -1121,7 +1123,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.addVertObject(VertModel, [0,-0.6,0], scale=(1,0.6,1),
                            filename=PATH+'../Models/Rings.obj',
-                           shadow='', useShaders={'add':0.5, 'noline':True})
+                           shadow='', useShaders={'shader':'add','args':{'emPow':0.5},
+                                                  'noline':True})
         self.restRings = self.vertObjects[-1]
 
         self.addVertObject(VertSphere, [0,0,0], scale=0.06,
@@ -1135,7 +1138,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertRing, [0,0,0], n=16,
                 radius=(0.5,1.2), z=0.3, uMult=5,
                 texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
-                shadow="", useShaders={'add':0.6, 'noline':True})
+                shadow="", useShaders={'shader':'add', 'args':{'emPow':0.6},
+                                       'noline':True})
             obj = self.vertObjects[-1]
             obj.prevCoord = np.array([0,0,0.])
             obj.prevRot = np.identity(3)
@@ -1153,24 +1157,25 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[2,0,0], h2=[0,2,0], n=1,
                            texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, "fog":fog, 'fogAbsorb':fabs,
+                           useShaders={"2d":1, 'shader':"fog",
+                                       'args':{'fogLight':fog, 'fogAbsorb':fabs,
                                        'fogDist':fdist, 'fogHeight':fheight,
-                                       'fogAmb':famb})
+                                       'fogAmb':famb}})
             self.fogMTL = self.vertObjects[-1].texNum
 
         if self.stage == 4:
             self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
                                filename=PATH+"../Models/Temple/Clouds.obj",
                                shadow="",
-                               useShaders={'add':0.04, 'noline':True,
-                                           'fadeDist':2})
+                               useShaders={'shader':'add','args':{
+                                   'emPow':0.04, 'fadeDist':2}, 'noline':True})
             self.clouds = self.vertObjects[-1]
 
         for i in range(self.numBullets // 3):
             p = [20, -3+i, 20]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Orange.png",
-                               useShaders={"add":0.4})
+                               useShaders={'shader':'add','args':{'emPow':0.4}})
             self.spheres.append(("orange", self.vertObjects[-1]))
 
             self.srbs.append(Phys.RigidBody(10, p, vel=[0.,0,0.],
@@ -1230,7 +1235,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                  wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
                  wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
                            texture=PATH+"../Assets/Blue.png",
-                           useShaders={"SSR":"0"})
+                           useShaders={'shader':"SSR"})
             self.water = self.vertObjects[-1]
 
         for i in range(len(self.players)):
@@ -1250,7 +1255,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = np.array([0., 0, 0])
             self.addVertObject(VertSphere, p, n=24, scale=0.25,
                                texture=PATH+"../Assets/Orange1.png",
-                               useShaders={"add":2.})
+                               useShaders={'shader':"add", 'args':{'emPow':2.}})
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
 
@@ -1270,12 +1275,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.addVertObject(VertPlane, np.array(c[i]) - np.array([0,2,0]),
                                    n=15, h1=h[i], h2=[0, 22, 0],
                                    texture=PATH+"../Assets/Magenta.png",
-                                   useShaders={"border":0.1})
+                                   useShaders={'shader':"border"})
 
         self.addVertObject(VertPlane, [-1,-1,0],
                            h1=[0,2,0], h2=[2,0,0], n=1,
                            texture=PATH+"../Assets/Circle.png",
-                           useShaders={"2d":1, 'DoF':1})
+                           useShaders={"2d":1, 'shader':'DoF'})
 
         try: self.STAGECONFIG.setupPostprocess(self)
         except AttributeError: pass
@@ -1402,7 +1407,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.gameStarted = True
 
         self.qi.put(True)
-        if 'isEqui' in self.matShaders[self.skyBox.texNum]:
+        if 'isEqui' in self.matShaders[self.skyBox.texNum]['args']:
             self.cubeMap = CubeMap(self.skyTex, None, False)
         else:
             self.cubeMap = CubeMap(self.skyTex, 2, False)
@@ -1926,7 +1931,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
-                    self.matShaders[xn]["sub"] = tr
+                    self.matShaders[xn]['shader'] = "sub"
+                    self.matShaders[xn]['args'] = {'emPow':tr}
                 g = a["ghost"]
                 if (not self.VRMode) or (self.frameNum & 1):
                     g.changePos(a["b1"].offset[:3])
@@ -2055,7 +2061,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 cs, ce, tn = e["obj"].cStart*3, e["obj"].cEnd*3, e["obj"].texNum
                 self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
                 e["scale"] *= frameScale / e["scale"]
-                self.matShaders[tn]["add"] = 2 / e["scale"]
+                self.matShaders[tn].update(args={'emPow': 2 / e["scale"]})
 
                 self.expLights[i] = {"pos": e["pos"], "i":np.array((40,40,10.)) / e["scale"]}
                 if e["scale"] > 30:

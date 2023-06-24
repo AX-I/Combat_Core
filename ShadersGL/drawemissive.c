@@ -5,7 +5,7 @@ out vec3 f_color;
 uniform vec3 LDir;
 uniform vec3 LInt;
 
-uniform float vPow;
+uniform float emPow;
 
 uniform float fadeDist;
 #define fadeBias 1.f
@@ -20,7 +20,7 @@ void main() {
 	float tz = 1 / depth;
 	vec3 norm = v_norm / tz;
 
-    vec3 light = vec3(vPow);
+    vec3 light = vec3(emPow);
     if (fadeDist != 0) {
       light *= vec3(clamp((tz-fadeBias)/(0.001+fadeDist), 0.f, 1.f));
     }

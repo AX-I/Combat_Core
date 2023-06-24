@@ -32,7 +32,7 @@ def setupStage(self):
                    texture=PATH+"../Assets/Blank1.png",
                    scale=0.6,
                    vertScale=2.5/6553, vertPow=2, vertMax=50000,
-                   useShaders={'spec': 1, 'normal': 'snow'},
+                   useShaders={'args':{'specular': 0.8}, 'normal': 'snow'},
                    uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
@@ -65,7 +65,7 @@ def setupStage(self):
            "texMode":None, "scale":0.2, "shadow":"C"}
     options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
                 'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
-                'useShaders':{'translucent':1}}
+                'useShaders':{'args':{'translucent':1}}}
 
     cn = []
     for i in range(-50, 70, 20):
@@ -112,7 +112,7 @@ def setupStage(self):
     pfile = tgpath + "TaigaPillar.obj"
     self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
                        rot=(0,-47.8 * 3.14/180, 0), static=True,
-                       mip=2, useShaders={'spec': 0.4, 'normal': 'rock'},
+                       mip=2, useShaders={'args':{'specular': 0.4}, 'normal': 'rock'},
                        shadow="CR")
 
     # Large rocks
@@ -125,13 +125,13 @@ def setupStage(self):
     for o in objs:
         self.addVertObject(VertModel, o['pos'], rot=o['rot'], static=True,
                            filename=pfile,
-                           mip=2, useShaders={'spec':0.4, 'normal':'largeRock'},
+                           mip=2, useShaders={'args':{'specular': 0.4}, 'normal':'largeRock'},
                            shadow="CR")
 
     # Background Mountain
     pfile = tgpath + "Mountain.obj"
     opts = {'filename':pfile, 'mip':2, 'texMul':0.8, 'useShaders':
-            {'spec':0.4, 'normal':'mountain', 'ignoreShadow':1},
+            {'args':{'specular': 0.4}, 'normal':'mountain', 'ignoreShadow':1},
             'shadow':'', 'static':True}
     self.addVertObject(VertModel, [22,32,-271], rot=(0,0,0), scale=2,
                        **opts)
@@ -143,7 +143,7 @@ def setupStage(self):
     self.addVertObject(VertPlane, [8.5-iceW, 1.8, 7-iceW],
                        h1=[iceW*2,0,0], h2=[0,0,iceW*2], n=16,
                        texture=PATH+'../Assets/Blank3.png', uvspread=0.333,
-                       useShaders={'SSR':'0', 'normal': 'ice'})
+                       useShaders={'shader':'SSR', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
 
@@ -189,7 +189,8 @@ def setupStage(self):
         pos = np.array(effectPos[i]) - np.array([0,0.2,0])
         self.addVertObject(VertModel, pos,
                            filename=mpath + 'Effect.obj', cache=False,
-                           mip=2, useShaders={'add': 4, 'noline': True},
+                           mip=2, useShaders={'shader':'add', 'args':{'emPow': 4},
+                                              'noline': True},
                            scale=0.6, rot=(0,0,0))
         t1 = self.vertObjects[-1]
         t1.create()
@@ -211,7 +212,8 @@ def setupStage(self):
         r = random.random()*3
         self.addVertObject(VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
                            texture=PATH+'../Assets/Snowflake.png',
-                           useShaders={'add': 1, 'noline':1}, mip=2,
+                           useShaders={'shader':'add', 'args':{'emPow':1},
+                                       'noline':1}, mip=2,
                            rot=(0,r,0))
 
     LInt = np.array([1,0.3,0.24]) * 2.5
@@ -233,12 +235,11 @@ def setupStage(self):
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=4)
 
     skyShader = self.matShaders[self.skyBox.texNum]
-    skyShader['isEqui'] = 1
-    skyShader['rotY'] = 0.4
+    skyShader['args'].update(isEqui=1, rotY=0.4)
 
     self.matShaders[self.iceMTL]['envFallback'] = self.skyBox.texNum
-    self.matShaders[self.iceMTL]['rotY'] = skyShader['rotY']
-    self.matShaders[self.iceMTL]['roughness'] = 0.02
+    self.matShaders[self.iceMTL]['args']['rotY'] = skyShader['args']['rotY']
+    self.matShaders[self.iceMTL]['args']['roughness'] = 0.02
 
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
@@ -248,7 +249,7 @@ def setupPostprocess(self):
     self.addVertObject(VertPlane, [-1,-1,0],
             h1=[2,0,0], h2=[0,2,0], n=1,
             texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'lens':1})
+            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':1}})
 
 def frameUpdate(self):
     if self.frameNum == 0:
@@ -272,7 +273,7 @@ def frameUpdate(self):
         s = np.array(s > 30, 'uint8')
         self.draw.addTexAlpha(s, 'snowflake')
 
-    self.matShaders[self.fogMTL]['fogHeight'] = max(10, self.pos[1] + 4)
+    self.matShaders[self.fogMTL]['args']['fogHeight'] = max(10, self.pos[1] + 4)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
     self.draw.setUVOff(self.effectMtl, (-1,-1), (2,2), (-self.frameNum/120, 0))
