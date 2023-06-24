@@ -1141,6 +1141,7 @@ class CLDraw:
                     pass
 
             elif 'SSR' in shader:
+                ctx.disable(moderngl.CULL_FACE)
                 ctx.disable(moderngl.DEPTH_TEST)
                 ctx.disable(moderngl.BLEND)
                 self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
