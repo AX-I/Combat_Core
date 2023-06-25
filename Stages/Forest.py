@@ -134,7 +134,7 @@ def setupStage(self):
 
 
     fn = "../Skyboxes/approaching_storm_1k.ahdr"
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=16)
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=12)
 
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1,rotY=0.25)

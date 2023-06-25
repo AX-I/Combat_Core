@@ -105,10 +105,11 @@ void main() {
                        vec3(-0.10208f,  1.10813f, -0.00605f),
                        vec3(-0.00327f, -0.07276f,  1.07602f));
     j = j * acesIn;
-    j = rtt_and_odt_fit(j);
+    j = rtt_and_odt_fit(j+0.001f);
     j = j * acesOut;
     j = sqrt(j);
   }
+  float dither = 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1));
 
-  f_color = j;
+  f_color = j + dither / 256.f;
 }

@@ -64,9 +64,9 @@ def setupStage(self):
         if "Wood066" in f:
             mat['shader'] = 'SSRopaque'
         elif "Wood_Ceil" in f:
-            mat.update({'noise': 1, 'normal': 'wood_coffers'})
+            mat.update(noise=1, normal='wood_coffers')
         elif "Wood" in f:
-            mat.update({'noise': 1})#, 'spec': 0.02, 'roughness': 0.002})
+            mat.update(noise=1, args={'specular': 0.5})#, 'roughness': 0.002})
         elif 'Wtest' in f or 'Material' in f or 'GraySt' in f or 'Turq' in f:
             mat['noise'] = 1
         if 'Wtest' in f:
@@ -107,8 +107,7 @@ def setupStage(self):
 
     if len(self.stagePlatforms) > 0:
         glass = self.vertObjects[-1].texNum
-        self.matShaders[glass].update(shader='add', noline=True,
-                                      args={'emPow':0.1}, special=True)
+        self.matShaders[glass].update(shader='special', noline=1, args={'emPow':0.1})
         self.platGlass = glass
 
         self.platTexn = getTexN(self.vertObjects[-3]) + [glass]
@@ -118,11 +117,11 @@ def setupStage(self):
 
     self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.2,0]),
                        scale=(-1,1,1), filename='../Models/Strachan/Ring.obj',
-                       useShaders={'add':4, 'noline':True})
+                       useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
     self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.3,0]),
                        scale=1.3, filename='../Models/Strachan/Ring.obj',
                        rot=(0,pi/3,0),
-                       useShaders={'add':4, 'noline':True})
+                       useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
     self.ringTest = self.vertObjects[-1]
 
     for f in self.vtNames:
@@ -291,7 +290,7 @@ def testPlatforms(self):
 
     self.draw.setUVOff(self.ringTest.texNum, (0,0), (1,1),
                        (0, t/3))
-    self.matShaders[self.ringTest.texNum]['add'] = 2 + 2 * sin(t*2)
+    self.matShaders[self.ringTest.texNum].update(args={'emPow': 2 + 2 * sin(t*2)})
 
 ##    if not self.lightsToggled:
 ##        for p in self.actPlayers:
@@ -310,11 +309,11 @@ def testPlatforms(self):
             self.draw.changeShader(i, self.matShaders[i], stage=self.stage)
         return
 
-    self.matShaders[self.platGlass]['add'] = 0.04 * min(1, (t / 2.5))
+    self.matShaders[self.platGlass].update(args={'emPow': 0.04 * min(1, (t / 2.5))})
 
     for i in self.platTexn[:-1]:
         self.matShaders[i].update(shader='dissolve',
-            args={'origin':(10,4,6), 'fact':np.float32(5*t)})
+            args={'fadeOrigin':(10,4,6), 'fadeFact':np.float32(5*t)})
         self.draw.changeShaderZ(i, self.matShaders[i])
 
 

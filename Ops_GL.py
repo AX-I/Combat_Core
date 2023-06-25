@@ -52,7 +52,7 @@ DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
 DRAW_SHADERS += ' Dissolve ZDissolve Fog SSR SSRglass SSRopaque Metallic Special'
 
 TRANSPARENT_SHADERS = set(
-    'add border SSR SSRopaque SSRglass sub fog lens'.split(' '))
+    'add border special SSR SSRopaque SSRglass sub fog lens'.split(' '))
 
 POST_SHADERS = 'gamma lens FXAA dof ssao'
 
@@ -1146,14 +1146,13 @@ class CLDraw:
 
             shader = shaders[i]['shader']
 
-            if shader == 'add' or shader == 'border':
+            if shader in ('add', 'border', 'special'):
                 ctx.blend_func = moderngl.ONE, moderngl.ONE
-                if 'special' in shaders[i]:
+                if shader == 'special':
                     self.DRAW[i]['VV'].write(self.rawVM[0])
-                try:
-                    self.DRAW[i]['iTime'].write(self.currTime)
-                except KeyError:
-                    pass
+
+                try: self.DRAW[i]['iTime'].write(self.currTime)
+                except KeyError: pass
 
             elif 'SSR' in shader:
                 ctx.disable(moderngl.CULL_FACE)

@@ -221,6 +221,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         
         self.root.config(background="#000")
         self.root.bind("<Escape>", self.escapeMouse)
+        self.root.bind("0", self.escapeMouse)
         self.root.bind("`", self.escapeMouse)
 
         if PLATFORM == "darwin": # Fn+F11 shows desktop
@@ -576,7 +577,8 @@ you probably want to disable Active Fullscreen.\n")
             f.write(str(sorted(a.getResolutions())))
     except: pass
     
-def runGUI(P, *args): 
+def runGUI(P, *args):
+    global app
     try:
         app = ThreeDVisualizer(P, *args)
         if PLATFORM == "win32": writeRes(app)
