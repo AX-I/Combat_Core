@@ -1277,11 +1277,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                    texture=PATH+"../Assets/Magenta.png",
                                    useShaders={'shader':"border"})
 
-        self.addVertObject(VertPlane, [-1,-1,0],
-                           h1=[0,2,0], h2=[2,0,0], n=1,
-                           texture=PATH+"../Assets/Circle.png",
-                           useShaders={"2d":1, 'shader':'DoF'})
-
         try: self.STAGECONFIG.setupPostprocess(self)
         except AttributeError: pass
 
@@ -1303,6 +1298,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print("Done in", time.time() - st, "s")
 
     def postProcess(self):
+        self.draw.applyDoF()
+
+        try: self.draw.applyLens(self.draw.lensTn)
+        except AttributeError: pass
+
         if self.doSSAO:
             self.draw.ssao()
 

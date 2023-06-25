@@ -671,6 +671,24 @@ class CLDraw:
         ctx.enable(moderngl.BLEND)
 
 
+    def setupLens(self):
+        pass
+    def applyLens(self, i):
+        try: _ = self.lensProg
+        except: self.setupLens()
+        self.fbo.use()
+        ctx.disable(moderngl.DEPTH_TEST)
+        ctx.enable(moderngl.BLEND)
+        ctx.blend_func = moderngl.ONE, moderngl.ONE
+        self.DRAW[i]['SM'] = 4
+        self.DRAW[i]['SM2'] = 5
+        self.DRAW[i]['db'] = 1
+        self.DRAW[i]['vmat'].write(self.rawVM)
+        self.DRAW[i]['tex1'] = 0
+        self.TEX[i].use(location=0)
+
+        self.VAO[i].render(moderngl.TRIANGLES)
+
     def setupBlur(self):
         # Temp
         self.POSTBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
@@ -903,7 +921,6 @@ class CLDraw:
             draw = self.DRAW[i]
         else:
             shaderT = 'emissive' if shader == 'add' else shader
-            if shader == 'DoF': return
 
             shaderName = 'draw{}'.format(shaderT[0].upper() + shaderT[1:])
 
@@ -1174,14 +1191,7 @@ class CLDraw:
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['vmat'].write(self.rawVM)
             elif shader == 'lens':
-                ctx.blend_func = moderngl.ONE, moderngl.ONE
-                self.DRAW[i]['SM'] = 4
-                self.DRAW[i]['SM2'] = 5
-                self.DRAW[i]['db'] = 1
-                self.DRAW[i]['vmat'].write(self.rawVM)
-            elif shader == 'DoF':
-                self.applyDoF()
-                self.fbo.use()
+                self.lensTn = i
                 continue
             else:
                 continue
