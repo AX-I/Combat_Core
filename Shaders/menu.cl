@@ -28,6 +28,7 @@ __kernel void blend(
     __read_only image2d_t SRC,
     const int sh, const int sw, const int sc,
     const float ox, const float oy,
+    const int offX, const int offY,
     const int method,
     const int effect,
     const float effectArg
@@ -35,8 +36,10 @@ __kernel void blend(
     int bi = get_group_id(0);
     int ti = get_local_id(0);
 
-    int tx = (bi * BS + ti) % W;
-    int ty = (bi * BS + ti) / W;
+    int tx = (bi * BS + ti) % sw + offX - (sw / 2);
+    int ty = (bi * BS + ti) / sw + offY - (sh / 2);
+
+    if ((tx >= W) || (tx < 0) || (ty >= H) || (ty < 0)) return;
 
     float left = ox - sw/2;
     float right = left + sw;

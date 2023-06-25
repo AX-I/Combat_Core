@@ -20,6 +20,7 @@ class CLObject:
         self.buf = buf
         self.shape = np.array(x.shape, dtype='int32')
         self.filters = {}
+        self.areaBS = self.shape[0] * self.shape[1] // BLOCK_SIZE + 1
 
     def __getitem__(self, i):
         if i == 'buf':
@@ -75,19 +76,15 @@ class NPCanvas:
             b = self.imgText(dText, dFill, dFont, blur, bFill,
                              method, blurWidth)
 
-            b = b.astype('float32')
-            fmt = cl.ImageFormat(cl.channel_order.RGBA, cl.channel_type.FLOAT)
-            buf = cl.Image(self.ctx, cl.mem_flags.READ_ONLY, fmt, shape=b.shape[1::-1])
-            cl.enqueue_copy(self.cq, buf, b, origin=(0,0), region=b.shape[1::-1])
+            self.UItexts[dText] = CLObject(self.ctx, self.cq, dText, b)
 
-            self.UItexts[dText] = {'buf': buf, 'shape': np.array(b.shape, 'int32')}
+        source = self.UItexts[dText]
 
-        b = self.UItexts[dText]
-
-        self.prog.blend(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
+        self.prog.blend(self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
                         fr, self.W, self.H,
-                        b['buf'], *b['shape'],
+                        source['buf'], *source['shape'],
                         np.float32(coords[1]), np.float32(coords[0]),
+                        np.int32(coords[1]), np.int32(coords[0]),
                         np.int32(1),
                         np.int32(0),
                         np.float32(0),
@@ -118,10 +115,11 @@ class NPCanvas:
                 effectArg = source.filters['crop']
                 del source.filters['crop']
 
-        self.prog.blend(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
+        self.prog.blend(self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
                         dest, self.W, self.H,
                         source['buf'], *source['shape'],
                         np.float32(coords[0]), np.float32(coords[1]),
+                        np.int32(coords[0]), np.int32(coords[1]),
                         np.int32(METHOD[method]),
                         np.int32(effectApplied),
                         np.float32(effectArg),
