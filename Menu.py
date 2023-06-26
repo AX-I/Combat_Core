@@ -210,6 +210,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         resScale = self.H / 600
         shader = open('Shaders/menu.cl').read()
+        shader = shader.replace('#define cropHeight 3.f',
+                                '#define cropHeight {}f'.format(3*resScale))
         self.prog = cl.Program(self.ctx, shader).build()
 
         self.si = mp.Queue(64)
@@ -302,8 +304,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             if 'Ornament' in f:
                 sw = int(78 * resScale * fac)
                 sh = int(112 * resScale * fac)
-            if f == 'MenuLights.png':
-                sh = b.size[1]
             b = b.resize((sw,sh), Image.BILINEAR)
             b = np.array(b, 'float32')
 

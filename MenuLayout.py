@@ -153,6 +153,8 @@ def mainMenuLayout(self):
                    effect='mult', effectArg=1.2)
 
 
+    i1 = int(3 * resScale)
+    i2 = int(6 * resScale + 0.5)
 
     # Start button
     for i in range(3):
@@ -161,9 +163,9 @@ def mainMenuLayout(self):
                    (xpos, ypos), 'alpha')
         self.blend(frame, self.menuOrnament[:,::-1],
                    (xpos + offset, ypos), 'alpha')
-        self.blend(frame, self.menuLights[3:6],
+        self.blend(frame, self.menuLights[i1:i2],
                    (xpos, ypos - bHalfTop), 'alpha')
-        self.blend(frame, self.menuLights[3:6],
+        self.blend(frame, self.menuLights[i1:i2],
                    (xpos, ypos + bHalfBot), 'alpha')
 
 
@@ -174,11 +176,11 @@ def mainMenuLayout(self):
                (xpos - self.H*0.2, yc), 'alpha')
     self.blend(frame, self.menuButton,
                (xpos, yc), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xpos, yc - bHalfTop), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xpos, yc + bHalfBot), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xpos, yc), 'alpha')
     self.blend(frame, self.menuOrnament[:,::-1],
                (xpos + offset, yc), 'alpha')
@@ -200,13 +202,13 @@ def mainMenuLayout(self):
 
     xo = 144*smallScale*resScale
     yo = 23*smallScale*resScale
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xc, yc - yo), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xc + xo, yc - yo), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xc, yc + yo), 'alpha')
-    self.blend(frame, self.menuLights[3:6],
+    self.blend(frame, self.menuLights[i1:i2],
                (xc + xo, yc + yo), 'alpha')
 
 ##    self.blend(frame, self.entryHL,
