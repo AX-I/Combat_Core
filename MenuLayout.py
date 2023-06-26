@@ -68,10 +68,11 @@ def mainMenuSetup(self):
 
     self.stageBgs = []
     for i in range(len(self.loc)):
-        im = self.openImageCover("../Assets/Preview_"+self.loc[i]+".png")
-        im = im.filter(ImageFilter.BoxBlur(5*resScale))
-        im = np.array(im)
-        im = (im / 255.) * im * 0.4
+        im = self.openImageCover("../Assets/Preview_"+self.loc[i]+".png",
+                                 blur=5*resScale)
+        im = np.array(im).astype('float32')
+        np.multiply(im, im, out=im)
+        np.multiply(im, 0.4/255, out=im)
         im = self.makeCL(f'Bg{i}', im)
         self.stageBgs.append(im)
 

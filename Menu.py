@@ -185,10 +185,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
 
-    def openImageCover(self, fn):
+    def openImageCover(self, fn, blur=0):
         """opens filename and scales it to cover (self.W, self.H)"""
         i = Image.open(fn).convert('RGBA')
         fac = max(self.W / i.size[0], self.H / i.size[1])
+        if blur: i = i.filter(ImageFilter.BoxBlur(blur/fac))
         i = i.resize((int(i.size[0] * fac), int(i.size[1] * fac)), Image.BILINEAR)
         return i
 
