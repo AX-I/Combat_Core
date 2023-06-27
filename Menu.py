@@ -147,6 +147,7 @@ g = ("Times", 12)
 h = ("Courier", 10)
 TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
 
+MSCALE = -0.04
 
 
 from MenuLayout import (
@@ -309,9 +310,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             b = np.array(b, 'float32')
 
             if f == 'MenuHighlight.png':
-                b = b * np.array([[[1., 0.9, 0.7, 1.]]])
+                b = b * np.array([[[1., 0.8, 0.6, 1.]]])
             if f == 'MenuEntryHighlight.png':
-                b = b * 0.8 * np.array([[[1., 0.9, 0.7, 1.]]])
+                b = b * 0.8 * np.array([[[1., 0.8, 0.6, 1.]]])
             if f == 'MenuEntryHighlightRed.png':
                 b = b * 0.8 * np.array([[[1., 0.4, 0.3, 1.]]])
                 
@@ -379,6 +380,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         print("menuInit", time.perf_counter() - perf)
 
+        self.parx = 0.
+        self.pary = 0.
+        self.parxy = np.array([0.,0.])
+
         mainMenuSetup(self)
 
 
@@ -401,6 +406,12 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         
         xt = time.perf_counter()
+
+        self.mx = max(0, min(self.W, self.d.winfo_pointerx() - self.d.winfo_rootx())) - self.W2
+        self.my = max(0, min(self.H, self.d.winfo_pointery() - self.d.winfo_rooty())) - self.H2
+        self.parx = 0.8 * self.parx + 0.2 * self.mx*MSCALE
+        self.pary = 0.8 * self.pary + 0.2 * self.my*MSCALE
+        self.parxy = np.array([self.parx, self.pary])
 
         if self.MENUSCREEN == 'MAIN':
             mainMenuLayout(self)
