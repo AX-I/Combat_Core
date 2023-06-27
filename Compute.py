@@ -39,7 +39,6 @@ import json
 
 import ctypes
 
-import openvr
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -392,6 +391,7 @@ class ThreeDBackend:
                 try: _ = self.VRtex
                 except:
                     print('Setup VR')
+                    import openvr
                     self.VRtex = openvr.Texture_t()
                     self.VRtex.handle = int(self.draw.FB_GL)
                     self.VRtex.eType = openvr.TextureType_OpenGL
