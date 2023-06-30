@@ -216,7 +216,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.dofFoc = 3
 
         exps = [1.4 for _ in stageNames]
-        exps[1] = 1.6
         exps[2] = 1.2
         self.exposure = exps[self.stage]
         self.blackPoint = 0.02
@@ -1148,8 +1147,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.14,0.01, 40,10,np.array((0.1,0.15,0.4)) * 0.016),
-                     4: (0.02,0.002,40,0, np.array((0.05,0.1,0.2)) * 0.0025),
+        fogParams = {2: (0.14,0.01, 60,10,np.array((0.1,0.15,0.4)) * 0.016),
+                     4: (0.02,0.002,40,30, np.array((0.15,0.18,0.2)) * 0.003),
                      5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
             fog, fabs, fdist, fheight, famb = fogParams[self.stage]
@@ -1322,7 +1321,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.draw.dof(self.dofFoc, aperture=8*ap if self.cam1P else 12*ap)
         if self.doBloom:
-            self.draw.blur(self.exposure)
+            self.draw.blur(self.exposure * 0.707)
 
         self.oldVMat = np.array(self.vMat)
         self.oldVPos = np.array(self.pos)

@@ -82,7 +82,7 @@ def setupStage(self):
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
             self.matShaders[self.flameMTL].update(shader='add', noline=1,
-                                                  args={'emPow': 5})
+                                                  args={'emPow': 4})
             self.vertObjects[self.flameMTL].castShadow = False
         if 'Sandstone' in f:
             tm = self.vtextures[self.vtNames[f]] * 0.9
@@ -220,6 +220,7 @@ def testTempleTrans(self):
         do = 40
         fdist = di * 0.9 + do * max(0.7, 1-f) * 0.1
         self.matShaders[self.fogMTL]['args']['fogDist'] = fdist
+        self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
         return
 
@@ -298,4 +299,4 @@ def frameUpdate(self):
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
         self.addNrmMap(tpath + '096.png', '096')
         self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True, mipLvl=4)
-        self.matShaders[self.fogMTL]['fogAmbDistFac'] = 4
+        self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4

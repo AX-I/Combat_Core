@@ -45,7 +45,7 @@ uniform float fogDist;
 uniform float fogScatter;
 uniform float fogHeight;
 
-uniform float fogAmbdistfac;
+uniform float fogAmbDistFac;
 uniform vec3 fogAmb;
 
 
@@ -88,7 +88,7 @@ void main() {
     if (maxZ != d) maxZ = d;
 
     float ambDistFac = 1.;
-    if (fogAmbdistfac != 0) ambDistFac = fogAmbdistfac;
+    if (fogAmbDistFac != 0) ambDistFac = fogAmbDistFac;
 
     float stepDist = 0.5;
     float stepFac = 1.2;
@@ -152,7 +152,7 @@ void main() {
 
 	float heightFac = (pos.y > fHeight) ? 0 : 1;
 
-	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * ambient * phase * LInt;
+	light += heightFac * (- 1.f / ABSORB) * (exp(-ABSORB * maxZ) - exp(-ABSORB * currDepth)) * ambient * phase;
 
 	transmit = exp(-ABSORB * totDensity);
 
