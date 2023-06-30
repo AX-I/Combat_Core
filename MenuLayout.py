@@ -64,16 +64,6 @@ def mainMenuSetup(self):
 
     self.bg = self.makeCL('Bg', self.bg)
 
-    self.stageBgs = []
-    for i in range(len(self.loc)):
-        im = self.openImageCover("../Assets/Preview_"+self.loc[i]+".png",
-                                 blur=5*resScale)
-        im = np.array(im).astype('float32')
-        np.multiply(im, im, out=im)
-        np.multiply(im, 0.4/255, out=im)
-        im = self.makeCL(f'Bg{i}', im)
-        self.stageBgs.append(im)
-
 
     i = self.openImageCover('../Assets/TitleLeaves.png')
     i = np.array(i)
@@ -401,14 +391,26 @@ def stageSelectSetup(self):
 
     self.selectedStage = 0
 
-    self.stagePreviews = []
-    for i in range(len(self.loc)):
-        im = Image.open(PATH+"../Assets/Preview_"+self.loc[i]+".png").convert('RGBA')
-        im = im.resize((int(320*resScale), int(200*resScale)), Image.BILINEAR)
-        im = np.array(im)
-        im = im / 255. * im * 0.9
-        im = self.makeCL(f'Im{i}', im)
-        self.stagePreviews.append(im)
+    try: _ = self.stageBgs
+    except AttributeError:
+        self.stageBgs = []
+        for i in range(len(self.loc)):
+            im = self.openImageCover("../Assets/Preview_"+self.loc[i]+".png",
+                                     blur=5*resScale)
+            im = np.array(im).astype('float32')
+            np.multiply(im, im, out=im)
+            np.multiply(im, 0.4/255, out=im)
+            im = self.makeCL(f'Bg{i}', im)
+            self.stageBgs.append(im)
+
+        self.stagePreviews = []
+        for i in range(len(self.loc)):
+            im = Image.open(PATH+"../Assets/Preview_"+self.loc[i]+".png").convert('RGBA')
+            im = im.resize((int(320*resScale), int(200*resScale)), Image.BILINEAR)
+            im = np.array(im)
+            im = im / 255. * im * 0.9
+            im = self.makeCL(f'Im{i}', im)
+            self.stagePreviews.append(im)
 
 
 def stageSelectLayout(self):
