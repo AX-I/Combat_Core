@@ -496,7 +496,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             self.setYoffsetTest(a)
 
-            self.matShaders[r.texNum]['add'] = Anim.interpAttr(t, addKF)
+            self.matShaders[r.texNum]['args']['emPow'] = Anim.interpAttr(t, addKF)
+            self.draw.changeShader(r.texNum, self.matShaders[r.texNum])
 
             self.draw.setUVOff(r.texNum, (0,0), (1,1), (t*0.2, 0))
 
@@ -504,11 +505,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['pv'].colliders[0].hc -= self.frameTime * 4
 
             xn = a["ctexn"][0]
-            if 'sub' in self.matShaders[xn]:
-                self.matShaders[xn]['sub'] -= 0.6 * self.frameTime
+            mat = self.matShaders[xn]
+            if 'emPow' in mat['args']:
+                mat['args']['emPow'] -= 0.6 * self.frameTime
+                self.draw.changeShader(xn, mat)
 
-                if self.matShaders[xn]['sub'] < 0:
-                    self.matShaders[xn]['sub'] = 0
+                if mat['args']['emPow'] < 0:
+                    mat['args']['emPow'] = 0
                     a['restFrame'] = self.frameNum
                     a['undoGhostTime'] = time.time()
                     self.undoGhost()

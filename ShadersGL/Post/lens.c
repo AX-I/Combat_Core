@@ -112,14 +112,14 @@ void main() {
   shadow = clamp(shadow, 0, 1);
 
   float sunDot = max(0, -dot(rayDir,LDir));
-  vec3 te = LInt; // * 0.001 + vec3(1.2,0.8,0.3);
+  vec3 te = LInt;
 
   vec3 col = 0.01 * te * pow(sunDot, 8.0);
   col += 0.04 * te * pow(sunDot, 256.0);
 
 
   float fac = texture(tex1, vec2(0.5, 0.5) + (tc - vec2(wF/2,hF/2)) / width / vscale).r;
-  col += te * fac * 4;
+  col += te * fac * 4 * sunDot;
 
 
   col += 0.00000001 * maxZ;

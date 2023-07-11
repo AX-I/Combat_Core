@@ -292,7 +292,7 @@ def frameUpdateAfter(self):
     for i in range(2*len(self.players)):
         p = self.players[i//2]
         if p['id'] not in self.actPlayers: continue
-        if p['id'] == 4: continue
+        if p['id'] == 5: continue
 
         s = self.skis[i]
         objArgs = (s.cStart*3, s.cEnd*3)
@@ -337,7 +337,7 @@ def frameUpdateAfter(self):
 
     for i in range(2*len(self.players)):
         p = self.players[i//2]
-        if p['id'] == 4: continue
+        if p['id'] == 5: continue
 
         s = self.poles[i]
         objArgs = (s.cStart*3, s.cEnd*3)

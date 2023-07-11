@@ -415,6 +415,7 @@ class CLDraw:
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
             tb = batch[tn]
+            if len(tb) == 0: continue
             size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
