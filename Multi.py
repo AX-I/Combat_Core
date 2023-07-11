@@ -1020,57 +1020,56 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"Zelda2/Test5b.obj",
-                           animated=True,
-                           texMul=2.5, useShaders={'args':{'specular': 1},
-                                                   'normal':'Zelda'},
+                           animated=True, texMul=2.5,
+                           useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
                            scale=0.33, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath+"L3/L3.obj",
-                           animated=True,
-                           texMul=1, useShaders={'args':{'specular': 1},
-                                                 'normal':'Link'},
+                           animated=True, texMul=1,
+                           useShaders={'args':{'specular': 1}, 'normal':'Link'},
                            scale=0.75, shadow="R")
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Test3/Test3J.obj",
-                               animated=True, useShaders={'spec':1},
+                               animated=True, useShaders={'args':{'specular':1}},
                                scale=0.8 / 1.08, shadow="R")
             self.addPlayer(self.vertObjects[-1])
-            self.matShaders[self.vertObjects[-1].nextMtl.texNum]["sub"] = 0.6
+            self.matShaders[self.vertObjects[-1].nextMtl.texNum].update(
+                shader='sub', args={'emPow':0.6})
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Zelda/Ztest4.obj",
                                animated=True,
-                               texMul=2, useShaders={'spec':1},
+                               texMul=2, useShaders={'args':{'specular':1}},
                                scale=1, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"LinkTP/Li.obj",
                                animated=True,
-                               texMul=1.5, useShaders={'spec':1},
+                               texMul=1.5, useShaders={'args':{'specular':1}},
                                scale=0.75, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Ahri/Ahri4.obj",
-                               animated=True, useShaders={'spec':1},
+                               animated=True, useShaders={'args':{'specular':1}},
                                scale=1.8, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Stormtrooper/Trooper5.obj",
-                               animated=True, useShaders={'spec':1},
+                               animated=True, useShaders={'args':{'specular':1}},
                                scale=1.4, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Vader/Vader5.obj",
-                               animated=True, useShaders={'spec':1},
+                               animated=True, useShaders={'args':{'specular':1}},
                                scale=1.6, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
