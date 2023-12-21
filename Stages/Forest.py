@@ -127,7 +127,7 @@ def setupStage(self):
     self.DIR2I = np.array([0.14,0.12,0.08])
     self.directionalLights.append({"dir":[pi*2/3, 2.8], "i":self.DIR2I})
     # Sky light
-    self.DIR3I = np.array([0.04,0.12,0.18])
+    self.DIR3I = np.array([0.04,0.12,0.24])
     self.directionalLights.append({"dir":[0, pi/2], "i":self.DIR3I})
     self.DIR4I = np.array([0.1,0.25,0.4]) * 0.4
     self.directionalLights.append({"dir":[pi*2/3+0.1, 2.1], "i":self.DIR4I})
@@ -200,6 +200,7 @@ def testTempleTrans(self):
         # Border z: (3, 35)
         f += max(0, min(1, (pos[2] - 32)/8)) + max(0, min(1, (5 - pos[2])/8))
 
+        # f is 1 outside, 0 inside
         f = min(1, f)
 
         di = np.array(self.directionalLights[4]['i'])
@@ -216,10 +217,10 @@ def testTempleTrans(self):
         self.directionalLights[1]['i'] = di * 0.8 + do * max(0.4, f) * 0.2
 
         # Fade out fog too
-        di = self.matShaders[self.fogMTL]['args']['fogDist']
-        do = 40
-        fdist = di * 0.9 + do * max(0.7, 1-f) * 0.1
-        self.matShaders[self.fogMTL]['args']['fogDist'] = fdist
+        di = self.matShaders[self.fogMTL]['args']['fogLight']
+        do = 0.015
+        fdist = di * 0.9 + do * max(0.4, 1-f) * 0.1
+        self.matShaders[self.fogMTL]['args']['fogLight'] = fdist
         self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
         return

@@ -227,6 +227,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.camAvg = False
         self.cam1P = False
+        self.camFree = False
         self.envPointLights = []
 
         self.stageFlags = {}
@@ -282,6 +283,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('T', self.tgTM2)
         self.bindKey('<F5>', self.tgCamAvg)
         self.bindKey('<F6>', self.tgCam1P)
+        self.bindKey('<F7>', self.tgCamFree)
 
         self.bindKey('p', self.printStuff)
         if self.stage == 4:
@@ -543,6 +545,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
     # ==== Camera control ====
+    def tgCamFree(self):
+        self.camFree = not self.camFree
     def tgCamAvg(self):
         self.camAvg = not self.camAvg
     def tgCam1P(self):
@@ -2487,9 +2491,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         else:
             self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
 
-        if not self.VRMode:
+        if not self.VRMode and not self.camFree:
             sp = self.players[sc]
-            self.pos = sp["b1"].offset[:3] + np.array((0,0.7,0)) - 4 * self.vv
+            self.pos = sp["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos[1] += sp['legIKoffset']
             self.pos -= sp['animOffset']
 
@@ -2516,7 +2520,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
-            if not self.VRMode and not self.cam1P:
+            if not self.VRMode and not self.cam1P and not self.camFree:
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
                 self.pos[1] -= a['legIKoffset']
 

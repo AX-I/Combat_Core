@@ -225,8 +225,8 @@ class VertObject:
             np.clip(self.u, 0, 1, out=self.u)
             np.clip(self.v, 0, 1, out=self.v)
         self.transform(origin=self.origin, early=True)
-        del self.u, self.v
-        if True: #self.static:
+        if self.static:
+            del self.u, self.v
             del self.wedgePoints, self.vertNorms
     
     def transform(self, origin=False, early=False):

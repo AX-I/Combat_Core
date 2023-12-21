@@ -32,7 +32,8 @@ def setupStage(self):
                    texture=PATH+"../Assets/Blank1.png",
                    scale=0.6,
                    vertScale=2.5/6553, vertPow=2, vertMax=50000,
-                   useShaders={'args':{'specular': 0.8}, 'normal': 'snow'},
+                   useShaders={'args':{'specular': 0.8}, 'normal': 'snow',
+                               'cull':1},
                    uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
@@ -125,7 +126,8 @@ def setupStage(self):
     for o in objs:
         self.addVertObject(VertModel, o['pos'], rot=o['rot'], static=True,
                            filename=pfile,
-                           mip=2, useShaders={'args':{'specular': 0.4}, 'normal':'largeRock'},
+                           mip=2, useShaders={'args':{'specular': 0.4},
+                                              'normal':'largeRock', 'cull':1},
                            shadow="CR")
 
     # Background Mountain
@@ -216,7 +218,7 @@ def setupStage(self):
                                        'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.3,0.24]) * 2.5
+    LInt = np.array([1,0.27,0.2]) * 2.5
     #LInt = np.array([0.1,0.3,0.9]) * 1
     #LInt = np.array([0.5,0.6,0.9])
     #LInt = np.array([1,0.4,0.2])
