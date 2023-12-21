@@ -21,7 +21,7 @@ redFG = (255,200,200)
 redBG = (255,70,70)
 
 
-smallScale = 0.96
+smallScale = 0.92
 
 def mainMenuSetup(self):
     resScale = self.H / 600
@@ -49,19 +49,9 @@ def mainMenuSetup(self):
     perf = time.perf_counter()
 
     i = self.openImageCover('../Assets/Forest.png')
-    i = i.filter(ImageFilter.BoxBlur(4*resScale))
-
-    gray = i.convert('L').convert('RGBA')
-    gray = np.array(gray)
-    gray = (gray / 255.)*gray
-
-
-
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
-
-    self.bg = self.bg * 0.7 + gray * 0.1
-
+    self.bg *= 0.4
     self.bg = self.makeCL('Bg', self.bg)
 
 
@@ -107,8 +97,8 @@ def mainMenuLayout(self):
     self.blend(frame, self.bg,
                (self.W2 - self.parx/6, self.H2 - self.pary/6), 'replace')
 
-    self.blend(frame, self.titleLeaves,
-               (self.W2 - self.parx/4, self.H*0.4 - self.pary/4), 'alpha')
+##    self.blend(frame, self.titleLeaves,
+##               (self.W2 - self.parx/4, self.H*0.4 - self.pary/4), 'alpha')
 
     self.blend(frame, self.bgNoise,
                (self.W2, self.H2), 'alpha',
@@ -117,7 +107,7 @@ def mainMenuLayout(self):
 
     bBlur = 1
     bWidth = 5*resScale
-    offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2
+    offset = (self.menuButton.shape[1] + self.menuOrnament.shape[1]) // 2 - 0.5
 
     h2 = self.H * 0.54
 
@@ -125,7 +115,7 @@ def mainMenuLayout(self):
 
     xpos = self.W*0.8 - self.parx
 
-    buttonCenters = [(self.H*(0.18 + 0.22*i) - self.pary, xpos) for i in range(4)]
+    buttonCenters = [(self.H*(0.2 + 0.21*i) - self.pary, xpos) for i in range(4)]
     self.menuButtonCenters = buttonCenters
 
     yc = buttonCenters[-1][0]
@@ -138,7 +128,7 @@ def mainMenuLayout(self):
 
 
     i1 = int(3 * resScale)
-    i2 = int(6 * resScale + 0.5)
+    i2 = int(6 * resScale + 0.8)
 
     # Start button
     for i in range(3):
@@ -173,7 +163,7 @@ def mainMenuLayout(self):
 
     # Username Server
     yc = buttonCenters[-1][0] - 32*resScale
-    xc = xpos - self.H*0.6
+    xc = xpos - self.H*0.56
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
     self.blend(frame, self.menuEntry,
                (xc + offset2, yc), 'alpha')
@@ -213,7 +203,7 @@ def mainMenuLayout(self):
 
 
     # Web/Local icons
-    self.iconsPos = (xpos - self.H*0.9, yc + self.H*0.1083)
+    self.iconsPos = (xpos - self.H*0.86, yc + self.H*0.1083)
     for i in range(len(self.icons)):
         s = i ^ (self.runMod['state'] == 'disabled')
         self.blend(frame, self.icons[i],
@@ -231,7 +221,7 @@ def mainMenuLayout(self):
     #if self.buttonSelect > 0:
     for i in range(len(fills)):
         if i != self.buttonSelect - 1:
-            fills[i] = (190,190,190)
+            fills[i] = (160,160,160)
             blurs[i] = 0
 
 

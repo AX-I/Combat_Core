@@ -168,6 +168,7 @@ def playSound(si):
 
 class CombatMenu(Frame, ImgUtils.NPCanvas):
     def __init__(self, root=None):
+        self.profTime = time.time()
 
         if root is None: root = Tk()
         super().__init__(root)
@@ -238,7 +239,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         #self.tgFullScreen()
 
-        print("Ready", time.time())
+        print('Ready in', time.time() - self.profTime)
 
         self.menuLoop()
 
