@@ -6,7 +6,7 @@
 
 
 #define REFL_STEP 2
-#define REFL_LENGTH 1024
+#define REFL_LENGTH {REFL_LENGTH}
 #define REFL_DEPTH 0.5f
 #define REFL_VSIZE 2.f
 #define REFL_DBIAS 0.2f

@@ -180,6 +180,8 @@ class CLDraw:
 
         self.stTime = time.time()
 
+        self.shaderParams = {'{REFL_LENGTH}':str(self.H)}
+
     def reloadShaders(self, **kwargs):
         while True:
             try:
@@ -460,7 +462,8 @@ class CLDraw:
             d['pTime'].write(self.currTime)
         except KeyError:
             draw = ctx.program(vertex_shader=trisetupWave,
-                               fragment_shader=drawSSR)
+                               fragment_shader=drawSSR.replace(
+                                   '{REFL_LENGTH}', self.shaderParams['{REFL_LENGTH}']))
             try:
                 draw['width'].write(np.float32(self.W))
                 draw['height'].write(np.float32(self.H))
@@ -927,9 +930,13 @@ class CLDraw:
 
             if shader == 'lens': shaderName = 'lens'
 
+            prog = globals()[shaderName]
+            for sp in self.shaderParams:
+                prog = prog.replace(sp, self.shaderParams[sp])
+
             draw = ctx.program(
                 vertex_shader=ts,
-                fragment_shader=globals()[shaderName]
+                fragment_shader=prog
             )
 
             if shader == 'fog':
