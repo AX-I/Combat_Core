@@ -905,6 +905,32 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
                              self.volmFX / 3, (np.array(p), 6, 1))})
 
+    def extractByUV(self, src, dst, u1,u2,v1,v2):
+        """Origin is bottom left, u up, v right"""
+        t1 = src
+        t2 = dst
+        t1.create()
+        tu = np.array(t1.u)
+        tv = np.array(t1.v)
+        cond = ((tu >= u1) & (tu <= u2) & (tv >= v1) & (tv <= v2))
+        #print(cond.shape, cond[0])
+        cond = cond.all(axis=1)
+        t2.wedgePoints = np.array(t1.wedgePoints)[cond]
+        t2.vertNorms = np.array(t1.vertNorms)[cond]
+        t2.bones = np.array(t1.bones)[cond]
+        t2.u = (tu[cond] - u1) / (u2 - u1)
+        t2.v = (tv[cond] - v1) / (v2 - v1)
+        t2.numWedges = np.sum(cond)
+        t2.create = lambda: 1
+        cond = np.logical_not(cond)
+        t1.wedgePoints = np.array(t1.wedgePoints)[cond]
+        t1.vertNorms = np.array(t1.vertNorms)[cond]
+        t1.bones = np.array(t1.bones)[cond]
+        t1.u = tu[cond]
+        t1.v = tv[cond]
+        t1.numWedges = np.sum(cond)
+        t1.create = lambda: 1
+
     def addPlayer(self, o):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
@@ -1024,6 +1050,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=1, reflect="1a",
                            useShaders={'args':{'specular':1}},
                            scale=1.33, shadow="")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.25,0.5,0.5,0.75)
+        self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
+
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
@@ -1031,6 +1062,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=2.5,
                            useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
                            scale=0.33, shadow="R")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.25,0.5,0.25,0.5)
+        self.matShaders[t2.texNum].update(args={'specular':0.8,
+                            'NMmipBias':0.1, 'translucent':1,
+                            'roughness':0.12, 'f0':0.6,
+                            'hairShading':1, 'tangentDir': 1}, normal='Z2H')
+
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
@@ -1038,6 +1077,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=1,
                            useShaders={'args':{'specular': 1}, 'normal':'Link'},
                            scale=0.75, shadow="R")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.5,0.75,0,0.25)
+        self.matShaders[t2.texNum].update(args={'specular':0.8,
+                            'NMmipBias':0.1, 'translucent':1,
+                            'roughness':0.12, 'f0':0.6,
+                            'hairShading':1, 'tangentDir': 1}, normal='L3H')
+
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
@@ -1505,7 +1552,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         mpath = PATH + '../Models/'
         self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
+        self.addNrmMap(mpath + 'L3/L3H_nrm.png', 'L3H')
         self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
+        self.addNrmMap(mpath + 'Zelda2/Z2H_nrm.png', 'Z2H')
         self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
         self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
         self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
