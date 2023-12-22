@@ -635,7 +635,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.gameList = {gd:[]}
 
         self.NSPECIAL = 1
-        self.charNames = ["Amber",
+        self.charNames = ["Autumn",
                           "Samus", "Zelda BotW",   "Link BotW",
                           "Louis", "Zelda TP",     "Link TP",
                           "Ahri",  "Stormtrooper", "Vader"]

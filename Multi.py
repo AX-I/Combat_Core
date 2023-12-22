@@ -975,7 +975,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Body/B10R.rig", 0.2, 1.47),
+        self.rpi = [(mpath + "Body/B10Fc.rig", 0.2, 1.47),
                     (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
                     (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
                     (mpath + "L3/L3.rig", 0.75, 1.16),
@@ -990,7 +990,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         self.addVertObject(VertModel, [0,0,0],
-                       filename=mpath+'Body/B10R3.obj',
+                       filename=mpath+'Body/B10Fc.obj',
                        animated=True, mip=1, texMode=None,
                        scale=0.2, rot=(0,0,0),
                        shadow='R')
@@ -1005,13 +1005,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 mat.update(args={'specular':0.8,
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
-                            'hairShading':1}, normal='Hair', genBone=8)
+                            'hairShading':1}, normal='Hair')
             if 'Face' in f:
-                mat.update(args={'specular':1}, normal='Face', genBone=8)
+                mat.update(args={'specular':1}, normal='Face')
             if 'Skin' in f:
                 mat.update(args={'specular':1}, normal='Body')
             if 'Metal' in f:
                 mat.update(shader='metallic', args={'roughness':0.6})
+            if 'ClothTest' in f:
+                mat.update(normal='ClothTrim')
+            if 'Clothes' in f:
+                mat.update(normal='Clothes', args={'NMipBias':-1.5})
 
         self.addPlayer(self.vertObjects[-1])
 
@@ -1505,6 +1509,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
         self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
         self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
+##        self.addNrmMap(mpath + 'Body/FrontTrimN1.png', 'Bracelet', mip=True)
+        self.addNrmMap(mpath + 'Body/Fabric_Lace_017_normal.png', 'ClothTrim', mip=True)
+        self.addNrmMap(mpath + 'Body/Fabric040_1K_NormalGL.png', 'Clothes', mip=True)
 
     def shadowChar(self):
         sc = self.shadowCams[1]
