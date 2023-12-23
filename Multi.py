@@ -1166,7 +1166,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertPlane, self.spheres[i][1].coords - np.array([0,0.2,0]),
                                n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
                                texture=PATH+"../Assets/BlankAdd.png",
-                               useShaders={"add":0.4, 'noline':True})
+                               useShaders={'shader':"add",'args':{'emPow':0.4},
+                                           'noline':True})
             self.sphereTrails.append(self.vertObjects[-1])
 
         for i in range(self.numBullets // 2):
@@ -1436,6 +1437,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(len(self.srbs)):
             if self.srbs[i].disabled and self.spheres[i][0] == color:
                 cb = i
+                break
         if cb is None:
             a["Energy"] += self.COSTS[color]
             return False
@@ -1956,7 +1958,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.dt1 = time.perf_counter()
             self.lp = np.zeros((len(self.spheres), 6, 3), 'float')
             for i in range(len(self.spheres)):
-                self.lp[i][:] = self.srbs[i].pos
+                self.lp[i] = self.srbs[i].pos
             self.lpCount = np.zeros((len(self.spheres),), 'int')
 
         self.dt2 = time.perf_counter()
@@ -2117,6 +2119,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 s = self.sphereTrails[i]
                 if s.texNum not in batch:
                     batch[s.texNum] = []
+
+                if self.srbs[i].disabled or sum(lpi[self.lpCount[i]]) == 0:
+                    lpi[self.lpCount[i]-4] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-3] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-2] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-1] = self.srbs[i].pos
+                    lpi[self.lpCount[i]] = self.srbs[i].pos
+
                 diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
                 batch[s.texNum].append((diff, s.cStart*3, s.cStart*3+2))
                 batch[s.texNum].append((diff2, s.cStart*3+2, s.cStart*3+5))
