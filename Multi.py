@@ -1161,6 +1161,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.srbs[-1].disabled = True
             self.w.addRB(self.srbs[-1])
 
+        self.sphereTrails = []
+        for i in range(self.numBullets):
+            self.addVertObject(VertPlane, self.spheres[i][1].coords - np.array([0,0.2,0]),
+                               n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
+                               texture=PATH+"../Assets/BlankAdd.png",
+                               useShaders={'shader':"add",'args':{'emPow':0.4},
+                                           'noline':True, 'texMode':'clamp'})
+            self.sphereTrails.append(self.vertObjects[-1])
+
         for i in range(self.numBullets // 2):
             p = [-30, -3+i, 20]
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
@@ -1428,6 +1437,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(len(self.srbs)):
             if self.srbs[i].disabled and self.spheres[i][0] == color:
                 cb = i
+                break
         if cb is None:
             a["Energy"] += self.COSTS[color]
             return False
@@ -1946,9 +1956,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if self.frameNum == 0:
             self.dt1 = time.perf_counter()
-            self.lp = []
+            self.lp = np.zeros((len(self.spheres), 6, 3), 'float')
             for i in range(len(self.spheres)):
-                self.lp.append(np.array(self.srbs[i].pos))
+                self.lp[i] = self.srbs[i].pos
+            self.lpCount = np.zeros((len(self.spheres),), 'int')
 
         self.dt2 = time.perf_counter()
 
@@ -2091,18 +2102,40 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         batch = {}
         for i in range(len(self.spheres)):
             s = self.spheres[i][1]
+            lpi = self.lp[i]
             if (np.isnan(self.srbs[i].pos)).any():
                 print("NaN, disable")
                 self.srbs[i].pos[:] = 0.
                 self.srbs[i].v[:] = 0.
                 self.srbs[i].disabled = True
-            diff = self.srbs[i].pos - self.lp[i]
+            diff = self.srbs[i].pos - lpi[self.lpCount[i]]
             if sum(diff*diff) > 0:
                 if s.texNum not in batch:
                     batch[s.texNum] = []
                 batch[s.texNum].append((diff, s.cStart*3, s.cEnd*3))
 
-            self.lp[i] = np.array(self.srbs[i].pos)
+            if self.spheres[i][0] == 'blank':
+                # 015 is one side of rect, 234 is other side
+                s = self.sphereTrails[i]
+                if s.texNum not in batch:
+                    batch[s.texNum] = []
+
+                if self.srbs[i].disabled or sum(lpi[self.lpCount[i]]) == 0:
+                    lpi[self.lpCount[i]-4] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-3] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-2] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-1] = self.srbs[i].pos
+                    lpi[self.lpCount[i]] = self.srbs[i].pos
+
+                diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
+                batch[s.texNum].append((diff, s.cStart*3, s.cStart*3+2))
+                batch[s.texNum].append((diff2, s.cStart*3+2, s.cStart*3+5))
+                batch[s.texNum].append((diff, s.cStart*3+5, s.cStart*3+6))
+
+            self.lpCount[i] += 1
+            self.lpCount[i] %= self.lp.shape[1]
+            lpi[self.lpCount[i]] = np.array(self.srbs[i].pos)
+
 
         self.draw.translateBatch(batch)
 
