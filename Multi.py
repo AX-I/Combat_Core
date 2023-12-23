@@ -1167,7 +1167,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
                                texture=PATH+"../Assets/BlankAdd.png",
                                useShaders={'shader':"add",'args':{'emPow':0.4},
-                                           'noline':True})
+                                           'noline':True, 'texMode':'clamp'})
             self.sphereTrails.append(self.vertObjects[-1])
 
         for i in range(self.numBullets // 2):

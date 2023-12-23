@@ -887,6 +887,11 @@ class CLDraw:
         if mip is not None or 'mip' in shader:
             tex.build_mipmaps()
 
+        if 'texMode' in shader:
+            if shader['texMode'] == 'clamp':
+                tex.repeat_x = False
+                tex.repeat_y = False
+
         self.TEX.append(tex)
 
         self.DRAW.append(draw)
