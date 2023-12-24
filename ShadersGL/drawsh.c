@@ -95,10 +95,12 @@ void main() {
 	float si2 = 1-sr2;
 
 	float shadow = 0;
-	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
+    shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
+    shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
+    shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
+    shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  }
 
   // Baked shadowmap
   if (wS_im > 0) {

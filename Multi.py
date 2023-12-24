@@ -323,6 +323,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def dummyAddVertObject(self, *args, **kwargs):
         self.vertObjects.append(self.oldVertObjects.pop(self.baseVertObjN))
         vo = self.vertObjects[-1]
+        if 'useShaders' in kwargs:
+            self.matShaders[vo.texNum].update(kwargs['useShaders'])
         if Phys.eucDist(args[1], vo.coords) > 0.001:
             self.draw.translate(np.array(args[1]) - vo.coords,
                                 vo.cStart*3, vo.cEnd*3, vo.texNum)
@@ -915,8 +917,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         cond = ((tu >= u1) & (tu <= u2) & (tv >= v1) & (tv <= v2))
         #print(cond.shape, cond[0])
         cond = cond.all(axis=1)
-        t2.wedgePoints = np.array(t1.wedgePoints)[cond]
-        t2.vertNorms = np.array(t1.vertNorms)[cond]
+        if type(t1.wedgePoints) is list:
+            t1.wedgePoints = np.array(t1.wedgePoints)
+            t1.vertNorms = np.array(t1.vertNorms)
+        t2.wedgePoints = t1.wedgePoints[cond]
+        t2.vertNorms = t1.vertNorms[cond]
         t2.bones = np.array(t1.bones)[cond]
         t2.u = (tu[cond] - u1) / (u2 - u1)
         t2.v = (tv[cond] - v1) / (v2 - v1)
@@ -1041,7 +1046,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if 'ClothTest' in f:
                 mat.update(normal='ClothTrim')
             if 'Clothes' in f:
-                mat.update(normal='Clothes', args={'NMipBias':-1.5})
+                mat.update(normal='Clothes', args={'NMmipBias':0.1})
 
         self.addPlayer(self.vertObjects[-1])
 
@@ -1570,7 +1575,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
 ##        self.addNrmMap(mpath + 'Body/FrontTrimN1.png', 'Bracelet', mip=True)
         self.addNrmMap(mpath + 'Body/Fabric_Lace_017_normal.png', 'ClothTrim', mip=True)
-        self.addNrmMap(mpath + 'Body/Fabric040_1K_NormalGL.png', 'Clothes', mip=True)
+        self.addNrmMap(mpath + 'Body/Fabric040_1K_NormalGL.png', 'Clothes', mip=True, mipLvl=4)
 
     def shadowChar(self):
         sc = self.shadowCams[1]

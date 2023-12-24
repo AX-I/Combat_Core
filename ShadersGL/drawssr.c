@@ -9,6 +9,7 @@
 #define REFL_VSIZE 2.f
 #define REFL_DBIAS 0.5f
 #define REFL_FADE 60.f
+#define MAXDIST 3000
 #define maxattn 0.1f
 #define ABSORB 0.3f
 
@@ -158,7 +159,7 @@ void main() {
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + REFL_DBIAS;
 
-        if ((1.f/sz > 100) && (currdist > 100)) {
+        if ((1.f/sz > MAXDIST) && (currdist > MAXDIST)) {
 			ssr_loc = vec2(sx, sy);
             hit = 1;
 		}

@@ -83,10 +83,12 @@ void main() {
 	float shadow = 0;
   float shadow0 = 0;
   float shadowDepth = 0;
-	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
+    shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
+    shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
+    shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
+    shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  }
   shadow0 = shadow;
 
 	sxyz = SV2 * (v_pos*tz - SPos2);

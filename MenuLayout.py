@@ -48,7 +48,7 @@ def mainMenuSetup(self):
 
     perf = time.perf_counter()
 
-    i = self.openImageCover('../Assets/Forest.png')
+    i = self.openImageCover('../Assets/Forest.jpg')
     self.bg = np.array(i)
     self.bg = (self.bg / 255.)*self.bg
     self.bg *= 0.4
@@ -97,8 +97,8 @@ def mainMenuLayout(self):
     self.blend(frame, self.bg,
                (self.W2 - self.parx/6, self.H2 - self.pary/6), 'replace')
 
-##    self.blend(frame, self.titleLeaves,
-##               (self.W2 - self.parx/4, self.H*0.4 - self.pary/4), 'alpha')
+    self.blend(frame, self.titleLeaves,
+               (self.W2 - self.parx/4, self.H*0.4 - self.pary/4), 'alpha')
 
     self.blend(frame, self.bgNoise,
                (self.W2, self.H2), 'alpha',

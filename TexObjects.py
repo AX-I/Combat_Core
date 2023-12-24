@@ -152,7 +152,7 @@ class TexSkyBox:
         self.wedgePoints = numpy.array(self.wedgePoints) @ self.rotMat
 
         tn = self.texNum
-        self.viewer.vertpoints[tn] = self.wedgePoints * 1000
+        self.viewer.vertpoints[tn] = self.wedgePoints * 4000
         self.viewer.vertnorms[tn] = ((1,0,0),)
         self.viewer.vertu[tn] = np.array(self.u) / 6
         self.viewer.vertv[tn] = np.array(self.v)
