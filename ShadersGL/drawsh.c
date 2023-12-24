@@ -64,6 +64,7 @@ uniform vec3 vpos;
 
 uniform float specular;
 uniform float roughness;
+uniform vec3 specRimEnvOff;
 
 uniform vec3 VV;
 uniform int useNoise;
@@ -172,10 +173,11 @@ void main() {
 	float fac = (specPow + 2) / (2*8 * 3.1416f);
 
 	// Rim light
+  vec3 specRimEnv = vec3(0.008) * (specRimEnvOff + 1);
     float nd = dot(a, norm);
     vec3 refl = normalize(a - 2 * nd * norm);
     theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
-    spec += specular * (theta * theta * vec3(0.008));
+    spec += specular * (theta * theta * specRimEnv);
 
 	// Sun specular
 	a = normalize(a);
