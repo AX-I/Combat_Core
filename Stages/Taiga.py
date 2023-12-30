@@ -167,6 +167,32 @@ def setupStage(self):
                        h1=[650,0,0], h2=[0,0,1045], n=32,
                        texture=PATH+'../Assets/Grass.png') # for motion blur
 
+    # Background ice spikes
+    pfile = f'{mpath}TaigaNew/IceSpikes_border.obj'
+    self.addVertObject(VertModel, [0,0,0], filename=pfile, shadow="CR")
+    self.matShaders[self.vertObjects[-1].texNum].update(
+        normal='snow', args={'specular': 0.8})
+    self.matShaders[self.vertObjects[-2].texNum].update(
+        normal='snow', args={'specular': 0.8})
+
+    # Background blowing snow
+    psparams = [([350,5,300], 7, 100, 10, 10, 30),
+                ([370,5,300], 7, 121, 11, 10, 30),
+                ([400,10,400], 6, 117, 9, 12, 50),
+                ([400,15,500], 5.5, 112, 7, 15, 60)]
+    self.fogPS = []
+    for p in psparams:
+        ps = ContinuousParticleSystem(p[0], (-pi/2,0),
+                                      vel=p[1], force=(0,0,0),
+                                      lifespan=p[2], nParticles=p[3],
+                                      randPos=p[4], randVel=0.1,
+                                      size=p[5], opacity=0.1,
+                                      color=np.array([1,0.24,0.18]) * 0.3,
+                                      tex='cloud')
+        self.addParticleSystem(ps)
+        self.fogPS.append(ps)
+
+
     self.skis = []
     self.poles = []
     self.skiParticles = []
@@ -236,7 +262,7 @@ def setupStage(self):
                                        'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.25,0.2]) * 2.5
+    LInt = np.array([1,0.24,0.18]) * 2.6
 
     #LInt = np.array([0.1,0.3,0.9]) * 1
     #LInt = np.array([0.5,0.6,0.9])
@@ -247,7 +273,7 @@ def setupStage(self):
     skyI = np.array([0.1,0.15,0.5]) * 0.4
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
     self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
-                                   np.array([0.1,0.06,0.1]) * 1})
+                                   np.array([0.1,0.06,0.1]) * 0.8})
     self.directionalLights.append({"dir":[LDir, 0.1], "i":
                                    np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
@@ -274,6 +300,10 @@ def setupPostprocess(self):
 
 def frameUpdate(self):
     if self.frameNum == 0:
+        cloudim = Image.open('../Models/Temple/Cloud1a.png')
+        cloudtex = np.array(cloudim)[:,:,0]
+        self.draw.addPSTex(np.ascontiguousarray(cloudtex), 'cloud')
+
         self.terrain.heights = self.tmpHeights
         self.terrain.interpLim = 2
 
@@ -297,10 +327,11 @@ def frameUpdate(self):
 
         fogShaderArgs = self.matShaders[self.fogMTL]['args']
         fogShaderArgs.update(
-            fogAmb = np.array((0.1,0.15,0.4)) * 0.008,
-            fogDist = 200,
-            fogLight = 0.12 /1.66,
-            fogAbsorb = 0.01 /4,
+            fogAmb = np.array((0.1,0.15,0.4)) * 0.006,
+            fogDist = 200*4,
+            fogLight = 0.12 /1.66/1.2,
+            fogAbsorb = 0.01 /1.8,
+            fogAmbDistAdd = 0.8,
         )
 
     self.matShaders[self.fogMTL]['args']['fogHeight'] = max(10, self.pos[1] + 3)
@@ -309,6 +340,9 @@ def frameUpdate(self):
     self.draw.setUVOff(self.effectMtl, (-1,-1), (2,2), (-self.frameNum/120, 0))
 
     for ps in self.effectPS:
+        ps.step(circular=True)
+
+    for ps in self.fogPS:
         ps.step(circular=True)
 
 

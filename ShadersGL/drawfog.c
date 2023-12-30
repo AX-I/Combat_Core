@@ -48,6 +48,7 @@ uniform float fogHeight;
 uniform float fogAmbDistFac;
 uniform vec3 fogAmb;
 
+uniform float fogAmbDistAdd;
 
 uint rand_xorshift(uint rng_state) {
     rng_state ^= (rng_state << 13);
@@ -144,7 +145,7 @@ void main() {
 		if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
 			if (texture(SM, sxy).r > sz) light += LIGHT * scatter * phase * LInt;
 			else light += ambient * scatter * phase;
-		} else light += LIGHT * scatter * phase * LInt;
+		} else light += (LIGHT * LInt + fogAmbDistAdd * ambient) * (scatter * phase);
 		pos += rayDir * stepDist;
 		currDepth = dot(pos - vpos, Vd);
     stepDist *= stepFac;
