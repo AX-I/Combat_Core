@@ -42,9 +42,8 @@ void main() {
     opacity = min(1.0, opacity * m);
   }
   if (useTex == 1) {
-    opacity = texture(tex1, v_UV / depth).r;
-    if (opacity < 0.5) discard;
-    f_color = vec4(rgb * opacity, opacity);
+    opacity *= texture(tex1, v_UV / depth).r;
+    f_color = vec4(rgb, opacity);
   }
   else {
     f_color = vec4(rgb, opacity);

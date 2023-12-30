@@ -528,11 +528,8 @@ class CLDraw:
         self.fbo.depth_mask = True
         ctx.enable(moderngl.DEPTH_TEST)
 
-        if tex in self.PSTEX:
-            ctx.disable(moderngl.BLEND)
-        else:
-            ctx.enable(moderngl.BLEND)
-            ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+        ctx.enable(moderngl.BLEND)
+        ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
 
         self.PSvao.render(moderngl.POINTS)
 
