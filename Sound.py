@@ -255,13 +255,17 @@ class SoundManager:
     def close(self):
         self.p.terminate()
 
-    def sndAttn(self, src, mult=5, const=1.2, doWrap=False, minDist=None):
+    def sndAttn(self, src, mult=5, const=1.2, doWrap=False, minDist=None,
+                maxDist=None):
         svec = (src - self.pos)
         dist = eucLen(svec)
         if minDist is None:
             attn = mult / (dist + const)
         else:
             attn = mult / (max(dist, minDist) + const)
+
+        if maxDist is not None:
+            attn *= max(0, min(1, (2 - dist/maxDist)))
 
         LR = (svec / dist) @ self.vvh
         left = (LR + 1) / 2

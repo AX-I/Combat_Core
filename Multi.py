@@ -106,7 +106,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             global LOADALL
             LOADALL = True
 
-        self.si.put({"Play":(PATH + "../Sound/Noise.flac", volm * 0.6, True)})
+        self.si.put({"Play":(PATH + "../Sound/Noise.flac", volm * 0.5, True)})
 
         kwargs = OpsConv.getSettings()
         width, height = kwargs["W"], kwargs["H"]
@@ -311,7 +311,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.bindKey('u', self.dofLess)
         self.bindKey('U', self.dofMore)
-        self.apFac = 1
+        self.apFac = 0.4
 
     def dofLess(self): self.apFac /= 1.1
     def dofMore(self): self.apFac *= 1.1
@@ -1262,7 +1262,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = [0, 0, 0]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Green.png",
-                               useShaders={"emissive":1.8})
+                               useShaders={'shader':'emissive',
+                                           'args':{'emPow':1.8}})
             self.pickups.append({"pos":None, "t":-1, "obj":self.vertObjects[-1]})
 
 

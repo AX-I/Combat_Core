@@ -291,6 +291,9 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
+    self.si.put({'Preload':[PATH+"../Sound/WindNoise.ogg"]})
+
+
 def setupPostprocess(self):
     # Sun glare
     self.addVertObject(VertPlane, [-1,-1,0],
@@ -300,6 +303,8 @@ def setupPostprocess(self):
 
 def frameUpdate(self):
     if self.frameNum == 0:
+        self.si.put({"Play":(PATH+"../Sound/WindNoise.ogg", self.volmFX, True,
+                             (np.array((10, 10, 100.)), 600, 10, 0.6, None, 40))})
         cloudim = Image.open('../Models/Temple/Cloud1a.png')
         cloudtex = np.array(cloudim)[:,:,0]
         self.draw.addPSTex(np.ascontiguousarray(cloudtex), 'cloud')
