@@ -88,9 +88,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
-        self.si.put({"Play":(PATH + "../Sound/Env_Plains_R.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
 
-        self.si.put({'Preload':[PATH + "../Sound/Noise.wav"]})
+        self.si.put({'Preload':[PATH + "../Sound/Noise.flac"]})
 
         self.proceed = True
         try:
@@ -98,7 +98,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except TypeError:
             self.proceed = False
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Env_Plains_R.wav'}}})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
 
         if not self.proceed: return
 
@@ -106,7 +106,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             global LOADALL
             LOADALL = True
 
-        self.si.put({"Play":(PATH + "../Sound/Noise.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Noise.flac", volm * 0.6, True)})
 
         kwargs = OpsConv.getSettings()
         width, height = kwargs["W"], kwargs["H"]
@@ -178,8 +178,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                       "New Stage", "Forest", 'Strachan']
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
-        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav",
-                          "H8.wav", '', '']
+        self.ENVTRACKS = ["New_rv1.ogg", "TextureA9.ogg", "Plains4v_ext.ogg",
+                          "H8.ogg", '', '']
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -401,9 +401,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.changedMusic = 0
         self.changedShader = False
 
-        self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.wav'}}})
+        self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.flac'}}})
 
-        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.wav', self.volmFX * 1.1, False)})
+        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.flac', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
         for p in self.actPlayers:
@@ -451,7 +451,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if 'restAnim' in a: return
         if a['jump'] > 0: return
 
-        self.si.put({'Play':(PATH+'../Sound/Recover.wav', self.volmFX * 0.8,
+        self.si.put({'Play':(PATH+'../Sound/Recover.flac', self.volmFX * 0.8,
                              False)})
 
         a['restStart'] = time.time()
@@ -1359,7 +1359,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.makeObjects(1)
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav",
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.flac",
                                                  PATH + '../Sound/Plains3v4.wav',
                                                  PATH + '../Sound/Env_Plains_R.wav'
         }}})
@@ -1469,7 +1469,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.gameStarted = False
 
         if self.stage == 4:
-            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.wav', self.volmFX * 0.9, True)})
+            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
         elif self.stage == 5:
             pass
         elif self.isClient:

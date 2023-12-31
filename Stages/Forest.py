@@ -141,10 +141,10 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    self.si.put({'Preload':[PATH+"../Sound/Forest5.wav",
-                            PATH+"../Sound/Forest4_Reverb.wav",
-                            PATH+"../Sound/NoiseOpen.wav",
-                            PATH+"../Sound/ForestNoise.wav"]})
+    self.si.put({'Preload':[PATH+"../Sound/Forest5.ogg",
+                            PATH+"../Sound/Forest4_Reverb.ogg",
+                            PATH+"../Sound/NoiseOpen.flac",
+                            PATH+"../Sound/ForestNoise.flac"]})
 
 def setupPostprocess(self):
     # Sun glare
@@ -154,10 +154,10 @@ def setupPostprocess(self):
             texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.5}})
 
 def changeMusic(self):
-    self.si.put({"Play":(PATH+"../Sound/Forest5.wav", self.volm, True,
+    self.si.put({"Play":(PATH+"../Sound/Forest5.ogg", self.volm, True,
                          (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
 
-    reverb = PATH+"../Sound/Forest4_Reverb.wav"
+    reverb = PATH+"../Sound/Forest4_Reverb.ogg"
 
     # Front L/R
     self.si.put({"Play":(reverb, self.volm, True,
@@ -172,7 +172,7 @@ def changeMusic(self):
     self.changedMusic = 2
 
 def changeNoise(self):
-    self.si.put({"Play":(PATH+"../Sound/ForestNoise.wav", self.volmFX, True,
+    self.si.put({"Play":(PATH+"../Sound/ForestNoise.flac", self.volmFX, True,
                          (np.array((55, 12, 20.)), 70, 16, 1.0))})
     self.changedMusic = 1
 

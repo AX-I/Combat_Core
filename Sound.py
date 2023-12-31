@@ -36,12 +36,23 @@ CHUNK = 1024
 def eucLen(a):
     return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 
-def readFlac(f):
-    buf = np.frombuffer(pyogg.FlacFile(f).buffer, 'int16').reshape((-1,2))
-    return buf[:buf.shape[0]//2]
+def readAudio(f):
+    if f.endswith('.flac'):
+        vf = pyogg.FlacFile(f)
+    if f.endswith('.ogg'):
+        vf = pyogg.VorbisFile(f)
 
-def readFlacThread(f, q):
-    q.put((f, readFlac(f)))
+    if vf.frequency == 44100:
+        return np.ascontiguousarray(vf.as_array()[::2])
+    elif vf.frequency == 22050:
+        return vf.as_array()
+
+    print('Only support 22.05kHz and 44.1kHz .ogg and .flac files')
+
+
+def readAudioThread(f, q):
+    q.put((f, readAudio(f)))
+
 
 class arrayWave:
     def __init__(self, ar):
@@ -215,15 +226,13 @@ class SoundManager:
         self.stream.write(frames.tobytes())
         
     def playFile(self, f, volume=(0.5, 0.5), loop=False):
-        flac = f[:-4] + '.flac'
-        if flac in self.preloadTracks:
-            a = arrayWave(self.preloadTracks[flac])
+        if f in self.preloadTracks:
+            a = arrayWave(self.preloadTracks[f])
         else:
-            try:
+            if f.endswith('.wav'):
                 a = wave.open(f, "rb")
-            except FileNotFoundError:
-                #print('Read FLAC', f)
-                a = arrayWave(readFlac(f[:-4] + '.flac'))
+            else:
+                a = arrayWave(readAudio(f))
 
         n = a.getnframes()
 
@@ -237,15 +246,11 @@ class SoundManager:
         if f in self.preloadTracks:
             print('Already preloaded')
             return
-        try: a = wave.open(f, "rb")
-        except FileNotFoundError:
-            #print('Preload FLAC', f)
-            #a = readFlac(f[:-4] + '.flac')
-            #self.preloadTracks[f] = a
-            t = threading.Thread(target=readFlacThread,
-                                 args=(f[:-4] + '.flac', self.preloadQ))
-            t.start()
-            self.preloadThreads.add(t)
+
+        t = threading.Thread(target=readAudioThread,
+                             args=(f, self.preloadQ))
+        t.start()
+        self.preloadThreads.add(t)
 
     def close(self):
         self.p.terminate()
