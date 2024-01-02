@@ -854,7 +854,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         Label(self.genFr, text="Render backend:", font=g).pack(anchor=W)
         self.backFr = Frame(self.genFr); self.backFr.pack()
         self.backCL = Button(self.backFr, text="OpenCL", font=g,
-                             command=self.switchBackend)
+                             command=self.switchBackend, state='disabled')
         self.backCL.pack(side=LEFT)
         self.backGL = Button(self.backFr, text="OpenGL", font=g,
                              command=self.switchBackend)
@@ -996,6 +996,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         except TclError: pass
 
     def switchBackend(self, e=None):
+        return
         for _ in range(self.devls.size()):
             self.devls.delete(0)
 
