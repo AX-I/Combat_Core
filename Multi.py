@@ -88,9 +88,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
-        self.si.put({"Play":(PATH + "../Sound/Env_Plains_R.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
 
-        self.si.put({'Preload':[PATH + "../Sound/Noise.wav"]})
+        self.si.put({'Preload':[PATH + "../Sound/Noise.flac"]})
 
         self.proceed = True
         try:
@@ -98,7 +98,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except TypeError:
             self.proceed = False
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Env_Plains_R.wav'}}})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
 
         if not self.proceed: return
 
@@ -106,7 +106,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             global LOADALL
             LOADALL = True
 
-        self.si.put({"Play":(PATH + "../Sound/Noise.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Noise.flac", volm * 0.5, True)})
 
         kwargs = OpsConv.getSettings()
         width, height = kwargs["W"], kwargs["H"]
@@ -178,8 +178,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                       "New Stage", "Forest", 'Strachan']
         self.changeTitle("AXI Combat - " + stageNames[self.stage])
 
-        self.ENVTRACKS = ["New_rv1.wav", "TextureA9.wav", "Haunted_2a.wav",
-                          "H8.wav", '', '']
+        self.ENVTRACKS = ["New_rv1.ogg", "TextureA9.ogg", "Plains4v_ext.ogg",
+                          "H8.ogg", '', '']
 
         self.α = 4.1; self.β = 0.1
         self.pos = numpy.array([35.8,  3.4, 31.3])
@@ -227,6 +227,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.camAvg = False
         self.cam1P = False
+        self.camFree = False
         self.envPointLights = []
 
         self.stageFlags = {}
@@ -282,6 +283,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('T', self.tgTM2)
         self.bindKey('<F5>', self.tgCamAvg)
         self.bindKey('<F6>', self.tgCam1P)
+        self.bindKey('<F7>', self.tgCamFree)
 
         self.bindKey('p', self.printStuff)
         if self.stage == 4:
@@ -309,7 +311,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.bindKey('u', self.dofLess)
         self.bindKey('U', self.dofMore)
-        self.apFac = 1
+        self.apFac = 0.4
 
     def dofLess(self): self.apFac /= 1.1
     def dofMore(self): self.apFac *= 1.1
@@ -321,6 +323,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def dummyAddVertObject(self, *args, **kwargs):
         self.vertObjects.append(self.oldVertObjects.pop(self.baseVertObjN))
         vo = self.vertObjects[-1]
+        if 'useShaders' in kwargs:
+            self.matShaders[vo.texNum].update(kwargs['useShaders'])
         if Phys.eucDist(args[1], vo.coords) > 0.001:
             self.draw.translate(np.array(args[1]) - vo.coords,
                                 vo.cStart*3, vo.cEnd*3, vo.texNum)
@@ -397,9 +401,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.changedMusic = 0
         self.changedShader = False
 
-        self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.wav'}}})
+        self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.flac'}}})
 
-        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.wav', self.volmFX * 1.1, False)})
+        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.flac', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
         for p in self.actPlayers:
@@ -447,7 +451,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if 'restAnim' in a: return
         if a['jump'] > 0: return
 
-        self.si.put({'Play':(PATH+'../Sound/Recover.wav', self.volmFX * 0.8,
+        self.si.put({'Play':(PATH+'../Sound/Recover.flac', self.volmFX * 0.8,
                              False)})
 
         a['restStart'] = time.time()
@@ -543,6 +547,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
     # ==== Camera control ====
+    def tgCamFree(self):
+        self.camFree = not self.camFree
     def tgCamAvg(self):
         self.camAvg = not self.camAvg
     def tgCam1P(self):
@@ -901,6 +907,35 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si.put({"Play":(PATH+"../Sound/Exp.wav",
                              self.volmFX / 3, (np.array(p), 6, 1))})
 
+    def extractByUV(self, src, dst, u1,u2,v1,v2):
+        """Origin is bottom left, u up, v right"""
+        t1 = src
+        t2 = dst
+        t1.create()
+        tu = np.array(t1.u)
+        tv = np.array(t1.v)
+        cond = ((tu >= u1) & (tu <= u2) & (tv >= v1) & (tv <= v2))
+        #print(cond.shape, cond[0])
+        cond = cond.all(axis=1)
+        if type(t1.wedgePoints) is list:
+            t1.wedgePoints = np.array(t1.wedgePoints)
+            t1.vertNorms = np.array(t1.vertNorms)
+        t2.wedgePoints = t1.wedgePoints[cond]
+        t2.vertNorms = t1.vertNorms[cond]
+        t2.bones = np.array(t1.bones)[cond]
+        t2.u = (tu[cond] - u1) / (u2 - u1)
+        t2.v = (tv[cond] - v1) / (v2 - v1)
+        t2.numWedges = np.sum(cond)
+        t2.create = lambda: 1
+        cond = np.logical_not(cond)
+        t1.wedgePoints = np.array(t1.wedgePoints)[cond]
+        t1.vertNorms = np.array(t1.vertNorms)[cond]
+        t1.bones = np.array(t1.bones)[cond]
+        t1.u = tu[cond]
+        t1.v = tv[cond]
+        t1.numWedges = np.sum(cond)
+        t1.create = lambda: 1
+
     def addPlayer(self, o):
         pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
@@ -971,7 +1006,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Body/B10R.rig", 0.2, 1.47),
+        self.rpi = [(mpath + "Body/B10Fc.rig", 0.2, 1.47),
                     (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
                     (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
                     (mpath + "L3/L3.rig", 0.75, 1.16),
@@ -986,7 +1021,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         self.addVertObject(VertModel, [0,0,0],
-                       filename=mpath+'Body/B10R3.obj',
+                       filename=mpath+'Body/B10Fc.obj',
                        animated=True, mip=1, texMode=None,
                        scale=0.2, rot=(0,0,0),
                        shadow='R')
@@ -1001,13 +1036,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 mat.update(args={'specular':0.8,
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
-                            'hairShading':1}, normal='Hair', genBone=8)
+                            'hairShading':1}, normal='Hair')
             if 'Face' in f:
-                mat.update(args={'specular':1}, normal='Face', genBone=8)
+                mat.update(args={'specular':1}, normal='Face')
             if 'Skin' in f:
                 mat.update(args={'specular':1}, normal='Body')
             if 'Metal' in f:
                 mat.update(shader='metallic', args={'roughness':0.6})
+            if 'ClothTest' in f:
+                mat.update(normal='ClothTrim')
+            if 'Clothes' in f:
+                mat.update(normal='Clothes', args={'NMmipBias':0.1})
 
         self.addPlayer(self.vertObjects[-1])
 
@@ -1016,6 +1055,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=1, reflect="1a",
                            useShaders={'args':{'specular':1}},
                            scale=1.33, shadow="")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.25,0.5,0.5,0.75)
+        self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
+
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
@@ -1023,6 +1067,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=2.5,
                            useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
                            scale=0.33, shadow="R")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.25,0.5,0.25,0.5)
+        self.matShaders[t2.texNum].update(args={'specular':0.8,
+                            'NMmipBias':0.1, 'translucent':1,
+                            'roughness':0.12, 'f0':0.6,
+                            'hairShading':1, 'tangentDir': 1}, normal='Z2H')
+
         self.addPlayer(self.vertObjects[-1])
 
         self.addVertObject(VertModel, [0,0,0],
@@ -1030,6 +1082,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            animated=True, texMul=1,
                            useShaders={'args':{'specular': 1}, 'normal':'Link'},
                            scale=0.75, shadow="R")
+        t1 = self.vertObjects[-1]
+        t2 = self.vertObjects[-2]
+        self.extractByUV(t1, t2, 0.5,0.75,0,0.25)
+        self.matShaders[t2.texNum].update(args={'specular':0.8,
+                            'NMmipBias':0.1, 'translucent':1,
+                            'roughness':0.12, 'f0':0.6,
+                            'hairShading':1, 'tangentDir': 1}, normal='L3H')
+
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
@@ -1105,6 +1165,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                           rb=self.srbs[-1]))
             self.srbs[-1].disabled = True
             self.w.addRB(self.srbs[-1])
+
+        self.sphereTrails = []
+        for i in range(self.numBullets):
+            self.addVertObject(VertPlane, self.spheres[i][1].coords - np.array([0,0.2,0]),
+                               n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
+                               texture=PATH+"../Assets/BlankAdd.png",
+                               useShaders={'shader':"add",'args':{'emPow':0.4},
+                                           'noline':True, 'texMode':'clamp'})
+            self.sphereTrails.append(self.vertObjects[-1])
 
         for i in range(self.numBullets // 2):
             p = [-30, -3+i, 20]
@@ -1193,7 +1262,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = [0, 0, 0]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Green.png",
-                               useShaders={"emissive":1.8})
+                               useShaders={'shader':'emissive',
+                                           'args':{'emPow':1.8}})
             self.pickups.append({"pos":None, "t":-1, "obj":self.vertObjects[-1]})
 
 
@@ -1290,7 +1360,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.makeObjects(1)
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.wav",
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.flac",
                                                  PATH + '../Sound/Plains3v4.wav',
                                                  PATH + '../Sound/Env_Plains_R.wav'
         }}})
@@ -1373,6 +1443,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(len(self.srbs)):
             if self.srbs[i].disabled and self.spheres[i][0] == color:
                 cb = i
+                break
         if cb is None:
             a["Energy"] += self.COSTS[color]
             return False
@@ -1399,7 +1470,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.gameStarted = False
 
         if self.stage == 4:
-            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.wav', self.volmFX * 0.9, True)})
+            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
         elif self.stage == 5:
             pass
         elif self.isClient:
@@ -1497,10 +1568,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         mpath = PATH + '../Models/'
         self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
+        self.addNrmMap(mpath + 'L3/L3H_nrm.png', 'L3H')
         self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
+        self.addNrmMap(mpath + 'Zelda2/Z2H_nrm.png', 'Z2H')
         self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
         self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
         self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
+##        self.addNrmMap(mpath + 'Body/FrontTrimN1.png', 'Bracelet', mip=True)
+        self.addNrmMap(mpath + 'Body/Fabric_Lace_017_normal.png', 'ClothTrim', mip=True)
+        self.addNrmMap(mpath + 'Body/Fabric040_1K_NormalGL.png', 'Clothes', mip=True, mipLvl=4)
 
     def shadowChar(self):
         sc = self.shadowCams[1]
@@ -1886,9 +1962,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if self.frameNum == 0:
             self.dt1 = time.perf_counter()
-            self.lp = []
+            self.lp = np.zeros((len(self.spheres), 6, 3), 'float')
             for i in range(len(self.spheres)):
-                self.lp.append(np.array(self.srbs[i].pos))
+                self.lp[i] = self.srbs[i].pos
+            self.lpCount = np.zeros((len(self.spheres),), 'int')
 
         self.dt2 = time.perf_counter()
 
@@ -2031,18 +2108,40 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         batch = {}
         for i in range(len(self.spheres)):
             s = self.spheres[i][1]
+            lpi = self.lp[i]
             if (np.isnan(self.srbs[i].pos)).any():
                 print("NaN, disable")
                 self.srbs[i].pos[:] = 0.
                 self.srbs[i].v[:] = 0.
                 self.srbs[i].disabled = True
-            diff = self.srbs[i].pos - self.lp[i]
+            diff = self.srbs[i].pos - lpi[self.lpCount[i]]
             if sum(diff*diff) > 0:
                 if s.texNum not in batch:
                     batch[s.texNum] = []
                 batch[s.texNum].append((diff, s.cStart*3, s.cEnd*3))
 
-            self.lp[i] = np.array(self.srbs[i].pos)
+            if self.spheres[i][0] == 'blank':
+                # 015 is one side of rect, 234 is other side
+                s = self.sphereTrails[i]
+                if s.texNum not in batch:
+                    batch[s.texNum] = []
+
+                if self.srbs[i].disabled or sum(lpi[self.lpCount[i]]) == 0:
+                    lpi[self.lpCount[i]-4] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-3] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-2] = self.srbs[i].pos
+                    lpi[self.lpCount[i]-1] = self.srbs[i].pos
+                    lpi[self.lpCount[i]] = self.srbs[i].pos
+
+                diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
+                batch[s.texNum].append((diff, s.cStart*3, s.cStart*3+2))
+                batch[s.texNum].append((diff2, s.cStart*3+2, s.cStart*3+5))
+                batch[s.texNum].append((diff, s.cStart*3+5, s.cStart*3+6))
+
+            self.lpCount[i] += 1
+            self.lpCount[i] %= self.lp.shape[1]
+            lpi[self.lpCount[i]] = np.array(self.srbs[i].pos)
+
 
         self.draw.translateBatch(batch)
 
@@ -2487,9 +2586,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         else:
             self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
 
-        if not self.VRMode:
+        if not self.VRMode and not self.camFree:
             sp = self.players[sc]
-            self.pos = sp["b1"].offset[:3] + np.array((0,0.7,0)) - 4 * self.vv
+            self.pos = sp["b1"].offset[:3] + np.array((0,0.5,0)) - 4 * self.vv
             self.pos[1] += sp['legIKoffset']
             self.pos -= sp['animOffset']
 
@@ -2516,7 +2615,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
                 self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
-            if not self.VRMode and not self.cam1P:
+            if not self.VRMode and not self.cam1P and not self.camFree:
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
                 self.pos[1] -= a['legIKoffset']
 

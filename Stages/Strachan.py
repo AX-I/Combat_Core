@@ -237,7 +237,7 @@ def movePillars(self, i):
                              (np.array((12,-2,10)), 80, 8, True))})
 
         if time.time() - self.trackTime > 84:
-            self.si.put({'Play':(SFX+'Sac_a.wav', self.volm, False)})
+            self.si.put({'Play':(SFX+'Sac_a.flac', self.volm, False)})
             self.pillarTrackTime = time.time()
 
 
@@ -345,17 +345,17 @@ def frameUpdate(self):
             ps.step()
 
     if self.frameNum == 4:
-        self.si.put({'Play':('../Sound/StrachanLoop.wav', self.volm*0.6, True)})
+        self.si.put({'Play':('../Sound/StrachanLoop.ogg', self.volm*0.6, True)})
 
     if self.frameNum == 10:
         #showPlatforms(self)
-        self.si.put({'Play':(SFX+'F_3c.wav', self.volm*0.9, False)})
+        self.si.put({'Play':('../Sound/F_3c.ogg', self.volm*0.9, False)})
         self.trackTime = CURRTIME
 
     if self.showPillars == 1000 and self.trackTime > 0 \
       and CURRTIME - self.trackTime > 84 \
       and CURRTIME - self.pillarTrackTime > 18:
-        self.si.put({'Play':(SFX+'FE2a.wav', self.volm*0.42, False)})
+        self.si.put({'Play':('../Sound/FE2a.ogg', self.volm*0.42, False)})
         self.trackTime = -1
 
 

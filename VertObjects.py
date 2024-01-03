@@ -225,8 +225,8 @@ class VertObject:
             np.clip(self.u, 0, 1, out=self.u)
             np.clip(self.v, 0, 1, out=self.v)
         self.transform(origin=self.origin, early=True)
-        del self.u, self.v
-        if True: #self.static:
+        if self.static:
+            del self.u, self.v
             del self.wedgePoints, self.vertNorms
     
     def transform(self, origin=False, early=False):
@@ -974,7 +974,6 @@ class VertPlane(VertObject):
     def __init__(self, *args, n=8, h1=[4, 0, 0], h2=[0, 8, 0],
                  norm=False, **ex):
         super().__init__(*args, **ex)
-        self.estWedges = n**2 * 2
         self.h1 = numpy.array(h1, dtype="float64")
         self.h2 = numpy.array(h2, dtype="float64")
         if norm is False:
@@ -983,20 +982,25 @@ class VertPlane(VertObject):
         else:
             normal = numpy.array(norm, dtype="float64")
         self.normal = -normal
-        self.n = n
+        if type(n) is int:
+            self.n = (n,n)
+        elif len(list(n)) == 2:
+            self.n = n
+        else: raise ValueError('n must be scalar or pair')
+        self.estWedges = self.n[0]*self.n[1] * 2
 
     def create(self):
-        n = self.n
-        m1 = self.h1/n
-        m2 = self.h2/n
+        n0,n1 = self.n
+        m1 = self.h1/n0
+        m2 = self.h2/n1
         norm = numpy.repeat([self.normal], 3, 0)
-        for i in range(n):
-            for j in range(n):
+        for i in range(n0):
+            for j in range(n1):
                 c = m1*i + m2*j
                 coords = numpy.array([c, c + m2, c + m1])
-                uv = numpy.array([(i/n, j/n), (i/n, (j+1)/n), ((i+1)/n, j/n)])
+                uv = numpy.array([(i/n0, j/n1), (i/n0, (j+1)/n1), ((i+1)/n0, j/n1)])
                 coords2 = numpy.array([c + m1 + m2, c + m1, c + m2])
-                uv2 = numpy.array([((i+1)/n, (j+1)/n),
-                                   ((i+1)/n, j/n), (i/n, (j+1)/n)])
+                uv2 = numpy.array([((i+1)/n0, (j+1)/n1),
+                                   ((i+1)/n0, j/n1), (i/n0, (j+1)/n1)])
                 self.appendWedge(coords, norm, uv)
                 self.appendWedge(coords2, norm, uv2)

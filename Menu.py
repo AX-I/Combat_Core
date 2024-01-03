@@ -168,6 +168,7 @@ def playSound(si):
 
 class CombatMenu(Frame, ImgUtils.NPCanvas):
     def __init__(self, root=None):
+        self.profTime = time.time()
 
         if root is None: root = Tk()
         super().__init__(root)
@@ -238,7 +239,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         #self.tgFullScreen()
 
-        print("Ready", time.time())
+        print('Ready in', time.time() - self.profTime)
 
         self.menuLoop()
 
@@ -634,7 +635,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.gameList = {gd:[]}
 
         self.NSPECIAL = 1
-        self.charNames = ["Amber",
+        self.charNames = ["Autumn",
                           "Samus", "Zelda BotW",   "Link BotW",
                           "Louis", "Zelda TP",     "Link TP",
                           "Ahri",  "Stormtrooper", "Vader"]
@@ -853,7 +854,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         Label(self.genFr, text="Render backend:", font=g).pack(anchor=W)
         self.backFr = Frame(self.genFr); self.backFr.pack()
         self.backCL = Button(self.backFr, text="OpenCL", font=g,
-                             command=self.switchBackend)
+                             command=self.switchBackend, state='disabled')
         self.backCL.pack(side=LEFT)
         self.backGL = Button(self.backFr, text="OpenGL", font=g,
                              command=self.switchBackend)
@@ -995,6 +996,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         except TclError: pass
 
     def switchBackend(self, e=None):
+        return
         for _ in range(self.devls.size()):
             self.devls.delete(0)
 

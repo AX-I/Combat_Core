@@ -32,7 +32,8 @@ def setupStage(self):
                    texture=PATH+"../Assets/Blank1.png",
                    scale=0.6,
                    vertScale=2.5/6553, vertPow=2, vertMax=50000,
-                   useShaders={'args':{'specular': 0.8}, 'normal': 'snow'},
+                   useShaders={'args':{'specular': 0.8, 'specRimEnvOff':(-0.1,-0.2,0.1)},
+                               'normal': 'snow', 'cull':1},
                    uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
@@ -117,15 +118,15 @@ def setupStage(self):
 
     # Large rocks
     pfile = tgpath + "LargeRocks.obj"
-    objs = [{'pos':(0,0,0), 'rot':(0,0,0)},
-            {'pos':(21,  6.9,-21.6), 'rot':(0,23/180*3.14,0)},
+    objs = [{'pos':(21,  6.9,-21.6), 'rot':(0,23/180*3.14,0)},
             {'pos':(37.6,4.8,-22), 'rot':(0,-34/180*3.14,0)},
             {'pos':(-1,5.5,-36.3), 'rot':(0,201/180*3.14,0)},
             {'pos':(-29,3.5,3.1), 'rot':(0,127/180*3.14,0)}]
     for o in objs:
         self.addVertObject(VertModel, o['pos'], rot=o['rot'], static=True,
                            filename=pfile,
-                           mip=2, useShaders={'args':{'specular': 0.4}, 'normal':'largeRock'},
+                           mip=2, useShaders={'args':{'specular': 0.4},
+                                              'normal':'largeRock', 'cull':1},
                            shadow="CR")
 
     # Background Mountain
@@ -133,9 +134,9 @@ def setupStage(self):
     opts = {'filename':pfile, 'mip':2, 'texMul':0.8, 'useShaders':
             {'args':{'specular': 0.4}, 'normal':'mountain', 'ignoreShadow':1},
             'shadow':'', 'static':True}
-    self.addVertObject(VertModel, [22,32,-271], rot=(0,0,0), scale=2,
+    self.addVertObject(VertModel, [22,46,-441], rot=(0,0,0), scale=2.2,
                        **opts)
-    self.addVertObject(VertModel, [-366,50,-11], rot=(0,pi/2,0), scale=2.5,
+    self.addVertObject(VertModel, [-666,66,-11], rot=(0,-pi/2,0), scale=3.3,
                        **opts)
 
 
@@ -145,6 +146,51 @@ def setupStage(self):
                        texture=PATH+'../Assets/Blank3.png', uvspread=0.333,
                        useShaders={'shader':'SSR', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
+
+    # Background forests
+    pfile = f'{mpath}TaigaNew/ForestsBackground.obj'
+    self.addVertObject(VertModel, [0,0,0], filename=pfile)
+    self.matShaders[self.vertObjects[-1].texNum].update(normal='snow')
+    self.matShaders[self.vertObjects[-2].texNum].update(normal='pineImposter',
+                                                        args={'translucent':1})
+
+    # Background plain
+    pfile = f'{mpath}TaigaNew/PlainsBackground.obj'
+    self.addVertObject(VertModel, [0,0,0], filename=pfile, shadow="R",
+                       useShaders={'args':{'specular': 0.8}, 'normal':'snow'})
+
+    self.addVertObject(VertPlane, [350, -10.5, -520],
+                       h1=[650,0,0], h2=[0,0,1045], n=32,
+                       texture=PATH+'../Assets/Blank3.png', uvspread=0.2,
+                       useShaders={'shader':'SSR', 'normal': 'ice'})
+    self.addVertObject(VertPlane, [350, -11, -520],
+                       h1=[650,0,0], h2=[0,0,1045], n=32,
+                       texture=PATH+'../Assets/Grass.png') # for motion blur
+
+    # Background ice spikes
+    pfile = f'{mpath}TaigaNew/IceSpikes_border.obj'
+    self.addVertObject(VertModel, [0,0,0], filename=pfile, shadow="CR")
+    self.matShaders[self.vertObjects[-1].texNum].update(
+        normal='snow', args={'specular': 0.8})
+    self.matShaders[self.vertObjects[-2].texNum].update(
+        normal='snow', args={'specular': 0.8})
+
+    # Background blowing snow
+    psparams = [([350,5,300], 7, 100, 10, 10, 30),
+                ([370,5,300], 7, 121, 11, 10, 30),
+                ([400,10,400], 6, 117, 9, 12, 50),
+                ([400,15,500], 5.5, 112, 7, 15, 60)]
+    self.fogPS = []
+    for p in psparams:
+        ps = ContinuousParticleSystem(p[0], (-pi/2,0),
+                                      vel=p[1], force=(0,0,0),
+                                      lifespan=p[2], nParticles=p[3],
+                                      randPos=p[4], randVel=0.1,
+                                      size=p[5], opacity=0.1,
+                                      color=np.array([1,0.24,0.18]) * 0.3,
+                                      tex='cloud')
+        self.addParticleSystem(ps)
+        self.fogPS.append(ps)
 
 
     self.skis = []
@@ -216,7 +262,8 @@ def setupStage(self):
                                        'noline':1}, mip=2,
                            rot=(0,r,0))
 
-    LInt = np.array([1,0.3,0.24]) * 2.5
+    LInt = np.array([1,0.24,0.18]) * 2.6
+
     #LInt = np.array([0.1,0.3,0.9]) * 1
     #LInt = np.array([0.5,0.6,0.9])
     #LInt = np.array([1,0.4,0.2])
@@ -226,12 +273,12 @@ def setupStage(self):
     skyI = np.array([0.1,0.15,0.5]) * 0.4
     self.directionalLights.append({"dir":[LDir, 0.1], "i":LInt})
     self.directionalLights.append({"dir":[LDir, 0.1+pi], "i":
-                                   np.array([0.1,0.06,0.1]) * 1})
+                                   np.array([0.1,0.06,0.1]) * 0.8})
     self.directionalLights.append({"dir":[LDir, 0.1], "i":
                                    np.array([0.12,0.1,0.08]) * 0.6})
     self.directionalLights.append({"dir":[0, pi/2], "i":skyI})
 
-    fn = "../Skyboxes/kiara_1_dawn_1k.ahdr"
+    fn = "../Skyboxes/kiara_1_dawn_2k.ahdr"
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+fn, hdrScale=4)
 
     skyShader = self.matShaders[self.skyBox.texNum]
@@ -244,6 +291,9 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
+    self.si.put({'Preload':[PATH+"../Sound/WindNoise.ogg"]})
+
+
 def setupPostprocess(self):
     # Sun glare
     self.addVertObject(VertPlane, [-1,-1,0],
@@ -253,6 +303,12 @@ def setupPostprocess(self):
 
 def frameUpdate(self):
     if self.frameNum == 0:
+        self.si.put({"Play":(PATH+"../Sound/WindNoise.ogg", self.volmFX, True,
+                             (np.array((10, 10, 100.)), 600, 10, 0.6, None, 40))})
+        cloudim = Image.open('../Models/Temple/Cloud1a.png')
+        cloudtex = np.array(cloudim)[:,:,0]
+        self.draw.addPSTex(np.ascontiguousarray(cloudtex), 'cloud')
+
         self.terrain.heights = self.tmpHeights
         self.terrain.interpLim = 2
 
@@ -267,18 +323,31 @@ def frameUpdate(self):
         self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
         self.addNrmMap(tpath + 'LargeRocks_normal.png', 'largeRock')
         self.addNrmMap(tpath + 'Mountain_normal.png', 'mountain')
+        self.addNrmMap(tpath + 'Norm_expanded.png', 'pineImposter')
 
         s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
         s = np.array(s)
         s = np.array(s > 30, 'uint8')
         self.draw.addTexAlpha(s, 'snowflake')
 
-    self.matShaders[self.fogMTL]['args']['fogHeight'] = max(10, self.pos[1] + 4)
+        fogShaderArgs = self.matShaders[self.fogMTL]['args']
+        fogShaderArgs.update(
+            fogAmb = np.array((0.1,0.15,0.4)) * 0.006,
+            fogDist = 200*4,
+            fogLight = 0.12 /1.66/1.2,
+            fogAbsorb = 0.01 /1.8,
+            fogAmbDistAdd = 0.8,
+        )
+
+    self.matShaders[self.fogMTL]['args']['fogHeight'] = max(10, self.pos[1] + 3)
     self.draw.changeShader(self.fogMTL, self.matShaders[self.fogMTL])
 
     self.draw.setUVOff(self.effectMtl, (-1,-1), (2,2), (-self.frameNum/120, 0))
 
     for ps in self.effectPS:
+        ps.step(circular=True)
+
+    for ps in self.fogPS:
         ps.step(circular=True)
 
 

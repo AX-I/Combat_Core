@@ -171,6 +171,8 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         if PLATFORM == "win32":
             self.DC = win32gui.GetDC(0)
 
+        self.UItexts = {}
+
     def runGame(self, *args):
         self.evtQ.put({"Run":args})
 
