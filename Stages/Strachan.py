@@ -270,7 +270,7 @@ def showPlatforms(self):
     self.showPlatforms = time.time()
 
     # restore materials after dissolve in
-    self.platMats = {i:self.matShaders[i] for i in self.platTexn}
+    self.platMats = {i:dict(self.matShaders[i]) for i in self.platTexn}
     self.platFullyAppeared = False
 
 def toggleLights(self):
