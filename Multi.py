@@ -1152,8 +1152,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         # Add projectiles and game elements
         self.spheres = []
         self.srbs = []
+        p = [0,0,0]
         for i in range(self.numBullets):
-            p = [32, -3+i, 29]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
                                useShaders={'shader':"emissive",'args':{'emPow':2}})
@@ -1176,7 +1176,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.sphereTrails.append(self.vertObjects[-1])
 
         for i in range(self.numBullets // 2):
-            p = [-30, -3+i, 20]
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
                                texture=PATH+"../Assets/Red.png",
                                useShaders={'shader':"emissive",'args':{'emPow':2.5}})
@@ -1242,7 +1241,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.clouds = self.vertObjects[-1]
 
         for i in range(self.numBullets // 3):
-            p = [20, -3+i, 20]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Orange.png",
                                useShaders={'shader':'add','args':{'emPow':0.4}})
@@ -1259,7 +1257,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.pickups = []
         for i in range(1):
-            p = [0, 0, 0]
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Green.png",
                                useShaders={'shader':'emissive',
@@ -1269,7 +1266,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.blackHoles = []
         for i in range(self.numBullets // 5):
-            p = [20, -3+i, 15]
             self.addVertObject(VertSphere, p, n=12, scale=0.3,
                                texture=PATH+"../Assets/Black.png",
                                useShaders={"emissive":0.0})
