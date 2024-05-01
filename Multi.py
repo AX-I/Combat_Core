@@ -427,7 +427,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.restKF = Anim.loadAnim(PATH+'../Poses/RestTest.ava')
 
         off_fact = 1 if sc == 2 else 1.3
-        arm_fact = (2.4, 2, 1.2, 2.4, 2.4, 2.5, 2.2, 2.3, 1.8)[sc]
+        arm_fact = (2.7, 2.4, 2, 1.2, 2.4, 2.4, 2.5, 2.2, 2.3, 1.8)[sc]
         for i in range(len(self.restKF)):
             tempPose = self.restKF[i][1]
             armPose = tempPose['children'][0]['children'][0]['angle']
@@ -1500,7 +1500,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.idle = json.load(open(p+"Idle1.pose"))
         self.idleFlat = Anim.flattenPose(self.idle)
 
-        self.idleTest = Anim.loadAnim(p+'Idletest.ava')
+        self.idleTest = Anim.loadAnim(p+'IdleTest.ava')
         self.gestures.append(Anim.flattenPose(self.idleTest[0][1]))
 
         self.idlingTest = Anim.loadAnim(p+'IdlingTest6.ava')

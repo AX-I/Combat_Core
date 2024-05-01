@@ -50,7 +50,7 @@ def setupStage(self):
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
     self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1, rotY=3.27)

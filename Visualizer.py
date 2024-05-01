@@ -56,8 +56,10 @@ if PLATFORM == "linux":
     import Xlib.threaded
     xd = display.Display(); xs = xd.screen(); xroot = xs.root
     def mouseMover(x, y):
+      try:
         xroot.warp_pointer(int(x), int(y))
         xd.sync()
+      except RuntimeError: pass
 else:
     import pyautogui
     def mouseMover(x, y):
