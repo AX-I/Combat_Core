@@ -133,10 +133,10 @@ if PLATFORM == "darwin":
     _TIMESBD = "Times New Roman Bold.ttf"
     _COURIERBD = "Courier New Bold.ttf"
 elif PLATFORM == "linux":
-    _TIMES = "LiberationSerif.ttf"
+    _TIMES = "LiberationSerif-Regular.ttf"
     _TIMESBD = "LiberationSerif-Bold.ttf"
     _COURIERBD = "LiberationSans-Bold.ttf"
-elif "win" in PLATFORM:
+elif PLATFORM == "win32":
     _TIMES = "times.ttf"
     _TIMESBD = "timesbd.ttf"
     _COURIERBD = "courbd.ttf"

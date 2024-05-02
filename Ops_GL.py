@@ -1368,8 +1368,10 @@ class CLDraw:
         d = dirD.astype("float32")
 
         for draw in self.DRAW:
+          try:
             draw['LInt'].write(i)
             draw['LDir'].write(d)
+          except KeyError: pass
 
     def getSHM(self, i):
         sm = self.SHADOWMAP[i]

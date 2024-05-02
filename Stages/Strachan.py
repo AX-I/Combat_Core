@@ -206,7 +206,7 @@ def setupStage(self):
     self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ),
                             'vec':sv})
 
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_Park_2k.ahdr",
+    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
                             rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1, rotY=3.27)
@@ -270,7 +270,7 @@ def showPlatforms(self):
     self.showPlatforms = time.time()
 
     # restore materials after dissolve in
-    self.platMats = {i:self.matShaders[i] for i in self.platTexn}
+    self.platMats = {i:dict(self.matShaders[i]) for i in self.platTexn}
     self.platFullyAppeared = False
 
 def toggleLights(self):
