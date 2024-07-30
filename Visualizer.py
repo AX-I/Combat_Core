@@ -171,7 +171,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         self.recVideo = False
 
         if PLATFORM == "win32":
-            self.DC = win32gui.GetDC(0)
+            self.DC = win32gui.GetDC(self.d.winfo_id())
 
         self.UItexts = {}
 
@@ -513,7 +513,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
     def _render(self, fr):
         self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
 
-        if PLATFORM == 'win32' and self.fs:
+        if PLATFORM == 'win32':
             dib = Dib(self.cframe)
             dib.expose(self.DC)
             return

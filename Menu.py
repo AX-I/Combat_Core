@@ -202,7 +202,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.finalRender = self.d.create_image((self.W/2, self.H/2))
 
         if PLATFORM == "win32":
-            self.DC = win32gui.GetDC(0)
+            self.DC = win32gui.GetDC(self.d.winfo_id())
 
         self.ctx = OpsConv.getContext_CL()
 
