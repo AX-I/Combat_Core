@@ -121,11 +121,10 @@ See https://axi.x10.mx/Combat for details.
 
 if getattr(sys, "frozen", False):
     PATH = os.path.dirname(sys.executable) + "/"
+    SERVER = "https://axi.x10.mx/Combat/Serv.php"
 else:
     PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
-
-#SERVER = "https://axi.x10.mx/Combat/Serv.php"
-SERVER = "127.0.0.1:4680"
+    SERVER = "127.0.0.1:4680"
 
 
 if PLATFORM == "darwin":

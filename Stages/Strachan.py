@@ -237,7 +237,7 @@ def movePillars(self, i):
                              (np.array((12,-2,10)), 80, 8, True))})
 
         if time.time() - self.trackTime > 84:
-            self.si.put({'Play':(SFX+'Sac_a.flac', self.volm, False)})
+            self.si.put({'Play':(SFX+'Sac_a.ogg', self.volm, False)})
             self.pillarTrackTime = time.time()
 
 
@@ -322,6 +322,7 @@ def frameUpdate(self):
     if self.frameNum < 2:
         self.addNrmMap(PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
                        'wood_coffers')
+        self.bindKey('o', lambda: movePillars(self, 0))
         return
 
 
