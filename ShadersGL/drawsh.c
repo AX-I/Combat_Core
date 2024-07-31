@@ -78,7 +78,7 @@ mat2 rot(float t) {
 void main() {
 	float tz = 1.0/depth;
 
-	vec3 norm = normalize(v_norm * tz);
+	vec3 norm = normalize(v_norm);
 
 	vec3 sxyz = SV * (v_pos*tz - SPos);
   float normbias = min(1., 1 - dot(LDir, norm)) * NBIAS;
