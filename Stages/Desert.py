@@ -27,7 +27,7 @@ def setupStage(self):
     self.terrain = self.vertObjects[-1]
 
 
-    nCloth = 4
+    nCloth = 16
     self.nCloth = nCloth
     self.addVertObject(VertPlane, [20,7,20],
                        n=nCloth, h2=[2,0,1.5], h1=[0.2,-2,0.1],
@@ -70,8 +70,10 @@ def updateCloth(self):
 ##    global VIEWER
 ##    self = VIEWER
 
-    g = np.repeat(np.array([[0,-1,0.2 * sin(time.time())]]), (self.nCloth+1)**2, 0)
+    g = np.repeat(np.array([[0,-1,0.4 * sin(time.time())]]), (self.nCloth+1)**2, 0)
+    st = time.perf_counter()
     self.clothSim.step(g)
+    print('Cloth', time.perf_counter() - st)
 
     tn = self.cloth.texNum
     cStart, cEnd = self.cloth.cStart*3, self.cloth.cEnd*3

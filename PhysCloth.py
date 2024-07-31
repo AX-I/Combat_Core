@@ -1,5 +1,6 @@
 
 import numpy as np
+from scipy.linalg import cho_factor, cho_solve
 
 def signed_incidence_matrix(n, E):
   A = np.zeros((E.shape[0], n))
@@ -47,7 +48,12 @@ class MassSprings:
 
     self.Q = Q
 
-    self.prefactorization = np.linalg.cholesky(Q)
+    self.prefactorization = cho_factor(Q)
+
+    self.pinnedConst = 10**10 * C.transpose() @ C @ self.V
+
+    self.Ei0 = E[:,0].flatten()
+    self.Ei1 = E[:,1].flatten()
 
   def step(self, fext):
     d = np.zeros((self.E.shape[0], 3))
@@ -56,19 +62,17 @@ class MassSprings:
     Unext = self.Ucur * 1.0
 
     for x in range(16):
-      for i in range(E.shape[0]):
-        d[i] = Unext[E[i,1]] - Unext[E[i,0]]
-        d[i] = d[i] / np.linalg.norm(d[i]) * self.r[i]
+      d = Unext[self.Ei1] - Unext[self.Ei0]
+      d *= (1 / np.linalg.norm(d, axis=1) * self.r)[:,None]
 
       y = 1 / (self.dt*self.dt) * self.M \
           @ (2*self.Ucur - self.Uprev) + fext
 
       bSolve = self.k * self.A.transpose() @ d + y
 
-      bSolve += 10**10 * self.C.transpose() @ self.C @ self.V
+      bSolve += self.pinnedConst
 
-      #Unext = LLTSolve(self.prefactorization, bSolve)
-      Unext = np.linalg.solve(self.Q, bSolve)
+      Unext = cho_solve(self.prefactorization, bSolve)
 
     self.Uprev = self.Ucur * 1.0
     self.Ucur = Unext * 1.0
