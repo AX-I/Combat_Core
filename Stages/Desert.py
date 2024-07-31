@@ -31,7 +31,8 @@ def setupStage(self):
     self.nCloth = nCloth
     self.addVertObject(VertPlane, [20,7,20],
                        n=nCloth, h2=[2,0,1.5], h1=[0.2,-2,0.1],
-                       texture=PATH+'../Assets/Preview_Forest.png')
+                       texture=PATH+'../Assets/Preview_Forest.jpg',
+                       useShaders={'calcNorm': 1})
     self.cloth = self.vertObjects[-1]
     self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
                                           self.cloth.getEdges(), 800,

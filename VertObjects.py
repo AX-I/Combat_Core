@@ -999,29 +999,29 @@ class VertPlane(VertObject):
                 self.appendWedge(coords2, norm, uv2)
 
     def getVertices(self):
-        n = self.n
-        m1 = self.h1/n
-        m2 = self.h2/n
+        n0,n1 = self.n
+        m1 = self.h1/n0
+        m2 = self.h2/n1
         verts = []
-        for i in range(n+1):
-            for j in range(n+1):
+        for i in range(n0+1):
+            for j in range(n1+1):
                 verts.append(m1*i + m2*j)
         return np.array(verts) + self.coords
 
     def getIndices(self):
-        n = self.n
+        n0,n1 = self.n
 
         o = []
-        for i in range(n):
-            for j in range(n):
-                o.extend((i*(n+1)+j, i*(n+1)+j+1, (i+1)*(n+1)+j))
-                o.extend(((i+1)*(n+1)+j+1, (i+1)*(n+1)+j, i*(n+1)+j+1))
+        for i in range(n0):
+            for j in range(n1):
+                o.extend((i*(n1+1)+j, i*(n1+1)+j+1, (i+1)*(n1+1)+j))
+                o.extend(((i+1)*(n1+1)+j+1, (i+1)*(n1+1)+j, i*(n1+1)+j+1))
         return np.array(o)
 
     def getEdges(self):
-        n = self.n
+        n0,n1 = self.n
 
-        v = np.arange((n+1)*(n+1)).reshape((n+1,n+1))
+        v = np.arange((n0+1)*(n1+1)).reshape((n0+1,n1+1))
 
         # horizontal edges
         e1 = np.repeat(v,2,1)

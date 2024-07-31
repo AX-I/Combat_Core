@@ -28,6 +28,8 @@ trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
 trisetupOrthoAnim = makeProgram("trisetupOrtho_anim.c", "PipeGL/")
 trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 
+trisetupNorm = makeProgram('trisetup_norm.c', 'PipeGL/')
+
 trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
 
 if True: #if sys.platform == 'darwin':
@@ -930,9 +932,19 @@ class CLDraw:
             for sp in self.shaderParams:
                 prog = prog.replace(sp, self.shaderParams[sp])
 
+            progKwargs = {}
+            if 'calcNorm' in mtl:
+                progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
+                ts = trisetupNorm
+                prog = prog.replace('vec3 norm = normalize(v_norm)',
+                                    'vec3 norm = normalize(v_gs_norm)')
+                prog = prog.replace('in vec3 v_norm',
+                                    'in vec3 v_gs_norm')
+
             draw = ctx.program(
                 vertex_shader=ts,
-                fragment_shader=prog
+                fragment_shader=prog,
+                **progKwargs
             )
 
             if shader == 'fog':
