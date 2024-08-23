@@ -65,7 +65,9 @@ def frameUpdate(self):
         self.addNrmMap(tpath + "ornate-celtic-gold-normal.png", 'gold')
         self.addNrmMap(PATH + '../Assets/aerial_beach_01_nor_gl_1k.png', 'sand',
                        mip=True)
+        self.clothTime = 0
     updateCloth(self)
+    print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
     g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]]), (self.nCloth+1)**2, 0)
@@ -80,7 +82,7 @@ def updateCloth(self):
 
     st = time.perf_counter()
     self.clothSim.step(g, collider=coll, collVMult=cvm)
-    print('Cloth', time.perf_counter() - st)
+    self.clothTime += time.perf_counter() - st
 
     tn = self.cloth.texNum
     cStart, cEnd = self.cloth.cStart*3, self.cloth.cEnd*3

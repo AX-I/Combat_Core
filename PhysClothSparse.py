@@ -1,6 +1,5 @@
 
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
 
 import scipy.sparse as sparse
 import scipy.sparse.linalg as splinalg
@@ -51,7 +50,7 @@ class MassSprings:
 
     A = signed_incidence_matrix_sparse(n, E)
     self.A = A
-    self.AT = A.transpose().tocsr()
+    self.kAT = self.k * A.transpose().tocsr()
 
     Q = k * A.transpose() @ A + 1 / (dt * dt) * M
 
@@ -68,19 +67,15 @@ class MassSprings:
     self.Ei1 = E[:,1].flatten()
 
   def step(self, fext, collider=None, collVMult=1):
-    d = np.zeros((self.E.shape[0], 3))
-    E = self.E
-
     Unext = self.Ucur * 1.0
+
+    y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
 
     for x in range(16):
       d = Unext[self.Ei1] - Unext[self.Ei0]
-      d *= (1 / np.linalg.norm(d, axis=1) * self.r)[:,None]
+      d *= (self.r / np.linalg.norm(d, axis=1))[:,None]
 
-      y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
-
-      bSolve = self.k * self.AT @ d + y
-
+      bSolve = self.kAT @ d + y
       bSolve += self.pinnedConst
 
       Unext = self.prefactorization.solve(bSolve)
@@ -96,6 +91,6 @@ class MassSprings:
         Unext[cond] += (collider.dim-d[cond]+EPSILON)[:,None] * R[cond] \
                        + collider.rb.v[None,:] * collVMult*self.dt * (collider.dim-d[cond])[:,None]/collider.dim
 
-    self.Uprev = self.Ucur * 1.0
+    self.Uprev = self.Ucur
     self.Ucur = Unext * 1.0
 
