@@ -409,6 +409,7 @@ def frameUpdate(self):
     # dimensions of table
     pSize = np.array((2.8, 0, 1))
 
+    batch = {}
     for i in range(len(self.pillars)):
         p = self.pillars[i]
 
@@ -420,8 +421,10 @@ def frameUpdate(self):
                     int(tmin[2]):int(tmax[2])] += tr*i
 
         for tn in self.pillarTexn:
-            self.draw.translate(tr*i, p.cStart*3, p.cEnd*3, tn)
+            if tn not in batch: batch[tn] = []
+            batch[tn].append((tr*i, p.cStart*3, p.cEnd*3))
             p = p.nextMtl
+    self.draw.translateBatch(batch)
 
     tempObjs = np.array(self.castObjs)
     tempObjs = tempObjs * (1 - np.array(self.testRM()))
