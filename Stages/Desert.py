@@ -28,15 +28,15 @@ def setupStage(self):
     self.terrain = self.vertObjects[-1]
 
 
-    nCloth = 16
+    nCloth = 31
     self.nCloth = nCloth
-    self.addVertObject(VertPlane, [20,7,20],
-                       n=nCloth, h2=[2,0,1.5], h1=[0.2,-2,0.1],
+    self.addVertObject(VertPlane, [20,8,20],
+                       n=nCloth, h2=[2,0,1.5], h1=[0.2,-3,0.1],
                        texture=PATH+'../Assets/Preview_Forest.jpg',
                        useShaders={'calcNorm': 1})
     self.cloth = self.vertObjects[-1]
     self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
-                                          self.cloth.getEdges(), 800,
+                                          self.cloth.getEdges(), 32000,
                                           np.ones((nCloth+1)**2),
                                           np.array([0,nCloth]), 1/20)
     self.clothI = self.cloth.getIndices()
@@ -61,19 +61,21 @@ def frameUpdate(self):
         self.addNrmMap(tpath + "ornate-celtic-gold-normal.png", 'gold')
         self.addNrmMap(PATH + '../Assets/aerial_beach_01_nor_gl_1k.png', 'sand',
                        mip=True)
-##    if self.frameNum == 1:
-##        self.bindKey('j', self.STAGECONFIG.updateCloth)
-##        global VIEWER
-##        VIEWER = self
     updateCloth(self)
 
 def updateCloth(self):
-##    global VIEWER
-##    self = VIEWER
+    g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]]), (self.nCloth+1)**2, 0)
 
-    g = np.repeat(np.array([[0,-1,0.4 * sin(time.time())]]), (self.nCloth+1)**2, 0)
+    coll = self.players[0]['pv'].colliders[1]
+    cvm = 10/self.frameTime
+
+    for s in self.srbs:
+        if not s.disabled:
+            coll = s.colliders[0]
+            cvm = 2
+
     st = time.perf_counter()
-    self.clothSim.step(g)
+    self.clothSim.step(g, collider=coll, collVMult=cvm)
     print('Cloth', time.perf_counter() - st)
 
     tn = self.cloth.texNum
