@@ -633,5 +633,40 @@ class ThreeDBackend:
     def fps(self):
         print("fps:", self.frameNum / self.totTime)
 
+    def frameProfile(self, i, end=False):
+        try: _ = self.ftime
+        except:
+            self.ftime = {}
+            self.ftx = {}; self.ftmax = {}
+            self.prevT = 0
+            self.totMax = 0
+        if i not in self.ftime:
+            self.ftime[i] = 0
+            self.ftmax[i] = 0
+            self.ftx[len(self.ftime)-1] = i
+
+        t = time.perf_counter()
+        self.ftime[i] += t - self.frameStart
+        if self.frameNum > 10:
+            self.ftmax[i] = max(self.ftmax[i], t - self.prevT)
+            if end:
+                self.totMax = max(self.totMax, t - self.frameStart)
+        self.prevT = t
+
+    def printProfile(self):
+        os.system('color')
+        print('Avg     Max')
+        for i in range(len(self.ftx)):
+            x = self.ftx[i]
+            if x == '.': continue
+            offset = 0 if i == 0 else self.ftime[self.ftx[i-1]]
+            t = (self.ftime[x] - offset) / self.frameNum
+            mt = self.ftmax[x]
+
+            print(f'{fmtTime(t)}  {fmtTime(mt)} {x}')
+
+        tt = (self.ftime[x] - self.ftime['.']) / self.frameNum
+        print(f'\033[96m{tt:.4f}  {self.totMax:.4f} Total \033[0m')
+
 if __name__ == "__main__":
     pass

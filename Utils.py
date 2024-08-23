@@ -65,3 +65,10 @@ def anglesToCoords(ab):
     y = sin(ab[1])
     z = sin(ab[0]) * cos(ab[1])
     return array((x, y, z))
+
+def fmtTime(t):
+    color = '\033[90m' if t<0.001 \
+            else '\033[0m' if t<0.01 \
+            else '\033[93m' if t<0.02 \
+            else '\033[91m'
+    return f'{color}{t:.4f}\033[0m'

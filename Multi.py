@@ -1848,29 +1848,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def qq(self): self.doQuit = True
 
-    def frameProfile(self, i):
-        try: _ = self.ftime
-        except:
-            self.ftime = {}
-            self.ftx = {}
-        if i not in self.ftime:
-            self.ftime[i] = 0
-            self.ftx[len(self.ftime)-1] = i
-        self.ftime[i] += time.time() - self.frameStart
-    def printProfile(self):
-        for i in range(len(self.ftx)):
-            x = self.ftx[i]
-            if x == '.': continue
-            offset = 0 if i == 0 else self.ftime[self.ftx[i-1]]
-            print(round((self.ftime[x] - offset) / self.frameNum, 5), x)
-
-        print('Total', round((self.ftime[x] - self.ftime['.']) / self.frameNum, 5))
 
     def frameUpdate(self):
+        self.frameStart = time.perf_counter()
+        self.frameProfile('.')
+
         try:
             self.STAGECONFIG.frameUpdate(self)
         except AttributeError:
             pass
+        self.frameProfile('Stage')
 
         self.si.put({'SetPos':{'pos':self.pos,
                                'vvh':self.vVhorz()}})
@@ -1885,8 +1872,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.frameNum == 1:
             self.rotateLight()
 
-        self.frameStart = time.perf_counter()
-        self.frameProfile('.')
 
         CURRTIME = time.time()
 
@@ -2024,6 +2009,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         impulses = self.w.stepWorld(self.frameTime,
                                     checkColl=(self.frameNum & vf == 0))
 
+        self.frameProfile('StepWorld')
+
         for i in range(min(len(impulses), 4)):
             im = impulses[i]
             idir = im[0]
@@ -2138,6 +2125,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.lpCount[i] %= self.lp.shape[1]
             lpi[self.lpCount[i]] = np.array(self.srbs[i].pos)
 
+        self.frameProfile('Batch')
 
         self.draw.translateBatch(batch)
 
@@ -2637,7 +2625,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for i in p["ctexn"]:
                         self.draw.highlight([1.,0,0], i)
 
-        self.frameProfile('Postprocess')
+        self.frameProfile('Postprocess', end=True)
 
 ##        if self.stage == 4:
 ##            test = 0.6 + 0.3 * sin(time.time() / 13) + 0.1 * sin(time.time() / 5)
