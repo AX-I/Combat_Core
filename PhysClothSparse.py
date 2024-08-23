@@ -64,7 +64,7 @@ class MassSprings:
     self.Ei0 = E[:,0].flatten()
     self.Ei1 = E[:,1].flatten()
 
-  def step(self, fext):
+  def step(self, fext, collider=None, collVMult=1):
     d = np.zeros((self.E.shape[0], 3))
     E = self.E
 
@@ -81,6 +81,17 @@ class MassSprings:
       bSolve += self.pinnedConst
 
       Unext = self.prefactorization.solve(bSolve)
+
+    if collider:
+      assert collider.t == 'Circle'
+      EPSILON = 0.01
+      buffer = 0.5
+      R = Unext - collider.pos[None,:]
+      d = np.sqrt(np.einsum('ij, ij->i', R, R))
+      cond = d < collider.dim
+      if np.any(cond):
+        Unext[cond] += (collider.dim-d[cond]+EPSILON)[:,None] * R[cond] \
+                       + collider.rb.v[None,:] * collVMult*self.dt * (collider.dim-d[cond])[:,None]/collider.dim
 
     self.Uprev = self.Ucur * 1.0
     self.Ucur = Unext * 1.0

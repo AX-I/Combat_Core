@@ -2253,6 +2253,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if a["jump"] > 0:
                 dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
                 a["b1"].offset[1] += dx * 1.2
+                a['pv'].v[1] = dx*1.2 * 0.1
                 a["vertVel"] -= self.frameTime * 9.81
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
@@ -2318,6 +2319,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 borderOk = (b1 < fx < b2) and (b1 < fy < b2)
 
                 if (slopeOk or stepOk) and borderOk:
+                    a['pv'].v[:] = np.array([bx, 0, by]) * 0.1
                     a["b1"].offset[0] += bx
                     a["b1"].offset[2] += by
                     if a["jump"] <= 0:
@@ -2358,6 +2360,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else:
                     playerStuck = True
 
+                if playerStuck:
+                    a['pv'].v[:] = 0
+
                 if not self.isClient:
                     if a['id'] in self.aiNums:
                         self.agents[a['id']].isStuck = playerStuck
@@ -2383,6 +2388,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       isFlat=True)
 
             elif a["movingOld"]:
+                a['pv'].v[:] = 0
                 a['animTrans'] = CURRTIME
                 a['tempPose'] = a['rig'].exportPoseFlat()
 
