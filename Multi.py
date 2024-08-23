@@ -1588,7 +1588,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         else:
             sobj = [(x <= self.players[-1]["obj"].texNum) and \
                     not self.renderMask[x] and \
-                    not ("sub" in self.matShaders[x]) \
+                    not ("sub" in self.matShaders[x]) or \
+                    'shadowDynamic' in self.matShaders[x]
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True

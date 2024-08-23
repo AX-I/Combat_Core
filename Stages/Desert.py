@@ -33,12 +33,16 @@ def setupStage(self):
     self.addVertObject(VertPlane, [20,8,20],
                        n=nCloth, h2=[2,0,1.5], h1=[0.2,-3,0.1],
                        texture=PATH+'../Assets/Preview_Forest.jpg',
-                       useShaders={'calcNorm': 1})
+                       shadow="R",
+                       useShaders={'calcNorm': 1, 'args':{'translucent':1,'NMmipBias':0.1},
+                                   'normal':'Clothes', 'shadowDynamic':1})
     self.cloth = self.vertObjects[-1]
+    pinned = np.array([0, nCloth, (nCloth+1)*nCloth])
     self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
                                           self.cloth.getEdges(), 32000,
                                           np.ones((nCloth+1)**2),
-                                          np.array([0,nCloth]), 1/20)
+                                          pinned, 1/20,
+                                          damp=0.002)
     self.clothI = self.cloth.getIndices()
 
 
@@ -47,7 +51,7 @@ def setupStage(self):
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
-    self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
+    self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":np.array([1.8,1.2,0.4])*1.5})
     self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.32,0.1]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
     self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
