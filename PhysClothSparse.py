@@ -24,7 +24,8 @@ def constructPinnedSparse(b, n):
 
 class MassSprings:
   def __init__(self, V: np.array, E: np.array, k: float,
-               m: np.array, b: np.array, dt: float):
+               m: np.array, b: np.array, dt: float,
+               damp=0.0):
     """V: (n,3), E: (e,2), k: spring const, m: (n,), b: pinned indices"""
 
     self.V = V * 1.0
@@ -32,6 +33,8 @@ class MassSprings:
     self.k = k
     self.b = b
     self.dt = dt
+
+    self.damp = 1 - damp
 
     self.Uprev = V * 1.0
     self.Ucur = V * 1.0
@@ -74,7 +77,7 @@ class MassSprings:
       d = Unext[self.Ei1] - Unext[self.Ei0]
       d *= (1 / np.linalg.norm(d, axis=1) * self.r)[:,None]
 
-      y = 1 / (self.dt*self.dt) * self.M.dot(2*self.Ucur - self.Uprev) + fext
+      y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
 
       bSolve = self.k * self.AT @ d + y
 

@@ -53,6 +53,8 @@ in float depth;
 in vec2 v_UV;
 uniform sampler2D tex1;
 
+uniform float translucent;
+
 // Normal map
 uniform int useNM;
 uniform sampler2D NM;
@@ -158,7 +160,9 @@ void main() {
     norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
   }
 
-    vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
+    vec3 light;
+    if (translucent > 0) {light = abs(dot(norm, LDir)) * (1-shadow) * LInt;}
+    else {light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;}
 
     for (int i = 1; i < lenD; i++) {
 		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
