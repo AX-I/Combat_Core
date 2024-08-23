@@ -70,7 +70,8 @@ def frameUpdate(self):
     print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
-    g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]]), (self.nCloth+1)**2, 0)
+    g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]], dtype='float32'),
+                  (self.nCloth+1)**2, 0)
 
     coll = self.players[0]['pv'].colliders[1]
     cvm = 10/self.frameTime
