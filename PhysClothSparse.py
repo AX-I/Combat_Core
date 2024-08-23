@@ -4,13 +4,15 @@ import numpy as np
 import scipy.sparse as sparse
 import scipy.sparse.linalg as splinalg
 
+F32 = np.float32
+
 def signed_incidence_matrix_sparse(n, E):
   ijv = []
   for i in range(E.shape[0]):
     ijv.append((i,E[i,0],-1))
     ijv.append((i,E[i,1],1))
   ijv = np.array(ijv).T
-  A = sparse.coo_matrix((ijv[2], (ijv[0], ijv[1])), shape=(E.shape[0], n))
+  A = sparse.coo_matrix((ijv[2], (ijv[0], ijv[1])), shape=(E.shape[0], n), dtype=F32)
   return A
 
 def constructPinnedSparse(b, n):
@@ -18,7 +20,7 @@ def constructPinnedSparse(b, n):
   for i in range(b.shape[0]):
     ijc.append((i,b[i],1))
   ijc = np.array(ijc).T
-  C = sparse.coo_matrix((ijc[2], (ijc[0], ijc[1])), shape=(b.shape[0], n))
+  C = sparse.coo_matrix((ijc[2], (ijc[0], ijc[1])), shape=(b.shape[0], n), dtype=F32)
   return C
 
 class MassSprings:
@@ -27,25 +29,25 @@ class MassSprings:
                damp=0.0):
     """V: (n,3), E: (e,2), k: spring const, m: (n,), b: pinned indices"""
 
-    self.V = V * 1.0
-    self.E = E
-    self.k = k
-    self.b = b
-    self.dt = dt
+    self.V = V.astype(F32)
+    self.E = E.astype(F32)
+    self.k = F32(k)
+    self.b = F32(b)
+    self.dt = F32(dt)
 
-    self.damp = 1 - damp
+    self.damp = F32(1 - damp)
 
-    self.Uprev = V * 1.0
-    self.Ucur = V * 1.0
+    self.Uprev = self.V * F32(1.0)
+    self.Ucur = self.V * F32(1.0)
 
-    r = np.zeros((E.shape[0],))
+    r = np.zeros((E.shape[0],), dtype=F32)
     for i in range(E.shape[0]):
       r[i] = np.linalg.norm(V[E[i,0]] - V[E[i,1]])
     self.r = r
 
     n = V.shape[0]
 
-    M = sparse.coo_matrix((m, (np.arange(n), np.arange(n))), shape=(n,n)).tocsr()
+    M = sparse.coo_matrix((m, (np.arange(n), np.arange(n))), shape=(n,n), dtype=F32).tocsr()
     self.M = M
 
     A = signed_incidence_matrix_sparse(n, E)
@@ -56,18 +58,18 @@ class MassSprings:
 
     self.C = constructPinnedSparse(b, n)
 
-    Q += 10**10 * self.C.transpose() @ self.C
+    Q += F32(10**10) * self.C.transpose() @ self.C
     self.Q = Q
 
     self.prefactorization = splinalg.splu(Q)
 
-    self.pinnedConst = 10**10 * self.C.transpose() @ self.C @ self.V
+    self.pinnedConst = F32(10**10) * self.C.transpose() @ self.C @ self.V
 
     self.Ei0 = E[:,0].flatten()
     self.Ei1 = E[:,1].flatten()
 
   def step(self, fext, collider=None, collVMult=1):
-    Unext = self.Ucur * 1.0
+    Unext = self.Ucur * F32(1.0)
 
     y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
 
@@ -92,5 +94,5 @@ class MassSprings:
                        + collider.rb.v[None,:] * collVMult*self.dt * (collider.dim-d[cond])[:,None]/collider.dim
 
     self.Uprev = self.Ucur
-    self.Ucur = Unext * 1.0
+    self.Ucur = Unext * F32(1.0)
 
