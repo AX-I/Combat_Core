@@ -604,7 +604,7 @@ def runGUI(P, *args):
 def logError(e, message):
     if __name__ == "__main__": raise e
     else:
-        with open(PATH+"Error.txt", "a") as f:
+        with open(PATH+"Error.txt", "w") as f:
             f.write("\n" + traceback.format_exc())
 
 if __name__ == "__main__":
