@@ -21,8 +21,8 @@ in vec3 in_vert;
 in vec2 v_UV;
 
 uniform sampler2D SRC;
-uniform float ox;
-uniform float oy;
+uniform float sw;
+uniform float sh;
 uniform int method;
 uniform int effect;
 uniform float effectArg;
@@ -45,17 +45,17 @@ void main() {
     }
     if (effect == EFFECT_CROP) {
         // crop vertically
-        /*if ((oy - cropHeight/2 < ty) && (ty < oy + cropHeight/2)) {
-            srcY = ty - (oy - cropHeight/2) + effectArg;
-            samplecoord.y = srcY;
-        } else discard;*/
+        float ty = (srcY-0.5) * sh;
+        if ((ty > -cropHeight/2) && (ty < cropHeight/2)) {
+          samplecoord.y -= effectArg/sh/2;
+        } else discard;
     }
     if (effect == EFFECT_ROLL) {
-        samplecoord.x = fract(abs(srcX + effectArg));
+        samplecoord.x = fract(abs(srcX + effectArg/sw));
     }
 
     if (effect == EFFECT_ROLLFADEY) {
-      samplecoord.y = fract(abs(srcY + effectArg));
+      samplecoord.y = fract(abs(srcY + effectArg/sh));
       mult = pow(1 - pow(abs(srcY - 0.5) / 0.5, 2), 2);
     }
 

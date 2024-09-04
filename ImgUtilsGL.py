@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 import moderngl as mgl
 
-VS = open('PipeGL/trisetup_2d.c').read()
+VS = open('PipeGL/trisetup_menu.c').read()
 FS = open('ShadersGL/menu.c').read()
 
 x = np.array([-1, -1, 1, 1, -1, 1])
@@ -23,9 +23,11 @@ class GLObject:
     vao: mgl.VertexArray
 
     def __init__(self, ctx, cq, name: str, x: np.array):
-        x = x.astype('uint8')
+        x = (x/255).astype('float16')
 
-        buf = ctx.texture(x.shape[1::-1], x.shape[2], x, dtype='f1')
+        buf = ctx.texture(x.shape[1::-1], x.shape[2], x, dtype='f2')
+        buf.repeat_x = False
+        buf.repeat_y = False
 
         self.name = name
         self.buf = buf
@@ -34,7 +36,7 @@ class GLObject:
 
         self.prog = ctx.program(vertex_shader=VS, fragment_shader=FS)
 
-        v = TRI #* np.array((*x.shape[:2],1))
+        v = TRI
         self.vbo = ctx.buffer(v.astype('float32').tobytes())
 
         self.vao = ctx.vertex_array(self.prog, self.vbo, 'in_vert', 'in_UV')
@@ -96,7 +98,7 @@ class NPCanvas:
 
         source = self.UItexts[dText]
 
-        self.blend(fr, source, coords, 'alpha')
+        self.blend(fr, source, coords[::-1], 'alpha')
 
 
     def blend(self, dest: mgl.Framebuffer, source: GLObject,
@@ -121,9 +123,6 @@ class NPCanvas:
             effectArg = source.filters['crop']
             del source.filters['crop']
 
-        if effect == 'roll':
-            effectArg /= source.shape[1]
-
         source.buf.use(location=0)
         dest.use()
 
@@ -136,8 +135,9 @@ class NPCanvas:
         self.ctx.blend_func = blendParam[method][1:]
 
         prog = source.prog
-        #prog['W'] = self.W; prog['H'] = self.H
-        #prog['ox'] = coords[0]; prog['oy'] = coords[1]
+        prog['W'] = self.W; prog['H'] = self.H
+        prog['ox'], prog['oy'] = coords
+        prog['sw'], prog['sh'] = source.shape[1::-1]
         prog['SRC'] = 0
         prog['method'] = METHOD[method]
         prog['effect'] = effectApplied
@@ -146,9 +146,29 @@ class NPCanvas:
         source.vao.render(mgl.TRIANGLES)
 
 
+    def setupPost(self):
+        trisetup2d = open('PipeGL/trisetup_2d.c').read()
+        gamma = open('ShadersGL/Post/gamma.c').read()
+        gamma = gamma.replace('#define CHROM', '').replace('#define VIGNETTE', '')
+        self.post_prog = self.ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
+
+        self.post_vbo = self.ctx.buffer(TRI.astype('float32').tobytes())
+        self.post_vao = self.ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert', 'in_UV')
+        self.post_prog['tex1'] = 0
+
+        self.post_prog['width'] = self.W
+        self.post_prog['height'] = self.H
+
+        self.post_prog['exposure'] = 1/6.67
+        self.post_prog['tonemap'] = 0
+        self.post_prog['blackPoint'] = 0
+
     def gamma(self, dest: mgl.Framebuffer):
         """Convert linear -> gamma"""
-        return
-##        self.prog.gamma(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
-##                        dest, self.W, self.H,
-##                        g_times_l=True)
+        self.ctx.blend_equation = mgl.FUNC_ADD
+        self.ctx.blend_func = mgl.ONE, mgl.ZERO
+        self.FB.use(location=0)
+
+        self.postBuf.use()
+
+        self.post_vao.render(mgl.TRIANGLES)

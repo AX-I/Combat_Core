@@ -367,9 +367,13 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.FB = self.ctx.texture((self.W, self.H), 3, dtype='f2')
             self.frameBuf = self.ctx.framebuffer(self.FB)
 
+            self.FBO = self.ctx.texture((self.W, self.H), 3, dtype='f1')
+            self.postBuf = self.ctx.framebuffer(self.FBO)
+            self.setupPost()
+
             self.ctx.disable(mgl.DEPTH_TEST)
             self.ctx.enable(mgl.BLEND)
-            f = self.frameBuf
+            f = self.postBuf
         else:
             self.frameBuf = f
         self.frameHost = f
@@ -455,6 +459,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             cl.enqueue_copy(self.cq, self.frameHost, frame)
             frame = self.frameHost
         elif USE_GL:
+            self.gamma(frame)
+
             shp = (self.H, self.W, 3)
             frame = np.frombuffer(self.frameHost.read(), 'uint8').reshape(shp)
         else:
@@ -470,7 +476,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #print('Push', et)
 
         if self.MENUSCREEN != '':
-            self.after(4, self.menuLoop)
+            self.after(3, self.menuLoop)
 
             self.frameNum += 1
 
