@@ -27,6 +27,12 @@ import sys, os
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
+ctx = moderngl.create_standalone_context()
+a = [ctx.info["GL_VENDOR"]]
+b = [[ctx.info["GL_RENDERER"]]]
+GL_INFO = (a, b)
+
+
 def genInfo(write=True):
     if getSettings(False)["Render"] == "GL":
         return genInfo_GL(write)
@@ -56,10 +62,7 @@ If only one device is available try updating its drivers.\n
     return (a, b)
 
 def genInfo_GL(write=True):
-    ctx = moderngl.create_standalone_context()
-    a = [ctx.info["GL_VENDOR"]]
-    b = [[ctx.info["GL_RENDERER"]]]
-    return (a, b)
+    return GL_INFO
 
 
 def getContext():
