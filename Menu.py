@@ -48,16 +48,23 @@ from math import sin
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
-USE_CL = True
+USE_CL = False
+USE_GL = True
 
 if USE_CL:
     import ImgUtilsCL as ImgUtils
+elif USE_GL:
+    import ImgUtilsGL as ImgUtils
 else:
     import ImgUtils
 
-from ImgUtilsCL import CLObject
-import pyopencl as cl
-mf = cl.mem_flags
+if USE_CL:
+    from ImgUtilsCL import CLObject
+    import pyopencl as cl
+    mf = cl.mem_flags
+elif USE_GL:
+    from ImgUtilsGL import GLObject as CLObject
+    import moderngl as mgl
 
 import OpsConv
 BLOCK_SIZE = 128
@@ -204,17 +211,27 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         if PLATFORM == "win32":
             self.DC = win32gui.GetDC(self.d.winfo_id())
 
-        self.ctx = OpsConv.getContext_CL()
-
-        d = self.ctx.devices[0]
-        print("Using", d.name)
-        self.cq = cl.CommandQueue(self.ctx)
 
         resScale = self.H / 600
-        shader = open('Shaders/menu.cl').read()
-        shader = shader.replace('#define cropHeight 3.f',
-                                '#define cropHeight {}f'.format(3*resScale))
-        self.prog = cl.Program(self.ctx, shader).build()
+
+        if USE_CL:
+            self.ctx = OpsConv.getContext_CL()
+
+            d = self.ctx.devices[0]
+            print("Using", d.name)
+            self.cq = cl.CommandQueue(self.ctx)
+
+            shader = open('Shaders/menu.cl').read()
+            shader = shader.replace('#define cropHeight 3.f',
+                                    '#define cropHeight {}f'.format(3*resScale))
+            self.prog = cl.Program(self.ctx, shader).build()
+
+        if USE_GL:
+            self.ctx = mgl.create_standalone_context()
+            print("Using", self.ctx.info['GL_RENDERER'])
+
+            self.cq = None
+
 
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
@@ -346,6 +363,17 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         f = np.zeros((self.H, self.W, 3), dtype='uint16')
         if USE_CL:
             self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
+        elif USE_GL:
+            self.FB = self.ctx.texture((self.W, self.H), 3, dtype='f2')
+            self.frameBuf = self.ctx.framebuffer(self.FB)
+
+            self.FBO = self.ctx.texture((self.W, self.H), 3, dtype='f1')
+            self.postBuf = self.ctx.framebuffer(self.FBO)
+            self.setupPost()
+
+            self.ctx.disable(mgl.DEPTH_TEST)
+            self.ctx.enable(mgl.BLEND)
+            f = self.postBuf
         else:
             self.frameBuf = f
         self.frameHost = f
@@ -389,7 +417,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
-        if not USE_CL: return x
+        if (USE_CL + USE_GL) == 0: return x
         return CLObject(self.ctx, self.cq, name, x)
 
 
@@ -430,6 +458,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
             cl.enqueue_copy(self.cq, self.frameHost, frame)
             frame = self.frameHost
+        elif USE_GL:
+            self.gamma(frame)
+
+            shp = (self.H, self.W, 3)
+            frame = np.frombuffer(self.frameHost.read(), 'uint8').reshape(shp)
         else:
             frame = np.sqrt(frame) * 16
 
@@ -443,7 +476,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #print('Push', et)
 
         if self.MENUSCREEN != '':
-            self.after(4, self.menuLoop)
+            self.after(3, self.menuLoop)
 
             self.frameNum += 1
 

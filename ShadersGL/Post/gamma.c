@@ -3,6 +3,7 @@
 #version 330
 
 #define CHROM
+#define VIGNETTE
 
 uniform sampler2D tex1;
 out vec3 f_color;
@@ -66,9 +67,10 @@ void main() {
   vec3 j = max(vec3(0.f), 8 * exposure * color - blackPoint);
   // now is in [0,1]
 
-  float vignette = dot((tc - center) * wh, (tc - center) * wh);
-
-  j *= 1 - vignette*vignette * 2.5;
+  #ifdef VIGNETTE
+    float vignette = dot((tc - center) * wh, (tc - center) * wh);
+    j *= 1 - vignette*vignette * 2.5;
+  #endif
 
   if (tonemap == 0) {
     // Basic gamma
