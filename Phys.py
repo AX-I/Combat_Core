@@ -32,6 +32,8 @@ def eucDist(a, b):
     return math.sqrt(c)
 def eucLen(a):
     return math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
+def eucLen2(a):
+    return a[0]*a[0] + a[1]*a[1] + a[2]*a[2]
 
 def planeDist(a, n, p):
     return abs((a - p) @ n)
@@ -159,7 +161,7 @@ class BulletCollider(CircleCollider):
                 self.disabled = True
                 self.rb.disabled = True
                 self.rb.pos[:] = 0.
-                self.rb.forces = []
+                self.rb.n_forces = 0
                 self.hc = 0
                 return False
             else:
@@ -175,7 +177,7 @@ class BulletCollider(CircleCollider):
             self.disabled = True
             self.rb.disabled = True
             self.rb.pos[:] = 0.
-            self.rb.forces = []
+            self.rb.n_forces = 0
             return False
 
         try:
@@ -184,7 +186,7 @@ class BulletCollider(CircleCollider):
                 self.disabled = True
                 self.rb.disabled = True
                 self.rb.pos[:] = 0.
-                self.rb.forces = []
+                self.rb.n_forces = 0
                 return False
         except AttributeError: pass
         return True
@@ -343,10 +345,10 @@ class RigidBody:
         else:               self.rotv = np.array(rotvel, dtype="float")
         
         self.el = elasticity
-            
-        self.forces = [[0, (-G * int(usegravity)), 0]]
-        if forces != None:
-            self.forces.extend(forces)
+
+        MAX_N_FORCES = 8
+        self.forces = np.zeros((MAX_N_FORCES, 3), 'float')
+        self.n_forces = 0
 
     def addCollider(self, collObj):
         collObj.rb = self
@@ -354,13 +356,14 @@ class RigidBody:
 
     def update(self, dt, attractors=[]):
         if self.disabled: return
-        self.forces = []
+        self.n_forces = 0
         if not self.noforces:
             for a in attractors:
                 i = attractors[a]
                 diff = (i["pos"] - self.pos)
-                self.forces.append(diff * i["m"] * self.M / np.sum(diff*diff))
-        self.v += np.sum(np.array(self.forces), axis=0) / self.M * dt
+                self.forces[self.n_forces] = diff * (i["m"] / eucLen2(diff))
+                self.n_forces += 1
+            self.v += np.sum(self.forces[:self.n_forces], axis=0) * dt
         
         self.pos += self.v * dt
 
