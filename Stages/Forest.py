@@ -84,9 +84,6 @@ def setupStage(self):
             self.matShaders[self.flameMTL].update(shader='add', noline=1,
                                                   args={'emPow': 4})
             self.vertObjects[self.flameMTL].castShadow = False
-        if 'Sandstone' in f:
-            tm = self.vtextures[self.vtNames[f]] * 0.9
-            self.vtextures[self.vtNames[f]] = tm.astype('uint16')
         if 'SandFloor' in f:
             mat['normal'] = 'sand_floor'
         if '3DRock' in f:

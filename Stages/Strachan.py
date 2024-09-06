@@ -70,7 +70,7 @@ def setupStage(self):
         elif 'Wtest' in f or 'Material' in f or 'GraySt' in f or 'Turq' in f:
             mat['noise'] = 1
         if 'Wtest' in f:
-            self.vtextures[self.vtNames[f]] = (self.vtextures[self.vtNames[f]]*1.2).astype('uint16')
+            pass
             #mat.update({'spec': 0.02, 'roughness': 0.002})
         if "Silver" in f:
             mat.update(shader='metallic', args={'roughness':0.4})

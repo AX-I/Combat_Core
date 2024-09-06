@@ -18,7 +18,7 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-from math import sin, cos, pi, log2, ceil
+from math import sin, cos, pi
 import numpy
 import numpy as np
 import time
@@ -126,25 +126,11 @@ class VertObject:
         if texture in self.viewer.vtNames:
             self.texNum = self.viewer.vtNames[texture]
         else:
-            ti = Image.open(texture).convert("RGBA")
-            if ti.size[0] != ti.size[1]:
-                print("Texture is not square")
-                n = max(ti.size)
-                ti = ti.resize((n,n))
-            if (ti.size[0] & (ti.size[0] - 1)) != 0:
-                print("Texture is not a power of 2, resizing up.")
-                n = 2**ceil(log2(ti.size[0]))
-                ti = ti.resize((n,n))
-            ta = numpy.array(ti.rotate(-90)).astype('float32')
-            if self.cgamma:
-                ta *= ta
-                ta /= 8. # Gamma correction
-            else:
-                ta *= 64
-            ta *= self.texMul
-            self.viewer.vtextures.append(ta.astype("uint16"))
-            self.viewer.vtNames[texture] = len(self.viewer.vtextures) - 1
+            self.viewer.vtNames[texture] = len(self.viewer.vtextures)
             self.texNum = self.viewer.vtNames[texture]
+
+            ta = self.viewer.loadTexture(texture, self.cgamma, self.texMul)
+            self.viewer.vtextures.append(ta)
             
             self.viewer.vertpoints.append([])
             self.viewer.vertnorms.append([])
@@ -488,6 +474,8 @@ class VertModel(VertObject):
         if "subDiv" in ex:
             self.subDiv = ex["subDiv"]
 
+        texMul = ex['texMul'] if ('texMul' in ex) else 1
+
         if 'cache' in ex:
             self.cache = ex['cache']
         else:
@@ -547,6 +535,10 @@ class VertModel(VertObject):
                         elif t[0] == "refl":
                             if cmtl == mtlNum:
                                 refl = t[1]
+                        elif t[0] == 'tex_mul':
+                            if cmtl == mtlNum:
+                                texMul = float(t[1])
+
             if not mc:
                 if cmtl > mtlNum:
                     self.nextMtl = VertModel(*args, filename=filename, size=size,
@@ -570,6 +562,7 @@ class VertModel(VertObject):
             if "useShaders" in ex: ex["useShaders"]["add"] = add
             else: ex["useShaders"] = {"add":add}
             if "mip" in ex: del ex["mip"]
+        ex['texMul'] = texMul
         
         super().__init__(*args, texture=self.mtlTex,
                          **ex)

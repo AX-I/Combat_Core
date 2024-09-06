@@ -21,9 +21,11 @@
 # Random utilities for 3D
 
 from numpy import sqrt, ones_like, array
-from math import sin, cos, pi, asin, acos, log2
-import numexpr as ne
+from math import sin, cos, pi, asin, acos, log2, ceil
 import numpy as np
+
+import multiprocessing as mp
+from PIL import Image
 
 def raySphereIntersect(p, v, c, r):
     m = (c-p) @ v
@@ -72,3 +74,41 @@ def fmtTime(t):
             else '\033[93m' if t<0.02 \
             else '\033[91m'
     return f'{color}{t:.4f}\033[0m'
+
+
+
+def _loader(q_in, q_out, func):
+    # q_in has elements (name, args)
+    while True:
+        a = q_in.get()
+        if a is None: break
+        r = func(*a[1])
+        q_out.put((a[0], r))
+
+class TexLoadManager:
+    def __init__(self, func: callable, n_proc: int):
+        self.P = n_proc
+
+        self.dat = {}
+        self.proc = []
+        self.njobs = 0
+        self.qi = mp.Queue()
+        self.qo = mp.Queue()
+        for i in range(self.P):
+            p = mp.Process(target=_loader, args=(self.qi,self.qo,func))
+            p.start()
+            self.proc.append(p)
+
+    def loadTex(self, tn, *args):
+        self.qi.put((tn, args))
+        self.njobs += 1
+        return self.njobs - 1
+
+    def collectTex(self, texlist):
+        for i in range(self.njobs):
+            r = self.qo.get()
+            texlist[r[0]] = r[1]
+
+    def cleanup(self):
+        for p in self.proc: self.qi.put(None)
+        for p in self.proc: p.join()
