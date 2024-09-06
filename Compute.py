@@ -43,32 +43,23 @@ import ctypes
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-def getTexture(fn):
+def getTexture(fn, cgamma=True, texMul=1):
     ti = Image.open(fn).convert("RGB")
     if ti.size[0] != ti.size[1]:
-        raise ValueError("Texture is not square!")
+        print("Texture is not square")
+        n = max(ti.size)
+        ti = ti.resize((n,n))
     if (ti.size[0] & (ti.size[0] - 1)) != 0:
-        #print("Texture is not a power of 2, resizing up.")
+        print("Texture is not a power of 2, resizing up.")
         n = 2**ceil(log2(ti.size[0]))
         ti = ti.resize((n,n))
-    ta = np.array(ti).astype("float")
-    ta *= 64 * 4
-    np.clip(ta, None, 256*256-1, ta)
-    return np.array(ta.astype("uint16").reshape((-1,3)))
+    ta = np.array(ti.rotate(-90)).astype('float32')
+    if cgamma:  ta *= ta; ta /= 8.
+    else:       ta *= 64
+    ta *= texMul
 
-def getTexture1(fn):
-    """keep 2d"""
-    ti = Image.open(fn).convert("RGB")
-    if ti.size[0] != ti.size[1]:
-        raise ValueError("Texture is not square!")
-    if (ti.size[0] & (ti.size[0] - 1)) != 0:
-        #print("Texture is not a power of 2, resizing up.")
-        n = 2**ceil(log2(ti.size[0]))
-        ti = ti.resize((n,n))
-    ta = np.array(ti).astype("float")
-    ta *= 64 * 4
-    np.clip(ta, None, 256*256-1, ta)
-    return np.array(ta.astype("uint16"))
+    return ta.astype("uint16")
+
 
 class ThreeDBackend:
     def __init__(self, width, height,
@@ -174,6 +165,13 @@ class ThreeDBackend:
 
         self.frontend.start()
 
+
+    def loadTexture(self, tex: str, cgamma: bool, texMul: float):
+        if self.texLoadManager:
+            return self.texLoadManager.loadTex(len(self.vtextures),
+                                               tex, cgamma, texMul)
+        return getTexture(tex, cgamma, texMul)
+
     def enableDOF(self, dofR=24, rad=0.2, di=4):
         pass
 
@@ -202,6 +200,13 @@ class ThreeDBackend:
         self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
 
     def start(self):
+        self.loadStart = time.time()
+
+        if mp.cpu_count() >= 4:
+            self.texLoadManager = TexLoadManager(getTexture, 2)
+        else:
+            self.texLoadManager = None
+
         self.createObjects()
 
         self.vertPoints = []
@@ -245,23 +250,18 @@ class ThreeDBackend:
 
         self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
 
+        if self.texLoadManager is not None:
+            self.texLoadManager.collectTex(self.vtextures)
+            self.texLoadManager.cleanup()
+
         for i in range(len(self.vtextures)):
             tex = self.vtextures[i]
-            if "mip" in self.matShaders[i] and not GL:
-                t = createMips(tex)
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    t[:,0], t[:,1], t[:,2],
-                    mip=tex.shape[0])
-            else:
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    tex[:,:,0], tex[:,:,1], tex[:,:,2],
-                    self.matShaders[i])
+            self.draw.addTextureGroup(
+                self.vertPoints[i].reshape((-1,3)),
+                np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
+                self.vertNorms[i].reshape((-1,3)),
+                tex,
+                self.matShaders[i])
             self.vtextures[i] = np.array([1])
 
         for f in self.matShaders:
@@ -291,6 +291,8 @@ class ThreeDBackend:
         self.customizeFrontend()
 
         self.vMat = np.stack((self.viewVec(),self.vVhorz(),self.vVvert()))
+
+        print('GL loaded in', time.time() - self.loadStart)
 
     def updateRig(self, rig, ct, name, vobj, offset=0):
         bt = rig.b0.getTransform()
