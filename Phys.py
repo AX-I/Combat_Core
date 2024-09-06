@@ -100,11 +100,13 @@ class CircleCollider(Collider):
 
     def collisionImpulse(self, obj):
         if obj.t == "Circle":
-            if eucDist(obj.pos, self.pos) == 0:
+            collDist = eucDist(obj.pos, self.pos)
+            if collDist == 0:
                 self.pos[1] += 0.01
+                collDist += 0.01
 
-            cdir = (obj.pos - self.pos) / eucDist(obj.pos, self.pos)
-            offset = self.r + obj.r - eucDist(obj.pos, self.pos)
+            cdir = (obj.pos - self.pos) / collDist
+            offset = self.r + obj.r - collDist
 
             if self.rb is None:
                 obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
@@ -366,6 +368,15 @@ class RigidBody:
             self.v += np.sum(self.forces[:self.n_forces], axis=0) * dt
         
         self.pos += self.v * dt
+
+    def disable(self):
+        self.disabled = True
+        for c in self.colliders:
+            c.disabled = True
+    def enable(self):
+        self.disabled = False
+        for c in self.colliders:
+            c.disabled = False
 
 def collision(ma, mb, va, vb, ea, eb):
     """1-dimensional -> (vaf, vbf)"""
