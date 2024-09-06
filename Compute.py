@@ -44,7 +44,7 @@ if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 def getTexture(fn, cgamma=True, texMul=1):
-    ti = Image.open(fn).convert("RGBA")
+    ti = Image.open(fn).convert("RGB")
     if ti.size[0] != ti.size[1]:
         print("Texture is not square")
         n = max(ti.size)
@@ -256,21 +256,12 @@ class ThreeDBackend:
 
         for i in range(len(self.vtextures)):
             tex = self.vtextures[i]
-            if "mip" in self.matShaders[i] and not GL:
-                t = createMips(tex)
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    t[:,0], t[:,1], t[:,2],
-                    mip=tex.shape[0])
-            else:
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    tex[:,:,0], tex[:,:,1], tex[:,:,2],
-                    self.matShaders[i])
+            self.draw.addTextureGroup(
+                self.vertPoints[i].reshape((-1,3)),
+                np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
+                self.vertNorms[i].reshape((-1,3)),
+                tex,
+                self.matShaders[i])
             self.vtextures[i] = np.array([1])
 
         for f in self.matShaders:
