@@ -967,6 +967,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.NPLAYERS += 1
         self.players.append(a)
         self.w.addRB(pv)
+        pv.disable()
 
         a["cheight"] = self.rpi[a["num"]][2] + 0.06 * (self.stage == 2)
 
@@ -1163,7 +1164,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                             usegravity=0, elasticity=0.8))
             self.srbs[-1].addCollider(Phys.BulletCollider(0.25, False,
                                                           rb=self.srbs[-1]))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.sphereTrails = []
@@ -1186,7 +1187,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.srbs[-1].addCollider(Phys.BulletCollider(0.5, False,
                                                           rb=self.srbs[-1],
                                                           damage=4))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
 
@@ -1252,7 +1253,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                           rb=self.srbs[-1],
                                                           damage=6,
                                                           explode=True))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.pickups = []
@@ -1278,7 +1279,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                           rb=self.srbs[-1],
                                                           damage=3, hl=0,
                                                           blackHole=True))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.srbs[-1].colliders[0].onHit = lambda x: self.explode(x)
 
             self.w.addRB(self.srbs[-1])
@@ -1444,7 +1445,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["Energy"] += self.COSTS[color]
             return False
 
-        self.srbs[cb].disabled = False
+        self.srbs[cb].enable()
         s = self.bulletSpeed
         if color == "black": s *= 0.66
         d = np.array([cos(a["cr"]), vh, sin(a["cr"])])
@@ -1987,6 +1988,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for xn in a["ctexn"]:
                         self.matShaders[xn] = {'temp': self.matShaders[xn]}
                 a["pv"].pos[:] = -10.
+                a['pv'].disable()
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
@@ -1998,7 +2000,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     g.step()
             elif tn not in actPlayers:
                 a["pv"].pos[:] = -10.
+                a['pv'].disable()
             else:
+                a['pv'].enable()
                 a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0]) \
                               - a['animOffset'] + np.array([0,a['legIKoffset'],0])
                 a["Energy"] += 0.05 * self.frameTime
@@ -2085,7 +2089,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                       (self.srbs[i].pos < self.BORDER[0])).any():
                     self.srbs[i].pos[:] = 0.
                     self.srbs[i].v[:] = 0.
-                    self.srbs[i].disabled = True
+                    self.srbs[i].disable()
 
 
         batch = {}
@@ -2096,7 +2100,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 print("NaN, disable")
                 self.srbs[i].pos[:] = 0.
                 self.srbs[i].v[:] = 0.
-                self.srbs[i].disabled = True
+                self.srbs[i].disable()
             diff = self.srbs[i].pos - lpi[self.lpCount[i]]
             if sum(diff*diff) > 0:
                 if s.texNum not in batch:

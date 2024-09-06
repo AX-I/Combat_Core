@@ -182,6 +182,8 @@ class CLDraw:
 
         self.shaderParams = {'{REFL_LENGTH}':str(self.H)}
 
+        self.batchCache = {}
+
     def reloadShaders(self, **kwargs):
         while True:
             try:
@@ -392,11 +394,16 @@ class CLDraw:
             size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
-            raw = self.VBO[tn].read(size=(mEnd-mStart)*size, offset=mStart*size)
-            dat = np.array(np.frombuffer(raw, 'float32')).reshape((mEnd-mStart, 8))
+            try:
+                dat = self.batchCache[tn]
+            except KeyError:
+                raw = self.VBO[tn].read()
+                dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, 8))
+                self.batchCache[tn] = dat
+
             for i in range(len(tb)):
-                dat[tb[i][1]-mStart:tb[i][2]-mStart,:3] += np.expand_dims(tb[i][0], 0)
-            self.VBO[tn].write(dat, offset=mStart*size)
+                dat[tb[i][1]:tb[i][2],:3] += np.expand_dims(tb[i][0], 0)
+            self.VBO[tn].write(dat[mStart:mEnd], offset=mStart*size)
 
     def translate(self, diff, cStart, cEnd, tn):
         size = 8*4
