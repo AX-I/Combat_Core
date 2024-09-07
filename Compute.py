@@ -221,13 +221,11 @@ class ThreeDBackend:
             del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
 
-        maxuv = max([i.shape[0] for i in self.vertU])
-        Luv = len(self.vertU)
-        pmax = max([ps.N for ps in self.particleSystems]) if len(self.particleSystems) > 0 else 1
-
 
         import OpsConv
-        GL = OpsConv.getSettings(False)["Render"] == "GL"
+        settings = OpsConv.getSettings(False)
+
+        GL = settings["Render"] == "GL"
         self.GL = GL
 
         if GL:
@@ -235,8 +233,7 @@ class ThreeDBackend:
         else:
             import Ops_CL as Ops
 
-        self.draw = Ops.CLDraw(self.skyTex.shape[0],
-                               Luv, self.W, self.H, pmax)
+        self.draw = Ops.CLDraw(self.W, self.H, ires=settings['IRES'], use_fsr=1)
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
 

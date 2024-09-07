@@ -65,15 +65,21 @@ def loadShaders():
 
 loadShaders()
 
+FSR_SUPPORTED = 1
 fsr_frag = makeProgram('Post/fsr.c')
 fsr_frag = fsr_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
 fsr_frag = fsr_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
-ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+try:
+    ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_frag)
+except moderngl.Error:
+    FSR_SUPPORTED = 0
+    print('FSR not supported')
 
 fsr_rcas_frag = makeProgram('Post/fsr_rcas.c')
 fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_a.h"', makeProgram('Post/ffx_a.h'))
 fsr_rcas_frag = fsr_rcas_frag.replace('#include "ffx_fsr1.h"', makeProgram('Post/ffx_fsr1.h'))
-ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
+if FSR_SUPPORTED:
+    ctx.program(vertex_shader=trisetup2d, fragment_shader=fsr_rcas_frag)
 
 ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
@@ -83,12 +89,12 @@ def align34(a):
     return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
 class CLDraw:
-    def __init__(self, size_sky, max_uv, w, h, max_particles):
+    def __init__(self, w, h, ires=1, use_fsr=0):
 
         # Internal resolution for supersampling
-        self.IRES = 0.75
+        self.IRES = ires
 
-        self.USE_FSR = 1
+        self.USE_FSR = use_fsr * FSR_SUPPORTED
         self.ENABLE_FXAA = 1
 
         self.W = np.int32(w * self.IRES)
@@ -214,12 +220,8 @@ class CLDraw:
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
 
-        self.post_prog['width'].write(np.float32(w))
-        self.post_prog['height'].write(np.float32(h))
-
-        if self.USE_FSR:
-            self.post_prog['width'].write(np.float32(self.W))
-            self.post_prog['height'].write(np.float32(self.H))
+        self.post_prog['width'].write(np.float32(self.W))
+        self.post_prog['height'].write(np.float32(self.H))
 
     def setupFSR(self):
         w, h = self.outW, self.outH

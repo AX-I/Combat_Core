@@ -105,8 +105,8 @@ def getSettings(write=True):
     settings = {"Render":"GL",
                 "CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
                 "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1,
-                "Uname":0, "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
-                "AutoRes":0, "Mouse":20}
+                "Uname":"0", "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
+                "AutoRes":0, "Mouse":20, "IRES":0.75}
     c = 0; newFile = False
     try:
         with open(PATH + "Settings.txt") as sf:
@@ -114,8 +114,7 @@ def getSettings(write=True):
                 if not "=" in line: continue
                 k, v = line.replace("\n", "").split("=")
                 if k in settings:
-                    try: settings[k] = int(v)
-                    except: settings[k] = v
+                    settings[k] = type(settings[k])(v)
                     c += 1
     except FileNotFoundError: newFile = True
     if c < len(settings): newFile = True
