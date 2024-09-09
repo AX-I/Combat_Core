@@ -15,20 +15,7 @@ import sys, os
 import OpsConv
 PATH = OpsConv.PATH
 
-if sys.platform == 'darwin':
-    import pyglet
-    pyglet.options["shadow_window"] = False
-    pyglet.options["debug_gl"] = False
-    cfg = pyglet.gl.Config(
-            major_version=3, minor_version=3,
-            forward_compatible=True,
-            depth_size=24, double_buffer=True)
-    w = pyglet.window.Window(width=8, height=8, caption='GL Window',
-                             visible=False, config=cfg)
-    ctx = moderngl.create_context()
-else:
-    ctx = moderngl.create_standalone_context()
-
+ctx = OpsConv.getContext_GL()
 print("Using", ctx.info["GL_RENDERER"])
 
 def makeProgram(f, path="ShadersGL/"):

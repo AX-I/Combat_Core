@@ -227,7 +227,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.prog = cl.Program(self.ctx, shader).build()
 
         if USE_GL:
-            self.ctx = mgl.create_standalone_context()
+            self.ctx = OpsConv.getContext_GL()
             print("Using", self.ctx.info['GL_RENDERER'])
 
             self.cq = None
