@@ -440,6 +440,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def respawnTest(self, sc=None):
         if sc is None: sc = self.selchar
 
+        a = self.players[sc]
+        if a['jump'] > 0: return
+
         if self.restPlayer is None and sc != self.lastRestPlayer:
             self.restPlayer = sc
             self.lastRestPlayer = sc
@@ -447,9 +450,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.setupRestKF(sc)
 
-        a = self.players[sc]
         if 'restAnim' in a: return
-        if a['jump'] > 0: return
 
         self.si.put({'Play':(PATH+'../Sound/Recover.flac', self.volmFX * 0.8,
                              False)})
