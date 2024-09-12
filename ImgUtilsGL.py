@@ -152,8 +152,8 @@ class NPCanvas:
         gamma = gamma.replace('#define CHROM', '').replace('#define VIGNETTE', '')
         self.post_prog = self.ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
 
-        self.post_vbo = self.ctx.buffer(TRI.astype('float32').tobytes())
-        self.post_vao = self.ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert', 'in_UV')
+        self.post_vbo = self.ctx.buffer(TRI[:,:,:3].astype('float32').tobytes())
+        self.post_vao = self.ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
 
         self.post_prog['width'] = self.W
