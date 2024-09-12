@@ -77,6 +77,7 @@ def setupStage(self):
             mat['args']['translucent'] = 1
         if 'Plant' in f:
             mat['alphaMip'] = 2
+            mat['args']['specular'] = 0.7
         if 'Flower' in f or 'ce0a' in f:
             mat['args']['translucent'] = 1
         if 'Flame' in f:

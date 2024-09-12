@@ -648,7 +648,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except:
             regenTargs = True
 
-            with open(PATH+'lib/EyeTracking.txt') as fuv:
+            with open(PATH+'../Models/EyeTracking.txt') as fuv:
                 uvInfo = fuv.readlines()
                 uvInfo = json.loads(''.join(uvInfo[3:]))
                 self.eyeUV = {int(n):uvInfo[n] for n in uvInfo}
@@ -1058,7 +1058,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            scale=1.33, shadow="")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.25,0.5,0.5,0.75)
+        self.extractByUV(t1, t2, 0,0.25,0,0.25)
         self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
 
         self.addPlayer(self.vertObjects[-1])
@@ -1070,7 +1070,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            scale=0.33, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.25,0.5,0.25,0.5)
+        self.extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
         self.matShaders[t2.texNum].update(args={'specular':0.8,
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
@@ -1098,9 +1098,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                filename=mpath+"Test3/Test3J.obj",
                                animated=True, useShaders={'args':{'specular':1}},
                                scale=0.8 / 1.08, shadow="R")
+
+            t1 = self.vertObjects[-1]
+            t2 = self.vertObjects[-3]
+            self.extractByUV(t1, t2, 352/1024,(352+128)/1024,513/1024,(513+256)/1024)
+            self.matShaders[t2.texNum]['nocast'] = 1
+
             self.addPlayer(self.vertObjects[-1])
             self.matShaders[self.vertObjects[-1].nextMtl.texNum].update(
-                shader='sub', args={'emPow':0.6})
+                shader='sub', args={'emPow':0.6}, noline=True)
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Zelda/Ztest4.obj",
@@ -1589,8 +1595,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         else:
             sobj = [(x <= self.players[-1]["obj"].texNum) and \
                     not self.renderMask[x] and \
-                    not ("sub" in self.matShaders[x]) or \
-                    'shadowDynamic' in self.matShaders[x]
+                    not ('nocast' in self.matShaders[x]) and \
+                    not (self.matShaders[x]['shader'] == 'sub') or \
+                    'shadowDynamic' in self.matShaders[x] \
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
