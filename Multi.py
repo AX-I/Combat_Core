@@ -599,7 +599,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             return
 
         p["jump"] = self.frameNum
-        p["pv"].v[1] = 6.0
+        p["pv"].v[1] = 6.0 * 1.1
         p['pv'].forces[0,1] = -9.81
 
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
