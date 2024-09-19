@@ -74,15 +74,13 @@ def updateCloth(self):
                   (self.nCloth+1)**2, 0)
 
     coll = self.players[0]['pv'].colliders[1]
-    cvm = 10/self.frameTime
 
     for s in self.srbs:
         if not s.disabled:
             coll = s.colliders[0]
-            cvm = 2
 
     st = time.perf_counter()
-    self.clothSim.step(g, collider=coll, collVMult=cvm)
+    self.clothSim.step(g, collider=coll, collVMult=2)
     self.clothTime += time.perf_counter() - st
 
     tn = self.cloth.texNum

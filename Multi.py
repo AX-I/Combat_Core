@@ -599,7 +599,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             return
 
         p["jump"] = self.frameNum
-        p["vertVel"] = 6.0
+        p["pv"].v[1] = 6.0 * 1.1
+        p['pv'].forces[0,1] = -9.81
 
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
         self.si.put({"Play":(PATH + jfn, self.volmFX / 3,
@@ -938,7 +939,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         t1.create = lambda: 1
 
     def addPlayer(self, o):
-        pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=False)
+        pv = Phys.RigidBody(64, [0.,0,0], forces=[(0,0,0)], noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
         pv.addCollider(Phys.CircleCollider(0.5, (0,0.51,0), rb=pv))
         pv.colliders[0].prop = "player"
@@ -957,7 +958,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "ctexn":None, "rig":None, "obj":o,
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
-             "jump":-1, "vertVel":0, "fCam": False,
+             "jump":-1, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
              'animOffset':np.zeros(3), 'animTrans':-100,
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
@@ -2251,30 +2252,37 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
             if a["id"] not in actPlayers: continue
+
+            a['pv'].noforces = (a['jump'] < 0)
+
             if a["jump"] > 0:
-                dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
-                a["b1"].offset[1] += dx * 1.2
-                a['pv'].v[1] = dx*1.2 * 0.1
-                a["vertVel"] -= self.frameTime * 9.81
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    # stuck on side of terrain
                     vx,vy = a['pv'].v[::2]
                     if vx*vx+vy*vy > 0.0001:
                         a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
-                        a['pv'].v[::2] *= 0
 
+                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
+                if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    # landed on terrain
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
                     self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
-                                         abs(a['vertVel']) / 8 * self.volmFX / 3,
+                                         abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
                                          (a['b1'].offset[:3], 6, 1))})
 
-                    if abs(a["vertVel"]) > 8:
-                        a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
+                    if abs(a["pv"].v[1]) > 8:
+                        a["pv"].colliders[0].hc += abs(abs(a["pv"].v[1]) - 6)
                         a["isHit"] = self.frameNum
 
-            a['pv'].v *= 0.9
+                    a['pv'].forces[0,1] = 0
+                    a['pv'].v[:] = 0
+
+
+            a['pv'].v[::2] *= 1 - 0.04 * Phys.eucLen(a['pv'].v) * self.frameTime
+
             if Phys.eucLen(a['pv'].v) < 0.01:
                 a['pv'].v *= 0
 
@@ -2298,9 +2306,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     d = sqrt(bx*bx + by*by) / hvel
                     bx /= d; by /= d
 
-                bx *= self.frameTime; by *= self.frameTime
                 if a['moving'] < 0:
                     bx *= 0.9; by *= 0.9
+
+                jbx = bx; jby = by
+                bx *= self.frameTime; by *= self.frameTime
 
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
@@ -2320,14 +2330,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 borderOk = (b1 < fx < b2) and (b1 < fy < b2)
 
                 if (slopeOk or stepOk) and borderOk:
-                    a['pv'].v[:] = np.array([bx, 0, by]) * 0.1
-                    a["b1"].offset[0] += bx
-                    a["b1"].offset[2] += by
                     if a["jump"] <= 0:
+                        a["b1"].offset[0] += bx
+                        a["b1"].offset[2] += by
                         if (navheight - ih) > maxStep:
+                            # fell off terrain
                             a['jump'] = self.frameNum
-                            a['vertVel'] = 0.0
+                            a['pv'].forces[0,1] = -9.81
+                            a['pv'].v[1] = 0.0
+
                     if a["jump"] <= 0:
+                        a['pv'].v[::2] = (jbx, jby)
+
                         self.setYoffset(a)
 
                         if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
@@ -2361,8 +2375,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else:
                     playerStuck = True
 
-                if playerStuck:
-                    a['pv'].v[:] = 0
 
                 if not self.isClient:
                     if a['id'] in self.aiNums:
@@ -2389,7 +2401,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       isFlat=True)
 
             elif a["movingOld"]:
-                a['pv'].v[:] = 0
+                if a['jump'] <= 0:
+                    a['pv'].v[:] = 0
                 a['animTrans'] = CURRTIME
                 a['tempPose'] = a['rig'].exportPoseFlat()
 

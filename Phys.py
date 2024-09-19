@@ -329,9 +329,8 @@ def boundingBox(obj):
                                  [*obj.dim.tolist(), max(obj.h) - min(obj,h)])
 
 class RigidBody:
-    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=None,
+    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=[],
                  drag=0, usegravity=True, elasticity=1, noforces=False):
-        """forces -> python list of vectors"""
         self.colliders = []
         self.wIndex = False
         self.M = float(mass)
@@ -350,7 +349,9 @@ class RigidBody:
 
         MAX_N_FORCES = 8
         self.forces = np.zeros((MAX_N_FORCES, 3), 'float')
-        self.n_forces = 0
+        self.n_forces = len(forces)
+        if forces:
+            self.forces[:self.n_forces] = forces
 
     def addCollider(self, collObj):
         collObj.rb = self
@@ -358,16 +359,18 @@ class RigidBody:
 
     def update(self, dt, attractors=[]):
         if self.disabled: return
-        self.n_forces = 0
+        n_forces = self.n_forces
+        adt = 0
         if not self.noforces:
             for a in attractors:
                 i = attractors[a]
                 diff = (i["pos"] - self.pos)
-                self.forces[self.n_forces] = diff * (i["m"] / eucLen2(diff))
-                self.n_forces += 1
-            self.v += np.sum(self.forces[:self.n_forces], axis=0) * dt
-        
-        self.pos += self.v * dt
+                self.forces[n_forces] = diff * (i["m"] / eucLen2(diff))
+                n_forces += 1
+            adt = np.sum(self.forces[:n_forces], axis=0) * dt
+            self.v += adt
+
+        self.pos += self.v * dt + adt*dt/2
 
     def disable(self):
         self.disabled = True
