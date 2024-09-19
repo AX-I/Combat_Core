@@ -2252,15 +2252,20 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
             if a["id"] not in actPlayers: continue
+
+            a['pv'].noforces = (a['jump'] < 0)
+
             if a["jump"] > 0:
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
-                    # landed on terrain
+                    # stuck on side of terrain
                     vx,vy = a['pv'].v[::2]
                     if vx*vx+vy*vy > 0.0001:
                         a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
-                        a['pv'].v[::2] *= 0
 
+                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
+                if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    # landed on terrain
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
@@ -2273,10 +2278,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["isHit"] = self.frameNum
 
                     a['pv'].forces[0,1] = 0
-                    a['pv'].v[1] = 0
+                    a['pv'].v[:] = 0
 
 
-            a['pv'].v *= 1 - 0.02 * Phys.eucLen(a['pv'].v) * self.frameTime
+            a['pv'].v *= 1 - 0.01 * Phys.eucLen(a['pv'].v) * self.frameTime
             print(np.round(a['pv'].v, 2), end='\r')
 
             if Phys.eucLen(a['pv'].v) < 0.01:
@@ -2302,9 +2307,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     d = sqrt(bx*bx + by*by) / hvel
                     bx /= d; by /= d
 
-                bx *= self.frameTime; by *= self.frameTime
                 if a['moving'] < 0:
                     bx *= 0.9; by *= 0.9
+
+                jbx = bx; jby = by
+                bx *= self.frameTime; by *= self.frameTime
 
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
@@ -2334,7 +2341,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                             a['pv'].v[1] = 0.0
 
                     if a["jump"] <= 0:
-                        a['pv'].v[::2] = (bx / self.frameTime, by / self.frameTime)
+                        a['pv'].v[::2] = (jbx, jby)
 
                         self.setYoffset(a)
 
@@ -2369,8 +2376,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else:
                     playerStuck = True
 
-                if playerStuck:
-                    a['pv'].v[:] = 0
 
                 if not self.isClient:
                     if a['id'] in self.aiNums:
