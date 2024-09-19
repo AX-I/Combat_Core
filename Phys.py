@@ -370,7 +370,7 @@ class RigidBody:
             adt = np.sum(self.forces[:n_forces], axis=0) * dt
             self.v += adt
 
-        self.pos += self.v * dt - adt*dt/2
+        self.pos += self.v * dt + adt*dt/2
 
     def disable(self):
         self.disabled = True
