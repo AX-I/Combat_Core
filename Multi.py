@@ -1997,8 +1997,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a["deathTime"] = time.time()
                     for xn in a["ctexn"]:
                         self.matShaders[xn] = {'temp': self.matShaders[xn]}
-                a["pv"].pos[:] = -10.
-                a['pv'].disable()
+
+                a['pv'].disable(disableKinematics=False)
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
@@ -2070,8 +2070,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         for a in self.players:
-            if self.getHealth(a['id']) <= 0:
-                continue
             if a['id'] not in self.actPlayers:
                 continue
             if a['jump'] > 0:

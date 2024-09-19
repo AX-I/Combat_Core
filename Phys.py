@@ -372,8 +372,8 @@ class RigidBody:
 
         self.pos += self.v * dt + adt*dt/2
 
-    def disable(self):
-        self.disabled = True
+    def disable(self, disableKinematics=True):
+        self.disabled = disableKinematics
         for c in self.colliders:
             c.disabled = True
     def enable(self):
