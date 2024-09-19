@@ -67,22 +67,20 @@ def frameUpdate(self):
                        mip=True)
         self.clothTime = 0
     updateCloth(self)
-    print('Cloth', self.clothTime / self.frameNum, end='\r')
+    #print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
     g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]], dtype='float32'),
                   (self.nCloth+1)**2, 0)
 
     coll = self.players[0]['pv'].colliders[1]
-    cvm = 10/self.frameTime
 
     for s in self.srbs:
         if not s.disabled:
             coll = s.colliders[0]
-            cvm = 2
 
     st = time.perf_counter()
-    self.clothSim.step(g, collider=coll, collVMult=cvm)
+    self.clothSim.step(g, collider=coll, collVMult=2)
     self.clothTime += time.perf_counter() - st
 
     tn = self.cloth.texNum
