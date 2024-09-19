@@ -39,7 +39,7 @@ def setupStage(self):
     self.cloth = self.vertObjects[-1]
     pinned = np.array([0, nCloth, (nCloth+1)*nCloth])
     self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
-                                          self.cloth.getEdges(), 32000,
+                                          self.cloth.getEdges(), 64000,
                                           np.ones((nCloth+1)**2),
                                           pinned, 1/20,
                                           damp=0.002)
@@ -70,17 +70,17 @@ def frameUpdate(self):
     print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
-    g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]], dtype='float32'),
+    g = np.repeat(np.array([[0,-9.81,0.2 * sin(time.time())]], dtype='float32'),
                   (self.nCloth+1)**2, 0)
 
-    coll = self.players[0]['pv'].colliders[1]
+    coll = self.players[self.selchar]['pv'].colliders[1]
 
     for s in self.srbs:
         if not s.disabled:
             coll = s.colliders[0]
 
     st = time.perf_counter()
-    self.clothSim.step(g, collider=coll, collVMult=2)
+    self.clothSim.step(g, collider=coll, collVMult=2, iters=16)
     self.clothTime += time.perf_counter() - st
 
     tn = self.cloth.texNum

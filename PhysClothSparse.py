@@ -68,12 +68,12 @@ class MassSprings:
     self.Ei0 = E[:,0].flatten()
     self.Ei1 = E[:,1].flatten()
 
-  def step(self, fext, collider=None, collVMult=1):
+  def step(self, fext, collider=None, collVMult=1, iters=16):
     Unext = self.Ucur * F32(1.0)
 
     y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
 
-    for x in range(16):
+    for x in range(iters):
       d = Unext[self.Ei1] - Unext[self.Ei0]
       d *= (self.r / np.linalg.norm(d, axis=1))[:,None]
 
