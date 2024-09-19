@@ -2282,7 +2282,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
             a['pv'].v[::2] *= 1 - 0.04 * Phys.eucLen(a['pv'].v) * self.frameTime
-            print(np.round(a['pv'].v, 2), end='\r')
 
             if Phys.eucLen(a['pv'].v) < 0.01:
                 a['pv'].v *= 0

@@ -67,7 +67,7 @@ def frameUpdate(self):
                        mip=True)
         self.clothTime = 0
     updateCloth(self)
-    #print('Cloth', self.clothTime / self.frameNum, end='\r')
+    print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
     g = np.repeat(np.array([[0,-4,0.2 * sin(time.time())]], dtype='float32'),
