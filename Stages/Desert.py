@@ -9,8 +9,7 @@ from VertObjects import VertTerrain, VertPlane
 from TexObjects import TexSkyBox
 
 import Phys
-#import PhysCloth
-import PhysClothSparse as PhysCloth
+import PhysCloth
 
 VIEWER = None
 
