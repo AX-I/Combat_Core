@@ -951,19 +951,14 @@ class CLDraw:
                 **progKwargs
             )
 
-            if shader == 'fog':
-                ra = np.random.rand(64) - 0.5
-                draw['R'].write(ra.astype('float32'))
-
             if 'envFallback' in mtl:
                 draw['useEquiEnv'] = 1
                 draw['equiEnv'] = 6
 
-            if 'roughness' in mtl['args']:
-                try:
-                    ra = np.random.rand(64)
-                    draw['R'].write(ra.astype('float32'))
-                except KeyError: pass
+            try:
+                ra = np.random.rand(64)
+                draw['R'].write(ra.astype('float32'))
+            except KeyError: pass
 
         for arg in mtl['args']:
             try: draw[arg] = mtl['args'][arg]

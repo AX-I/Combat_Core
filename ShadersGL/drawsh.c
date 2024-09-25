@@ -4,8 +4,16 @@
 #define FAR 200.0
 
 #define SBIAS -0.04
-
 #define NBIAS 0.1
+
+// # of PCF taps
+#define SHS 25
+// square root
+#define SHSR 5
+#define SHSOFT1 0.8
+#define SHSOFT2 0.96
+uniform float width;
+uniform float R[64]; // [0,1]
 
 in vec3 v_pos;
 //in vec3 v_color;
@@ -77,6 +85,14 @@ mat2 rot(float t) {
   return mat2(cos(t),-sin(t),sin(t),cos(t));
 }
 
+
+uint rand_xorshift(uint rng_state) {
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
 void main() {
 	float tz = 1.0/depth;
 
@@ -88,21 +104,25 @@ void main() {
 	vec2 sf = sxyz.xy * sScale/2 + 0.5;
 	sf = clamp(sf, 0.0, 1.0) * wS;
 
-	vec2 sxy = floor(sf) / wS;
-	vec2 s10 = floor(sf + vec2(1,0)) / wS;
-	vec2 s01 = floor(sf + vec2(0,1)) / wS;
-	vec2 s11 = floor(sf + vec2(1,1)) / wS;
-	float sr1 = sf.x - sxy.x*wS;
-	float sr2 = sf.y - sxy.y*wS;
-	float si1 = 1-sr1;
-	float si2 = 1-sr2;
+	vec2 sxy;
+	float sr1, sr2;
 
 	float shadow = 0;
-  if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
-    shadow += texture(SM, sxy).r < sz ? si1*si2 : 0.0;
-    shadow += texture(SM, s10).r < sz ? sr1*si2 : 0.0;
-    shadow += texture(SM, s01).r < sz ? si1*sr2 : 0.0;
-    shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0.0;
+
+  vec2 tc = gl_FragCoord.xy;
+
+  uint rng_state = uint(3.1416 * (tc.x + width*tc.y));
+  uint rid1 = rand_xorshift(rng_state) & uint(63);
+  vec2 sf0 = sf;
+
+  for (int j=0; j<SHS; j++) {
+    sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
+    for (int k=0; k<4; k++) {
+      sxy = floor(sf + vec2(k>>1, k&1)) / wS;
+      sr1 = abs(sf.x - sxy.x*wS);
+      sr2 = abs(sf.y - sxy.y*wS);
+      shadow += texture(SM, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
+    }
   }
 
   // Baked shadowmap
@@ -117,22 +137,19 @@ void main() {
 	sz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
 	sf = sxyz.xy * sScale2/2 + 0.5;
 	if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
-	  sf = sf * wS2;
+	  sf *= wS2;
+    sf0 = sf;
 
-	  sxy = floor(sf) / wS2;
-	  s10 = floor(sf + vec2(1,0)) / wS2;
-	  s01 = floor(sf + vec2(0,1)) / wS2;
-	  s11 = floor(sf + vec2(1,1)) / wS2;
-	  sr1 = sf.x - sxy.x*wS2;
-	  sr2 = sf.y - sxy.y*wS2;
-	  si1 = 1-sr1;
-	  si2 = 1-sr2;
-
-	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0.0;
-	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0.0;
-	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0.0;
-	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0.0;
+    for (int j=0; j<SHS; j++) {
+      sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT2 * rot(3.14/2* R[rid1]);
+      for (int k=0; k<4; k++) {
+        sxy = floor(sf + vec2(k>>1, k&1)) / wS2;
+        sr1 = abs(sf.x - sxy.x*wS2);
+        sr2 = abs(sf.y - sxy.y*wS2);
+        shadow += texture(SM2, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
+      }
     }
+  }
 
 	shadow = clamp(shadow, 0, 1);
 

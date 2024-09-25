@@ -35,7 +35,7 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D db;
 
-uniform float R[64];
+uniform float R[64]; // [0,1]
 
 out vec4 f_color;
 
@@ -111,11 +111,11 @@ void main() {
 	rng_state = rand_xorshift(rng_state);
 	uint rid3 = rand_xorshift(rng_state) & uint(63);
 
-	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
+	vec3 rayDir = normalize(Vd + (-Vx * (30*(R[rid2]-0.5f) + cx - wF/2) + Vy * (30*(R[rid3]-0.5f) + cy - hF/2)) / (vscale * hF/2));
 
-  stepDist *= 1 + stepFac * R[rid1] * (1 - 1/stepFac);
+  stepDist *= 1 + stepFac * (R[rid1]-0.5f) * (1 - 1/stepFac);
   stepDist *= 1.5;
-	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
+	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 	vec3 light = vec3(0);
 	float rn = 0;

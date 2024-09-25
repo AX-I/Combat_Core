@@ -353,6 +353,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def reloadShaders(self):
         self.draw.reloadShaders(stage=self.stage)
+        self.rotateLight(self.directionalLights[0]["dir"][1])
         print('Reloaded draw shaders')
 
 
@@ -1360,7 +1361,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":24*sr/2048 * fact})
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
-                                "size":sr, "scale":200*sr/2048})
+                                "size":sr, "scale":160*sr/2048})
 
         print('Textures in', time.time() - self.loadStart)
         self.makeObjects(1)
