@@ -12,9 +12,19 @@
 #define SHSR 5
 #define SHSOFT1 0.8
 #define SHSOFT2 0.96
+uniform float R[64]; // [0,1]
+
+#define SCR_SHADOW
+
+#define RAYCAST_LENGTH 64
+#define RAYCAST_STEP 2
+#define RAYCAST_TARGET_DIST 2.0
+#define RAYCAST_SURFACE_DEPTH 0.2f
+#define RAYCAST_DBIAS 0.05f
 uniform float width;
 uniform float height;
-uniform float R[64]; // [0,1]
+uniform float vscale;
+uniform mat3 rawVM;
 
 uniform sampler2D ssao;
 
@@ -63,6 +73,8 @@ in vec3 v_norm;
 in float depth;
 in vec2 v_UV;
 uniform sampler2D tex1;
+uniform sampler2D db;
+
 
 uniform float translucent;
 
@@ -79,7 +91,6 @@ uniform float specular;
 uniform float roughness;
 uniform vec3 specRimEnvOff;
 
-uniform vec3 VV;
 uniform int useNoise;
 uniform float noiseDist;
 uniform vec3 noisePos;
@@ -153,6 +164,62 @@ void main() {
       }
     }
   }
+  
+    vec2 wh = 1 / vec2(width, height);
+    float wF = width;
+    float hF = height;
+    float sVScale = vscale * hF / 2;
+    
+    vec3 SVd = rawVM[0];
+    vec3 SVx = rawVM[1];
+    vec3 SVy = rawVM[2];
+    vec3 a = v_pos*tz - vpos;
+
+
+  #ifdef SCR_SHADOW
+    vec2 rxy = tc;
+    vec3 target = a - LDir*99;//RAYCAST_TARGET_DIST;
+    float rpz = dot(target, SVd);
+    if (rpz < 0) { // direction is reversed
+      target = a + (-dot(SVd, a) / dot(SVd, LDir) * 0.99) * LDir;
+      rpz = dot(target, SVd);
+    }
+    vec2 rp = vec2(dot(target, SVx) * -sVScale / rpz + wF/2,
+                   dot(target, SVy) * sVScale / rpz + hF/2);
+
+    int hit = 0;
+    vec3 hitPos;
+
+    float dt = max(abs(rp.x - rxy.x), abs(rp.y - rxy.y));
+    int vx = RAYCAST_STEP;
+    float slopex = (rp.x - rxy.x) / dt * vx;
+    float slopey = (rp.y - rxy.y) / dt * vx;
+    float slopez = (1.f/rpz - depth) / dt * vx;
+
+    float sy = tc.y;
+    float sx = tc.x;
+    sz = 1.f/tz;
+    float sd = RAYCAST_SURFACE_DEPTH;
+    int rn = 0;
+
+    for (rn = 0; (hit == 0) && (rn < RAYCAST_LENGTH) &&
+                 (sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF) && (sz > 0);
+         rn += vx) {
+        float currdist = texture(db, vec2(int(sx)+0.5f, int(sy)+0.5f) * wh).r;
+        if ((currdist < 1.f/sz) &&
+            (currdist > 1.f/sz - sd)) {
+
+            hit = (rn > 1) ? 1 : 0;
+            
+            hitPos = currdist * (SVd - vec3((sx-wF/2)/sVScale) * SVx + vec3((sy-hF/2)/sVScale) * SVy);
+        }
+        sx += slopex;
+        sy += slopey;
+        sz += slopez;
+        sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
+    }
+    shadow += hit * max(0.0, (1 - dot(hitPos-a, hitPos-a)));
+  #endif
 
 	shadow = clamp(shadow, 0, 1);
 
@@ -190,7 +257,6 @@ void main() {
 	}
 
   vec3 spec = vec3(0);
-  vec3 a = v_pos*tz - vpos;
   float theta;
 
   float rough = (roughness == 0) ? 0.6 : roughness;

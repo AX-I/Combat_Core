@@ -1182,6 +1182,12 @@ class CLDraw:
                 if 'ignoreShadow' in shaders[i]:
                     self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
 
+                try:
+                    self.DRAW[i]['rawVM'].write(self.rawVM)
+                    self.DRAW[i]['db'] = 1
+                except KeyError:
+                    pass
+
                 vao.render(moderngl.TRIANGLES)
 
 
