@@ -147,7 +147,7 @@ class NPCanvas:
 
 
     def setupPost(self):
-        trisetup2d = open('PipeGL/trisetup_2d.c').read()
+        trisetup2d = open('PipeGL/trisetup2d.c').read()
         gamma = open('ShadersGL/Post/gamma.c').read()
         gamma = gamma.replace('#define CHROM', '').replace('#define VIGNETTE', '')
         self.post_prog = self.ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)

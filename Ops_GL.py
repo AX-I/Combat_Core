@@ -22,19 +22,9 @@ def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
     return t
 
-trisetup = makeProgram("trisetup.c", "PipeGL/")
-trisetupAnim = makeProgram("trisetup_anim.c", "PipeGL/")
-trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
-trisetupOrthoAnim = makeProgram("trisetupOrtho_anim.c", "PipeGL/")
-trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 
-trisetupNorm = makeProgram('trisetup_norm.c', 'PipeGL/')
+TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Norm Wave'
 
-trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
-
-if True: #if sys.platform == 'darwin':
-    trisetup = trisetup.replace('[128]', '[12]')
-    trisetupAnim = trisetupAnim.replace('[128]', '[12]')
 
 
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
@@ -46,6 +36,8 @@ TRANSPARENT_SHADERS = set(
 POST_SHADERS = 'gamma lens FXAA dof ssao'
 
 def loadShaders():
+    for f in TRISETUP_SHADERS.split(' '):
+        globals()[f'trisetup{f}'] = makeProgram(f'trisetup{f}.c', 'PipeGL/').replace('[128]', '[12]')
     for f in DRAW_SHADERS.split(' '):
         globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
     for f in POST_SHADERS.split(' '):
