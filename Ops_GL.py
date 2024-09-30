@@ -630,8 +630,13 @@ class CLDraw:
         self.ssaoProg['vscale'].write(np.float32(self.sScale))
         self.ssaoVao = ctx.vertex_array(self.ssaoProg, self.post_vbo, 'in_vert')
 
+        np.random.seed(0)
         ra = np.random.rand(64)
         self.ssaoProg['R'].write(ra.astype('float32'))
+
+        self.ssaoBUF = ctx.texture((self.W//2, self.H//2), 1, dtype='f1')
+        self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
+
 
     def ssao(self):
         try: _ = self.ssaoProg
@@ -1101,8 +1106,8 @@ class CLDraw:
         if self.doSSAO:
             ctx.disable(moderngl.DEPTH_TEST)
 
-            self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
-            self.POSTFBO.use()
+            self.ssaoFBO.clear(0.0, 0.0, 0.0, 0.0)
+            self.ssaoFBO.use()
             self.ssaoProg['vscale'].write(np.float32(self.sScale))
             self.ssaoProg['texd'] = 1
             self.DBT.use(location=1)
@@ -1115,7 +1120,7 @@ class CLDraw:
         self.fbo.depth_mask = True
 
         if self.doSSAO:
-            self.POSTBUF.use(location=8)
+            self.ssaoBUF.use(location=8)
             self.doSSAO = False
 
         # Opaque

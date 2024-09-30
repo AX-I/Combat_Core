@@ -4,7 +4,9 @@
 #define bias 0.002f
 #define nsamples 16
 
-#define MAX_CONTINUITY 1.f
+#define MAX_CONTINUITY 0.2f
+
+#define DOWNSCALED 2
 
 uniform sampler2D texd;
 uniform float width;
@@ -12,7 +14,7 @@ uniform float height;
 uniform float vscale;
 uniform float R[64];
 
-out vec3 f_color;
+out float f_color;
 
 
 uint rand_xorshift(uint rng_state) {
@@ -27,7 +29,7 @@ void main() {
 	float wF = width;
 	float hF = height;
 
-	vec2 tc = gl_FragCoord.xy;
+	vec2 tc = gl_FragCoord.xy * DOWNSCALED;
 	float cx = tc.x;
 	float cy = tc.y;
 
@@ -105,5 +107,5 @@ void main() {
 
 	ao = clamp(ao*1.25f, 0.f, 1.f);
 
-  f_color = vec3(ao);
+  f_color = ao;
 }
