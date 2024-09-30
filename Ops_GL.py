@@ -999,6 +999,9 @@ class CLDraw:
             draw['aspect'].write(np.float32(self.H/self.W))
         except: pass
 
+        try: draw['ssao'] = 8
+        except KeyError: pass
+
         self.DRAW[i] = draw
 
         self.writeShArgs(i)
@@ -1095,8 +1098,25 @@ class CLDraw:
             self.DRAWZ[i][0].render(moderngl.TRIANGLES)
 
 
+        if self.doSSAO:
+            ctx.disable(moderngl.DEPTH_TEST)
+
+            self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
+            self.POSTFBO.use()
+            self.ssaoProg['vscale'].write(np.float32(self.sScale))
+            self.ssaoProg['texd'] = 1
+            self.DBT.use(location=1)
+
+            self.ssaoVao.render(moderngl.TRIANGLES)
+
+            ctx.enable(moderngl.DEPTH_TEST)
+
         self.fbo.use()
         self.fbo.depth_mask = True
+
+        if self.doSSAO:
+            self.POSTBUF.use(location=8)
+            self.doSSAO = False
 
         # Opaque
         for i in range(len(self.VBO)):
@@ -1133,25 +1153,6 @@ class CLDraw:
 
 
         self.fbo.depth_mask = False
-
-        if self.doSSAO:
-            ctx.disable(moderngl.DEPTH_TEST)
-
-            self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
-            self.POSTFBO.use()
-            self.ssaoProg['vscale'].write(np.float32(self.sScale))
-            self.ssaoProg['tex1'] = 0
-            self.ssaoProg['texd'] = 1
-            self.FB.use(location=0)
-            self.DBT.use(location=1)
-
-            self.ssaoVao.render(moderngl.TRIANGLES)
-
-            # Copy to frame
-            self.blit(self.fbo, self.POSTBUF, self.W, self.H)
-            ctx.enable(moderngl.DEPTH_TEST)
-            self.doSSAO = False
-
         ctx.enable(moderngl.BLEND)
 
         # Transparent

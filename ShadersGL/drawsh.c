@@ -13,7 +13,10 @@
 #define SHSOFT1 0.8
 #define SHSOFT2 0.96
 uniform float width;
+uniform float height;
 uniform float R[64]; // [0,1]
+
+uniform sampler2D ssao;
 
 in vec3 v_pos;
 //in vec3 v_color;
@@ -155,6 +158,7 @@ void main() {
 
 	if (ignoreShadow == 1) shadow = 0;
 
+  float ao = texture(ssao, tc/vec2(width, height)).r;
 
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
@@ -182,7 +186,7 @@ void main() {
     else {light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;}
 
     for (int i = 1; i < lenD; i++) {
-		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
+		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i] * (1 - ao);
 	}
 
   vec3 spec = vec3(0);
@@ -198,7 +202,7 @@ void main() {
     float nd = dot(a, norm);
     vec3 refl = normalize(a - 2 * nd * norm);
     theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
-    spec += specular * (theta * theta * specRimEnv);
+    spec += specular * (theta * theta * specRimEnv) * (1 - ao);
 
 	// Sun specular
 	a = normalize(a);
@@ -223,7 +227,7 @@ void main() {
     }
   }
 
-    light += vertLight;
+    light += vertLight * (1 - ao);
 
     light += highColor;
 
