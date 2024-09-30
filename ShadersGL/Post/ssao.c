@@ -4,7 +4,8 @@
 #define bias 0.002f
 #define nsamples 16
 
-uniform sampler2D tex1;
+#define MAX_CONTINUITY 1.f
+
 uniform sampler2D texd;
 uniform float width;
 uniform float height;
@@ -44,10 +45,10 @@ void main() {
 	float dy = texture(texd, (tc + vec2(0, 1))*wh).r;
 
 	// Use the other side if closer object is in the way
-	if (abs(dx - d) > 1.f) {
+	if (abs(dx - d) > MAX_CONTINUITY) {
 		dx = 2*d - texture(texd, (tc + vec2(-1, 0))*wh).r;
 	}
-	if (abs(dy - d) > 1.f) {
+	if (abs(dy - d) > MAX_CONTINUITY) {
 		dy = 2*d - texture(texd, (tc + vec2(0, -1))*wh).r;
 	}
 
@@ -104,7 +105,5 @@ void main() {
 
 	ao = clamp(ao*1.25f, 0.f, 1.f);
 
-	f_color = (1-ao) * texture(tex1, tc * wh).rgb;
-	//f_color = (1-ao) * (vec3(0.1f) + 0.001f * texture(tex1, tc * wh).rgb);
-
+  f_color = vec3(ao);
 }
