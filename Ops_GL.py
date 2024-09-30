@@ -720,21 +720,18 @@ class CLDraw:
     def setupBlur(self):
         # Temp
         self.POSTBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
-        self.POSTDB = ctx.depth_texture((self.W, self.H))
-        self.POSTFBO = ctx.framebuffer(self.POSTBUF, self.POSTDB)
+        self.POSTFBO = ctx.framebuffer(self.POSTBUF)
 
         # 1st pass
         self.POSTBUF1 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
         self.POSTBUF1.repeat_x = False
         self.POSTBUF1.repeat_y = False
-        self.POSTDB1 = ctx.depth_texture((self.W//2, self.H//2))
-        self.POSTFBO1 = ctx.framebuffer(self.POSTBUF1, self.POSTDB1)
+        self.POSTFBO1 = ctx.framebuffer(self.POSTBUF1)
         # 2nd pass
         self.POSTBUF2 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
         self.POSTBUF2.repeat_x = False
         self.POSTBUF2.repeat_y = False
-        self.POSTDB2 = ctx.depth_texture((self.W//2, self.H//2))
-        self.POSTFBO2 = ctx.framebuffer(self.POSTBUF2, self.POSTDB2)
+        self.POSTFBO2 = ctx.framebuffer(self.POSTBUF2)
 
         self.blurProg1 = ctx.program(vertex_shader=trisetup2d,
             fragment_shader=makeProgram('Post/bloom1.c'))
