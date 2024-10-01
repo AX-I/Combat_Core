@@ -2,11 +2,12 @@
 
 #define radius 1.f
 #define bias 0.002f
-#define nsamples 16
+#define nsamples 32
+#define FALLOFF_DIST 0.5f
 
 #define MAX_CONTINUITY 0.2f
 
-#define DOWNSCALED 2
+#define DOWNSCALED 1
 
 uniform sampler2D texd;
 uniform float width;
@@ -96,7 +97,7 @@ void main() {
 
 			float sampd = texture(texd, vec2(int(sx) + 0.5*sig_x, int(sy) + 0.5*sig_y)*wh).r;
 
-			float disct = clamp(2.f - (d-sampd), 0.f, 1.f);
+			float disct = clamp(2.f - (d-sampd)/FALLOFF_DIST, 0.f, 1.f);
 		    ao += disct * ((sampd < sz - bias) ? 1.f : 0.f);
 
    	    }
