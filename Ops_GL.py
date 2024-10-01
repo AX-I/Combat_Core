@@ -625,10 +625,15 @@ class CLDraw:
     def setupSSAO(self):
         self.ssaoProg = ctx.program(vertex_shader=trisetup2d,
             fragment_shader=ssao)
+        self.ssaoBlur = ctx.program(vertex_shader=trisetup2d,
+            fragment_shader=makeProgram('Post/ssao_blur.c'))
         self.ssaoProg['width'].write(np.float32(self.W))
         self.ssaoProg['height'].write(np.float32(self.H))
+        self.ssaoBlur['width'].write(np.float32(self.W))
+        self.ssaoBlur['height'].write(np.float32(self.H))
         self.ssaoProg['vscale'].write(np.float32(self.sScale))
         self.ssaoVao = ctx.vertex_array(self.ssaoProg, self.post_vbo, 'in_vert')
+        self.ssaoBlurVao = ctx.vertex_array(self.ssaoBlur, self.post_vbo, 'in_vert')
 
         np.random.seed(0)
         ra = np.random.rand(64)
@@ -636,6 +641,9 @@ class CLDraw:
 
         self.ssaoBUF = ctx.texture((self.W//2, self.H//2), 1, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
+
+        self.ssaoBUF2 = ctx.texture((self.W, self.H), 1, dtype='f1')
+        self.ssaoFBO2 = ctx.framebuffer(self.ssaoBUF2)
 
 
     def ssao(self):
@@ -1106,7 +1114,6 @@ class CLDraw:
         if self.doSSAO:
             ctx.disable(moderngl.DEPTH_TEST)
 
-            self.ssaoFBO.clear(0.0, 0.0, 0.0, 0.0)
             self.ssaoFBO.use()
             self.ssaoProg['vscale'].write(np.float32(self.sScale))
             self.ssaoProg['texd'] = 1
@@ -1114,13 +1121,21 @@ class CLDraw:
 
             self.ssaoVao.render(moderngl.TRIANGLES)
 
+            # Blur
+            self.ssaoFBO2.use()
+            self.ssaoBUF.use(location=0)
+            self.ssaoBlur['ssao'] = 0
+            self.ssaoBlur['texd'] = 1
+            self.ssaoBlurVao.render(moderngl.TRIANGLES)
+
+
             ctx.enable(moderngl.DEPTH_TEST)
 
         self.fbo.use()
         self.fbo.depth_mask = True
 
         if self.doSSAO:
-            self.ssaoBUF.use(location=8)
+            self.ssaoBUF2.use(location=8)
             self.doSSAO = False
 
         # Opaque
