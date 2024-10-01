@@ -209,7 +209,11 @@ class CLDraw:
     def setupPost(self):
         w, h = self.outW, self.outH
 
-        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
+        g1 = gamma
+        if not (self.USE_FSR or self.ENABLE_FXAA):
+            g1 = gamma.replace('#define IRES 1.0', f'#define IRES {self.IRES}')
+
+        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=g1)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
 

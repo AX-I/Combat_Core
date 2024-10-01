@@ -5,6 +5,8 @@
 #define CHROM
 #define VIGNETTE
 
+#define IRES 1.0
+
 uniform sampler2D tex1;
 out vec3 f_color;
 
@@ -48,7 +50,7 @@ void main() {
 	vec2 wh = 1 / vec2(width, height);
   vec2 center = vec2(width, height)/2;
 
-	vec2 tc = gl_FragCoord.xy;
+	vec2 tc = gl_FragCoord.xy * IRES;
 
 	// For VR mode
 	//tc.y = height - tc.y;
