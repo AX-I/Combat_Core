@@ -7,7 +7,7 @@
 
 #define MAX_CONTINUITY 0.2f
 
-#define DOWNSCALED 1
+#define DOWNSCALED {DOWNSCALED}
 
 uniform sampler2D texd;
 uniform float width;

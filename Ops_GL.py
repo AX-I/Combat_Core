@@ -181,6 +181,8 @@ class CLDraw:
 
         self.batchCache = {}
 
+        self.AOscale = 1
+
     def reloadShaders(self, **kwargs):
         while True:
             try:
@@ -625,10 +627,16 @@ class CLDraw:
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def setupSSAO(self):
+        AOscale = int(self.AOscale)
+        print('AOscale', AOscale)
+        self.AOscale = 2 / self.AOscale
+
+        ssao_blur = makeProgram('Post/ssao_blur.c')
+
         self.ssaoProg = ctx.program(vertex_shader=trisetup2d,
-            fragment_shader=ssao)
+            fragment_shader=ssao.replace('{DOWNSCALED}', f'{AOscale}'))
         self.ssaoBlur = ctx.program(vertex_shader=trisetup2d,
-            fragment_shader=makeProgram('Post/ssao_blur.c'))
+            fragment_shader=ssao_blur.replace('{SCALEK}', f'{AOscale}'))
         self.ssaoProg['width'].write(np.float32(self.W))
         self.ssaoProg['height'].write(np.float32(self.H))
         self.ssaoBlur['width'].write(np.float32(self.W))
@@ -641,7 +649,7 @@ class CLDraw:
         ra = np.random.rand(64)
         self.ssaoProg['R'].write(ra.astype('float32'))
 
-        self.ssaoBUF = ctx.texture((self.W, self.H), 1, dtype='f1')
+        self.ssaoBUF = ctx.texture((self.W//AOscale, self.H//AOscale), 1, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
 
         self.ssaoBUF2 = ctx.texture((self.W, self.H), 1, dtype='f1')

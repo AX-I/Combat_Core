@@ -5,7 +5,7 @@
 #define MAX_CONTINUITY 0.2f
 
 #define DOWNSCALED 1
-#define SCALEK 1
+#define SCALEK {SCALEK}
 
 uniform sampler2D ssao;
 uniform sampler2D texd;
