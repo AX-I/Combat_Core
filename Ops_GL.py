@@ -121,6 +121,8 @@ class CLDraw:
 
         # Readable depth buffer
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
+        self.DBT.repeat_x = False
+        self.DBT.repeat_y = False
         temp = ctx.depth_texture((self.W, self.H))
         self.fboZ = ctx.framebuffer((self.DBT,), temp)
 
@@ -639,17 +641,19 @@ class CLDraw:
         ra = np.random.rand(64)
         self.ssaoProg['R'].write(ra.astype('float32'))
 
-        self.ssaoBUF = ctx.texture((self.W//2, self.H//2), 1, dtype='f1')
+        self.ssaoBUF = ctx.texture((self.W, self.H), 1, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
 
         self.ssaoBUF2 = ctx.texture((self.W, self.H), 1, dtype='f1')
         self.ssaoFBO2 = ctx.framebuffer(self.ssaoBUF2)
 
 
-    def ssao(self):
+    def ssao(self, doSSAO):
         try: _ = self.ssaoProg
         except: self.setupSSAO()
-        self.doSSAO = True
+        self.doSSAO = doSSAO
+        if not self.doSSAO:
+            self.ssaoFBO2.clear(0)
 
     def setupDoF(self):
         self.dofProg = ctx.program(vertex_shader=trisetup2d,
@@ -1136,7 +1140,7 @@ class CLDraw:
 
         if self.doSSAO:
             self.ssaoBUF2.use(location=8)
-            self.doSSAO = False
+
 
         # Opaque
         for i in range(len(self.VBO)):

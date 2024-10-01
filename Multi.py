@@ -569,7 +569,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.tonemap = tm[tm.index(self.tonemap) - 1]
 
     def tgMB(self): self.doMB = not self.doMB
-    def tgAO(self): self.doSSAO = not self.doSSAO
+    def tgAO(self):
+        self.doSSAO = not self.doSSAO
+        self.draw.ssao(self.doSSAO)
     def foc1(self):
         self.exposure *= 1.1
         print(self.exposure)
@@ -1379,9 +1381,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         try: self.draw.applyLens(self.draw.lensTn)
         except AttributeError: pass
-
-        if self.doSSAO:
-            self.draw.ssao()
 
         if self.frameNum > 1:
             if self.doMB:
