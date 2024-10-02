@@ -17,11 +17,12 @@ uniform float R[64]; // [0,1]
 #define SCR_SHADOW
 #define SCR_SOFT
 
-#define RAYCAST_LENGTH 64
+#define RAYCAST_LENGTH 128
 #define RAYCAST_STEP 2
 #define RAYCAST_TARGET_DIST 99.0
 #define RAYCAST_SURFACE_DEPTH 0.f
-#define RAYCAST_DBIAS 0.02f
+#define RAYCAST_DBIAS 0.2f
+#define RAYCAST_FADE_DIST 2.f
 uniform float width;
 uniform float height;
 uniform float vscale;
@@ -180,14 +181,27 @@ void main() {
     vec3 a = v_pos*tz - vpos;
 
 
+    int idP = 0;
   #ifdef SCR_SHADOW
+    float maxP = 0;
+    for (int i = 0; i < lenP; i++) {
+      vec3 pl = v_pos*tz - PPos[i];
+      float curP = dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * dot(PInt[i], vec3(0.2126f, 0.7152f, 0.0722f));
+      if (curP > maxP) {
+        maxP = curP; idP = i;
+      }
+    }
+
     vec2 rxy = tc;
+
+    // vec3 PxDir = LDir;
+    vec3 PxDir = normalize(a - (PPos[idP]-vpos));
     #ifdef SCR_SOFT
-      vec3 LDirTG1 = normalize(cross(LDir, vec3(1,0,0)));
-      vec3 LDirTG2 = normalize(cross(LDir, LDirTG1));
-      vec3 LDirSample = LDir + 0.1 * LDirTG1 * R[rid1] + 0.1 * LDirTG2 * R[rid2];
+      vec3 LDirTG1 = normalize(cross(PxDir, vec3(1,0,0)));
+      vec3 LDirTG2 = normalize(cross(PxDir, LDirTG1));
+      vec3 LDirSample = PxDir + 0.1 * LDirTG1 * R[rid1] + 0.1 * LDirTG2 * R[rid2];
     #else
-      vec3 LDirSample = LDir;
+      vec3 LDirSample = PxDir;
     #endif
     vec3 target = a - LDirSample*RAYCAST_TARGET_DIST;
     float rpz = dot(target, SVd);
@@ -230,7 +244,9 @@ void main() {
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
     }
     float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
-    shadow += hit * max(0.0, (1 - dot(hitPos-a, hitPos-a))) * shfact;
+    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - dot(hitPos-a, hitPos-a))) * shfact;
+  #else
+    float pxShadow = 0;
   #endif
 
 	shadow = clamp(shadow, 0, 1);
@@ -293,15 +309,16 @@ void main() {
 
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 
-
+  int pxFact;
   for (int i = 0; i < lenP; i++) {
     vec3 pl = v_pos * tz - PPos[i];
+    pxFact = (i == idP ? 1 : 0);
     if (dot(norm, pl) > 0.0) {
-	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
+	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i] * (1- pxShadow*pxFact);
 
       vec3 h = normalize(normalize(pl) + a);
       theta = max(0.f, dot(h,norm));
-      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl));
+      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl)) * (1- pxShadow*pxFact);
     }
   }
 
