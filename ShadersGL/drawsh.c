@@ -69,6 +69,7 @@ uniform vec3 highMult;
 out vec4 f_color;
 
 in vec3 v_norm;
+flat in vec3 v_gs_norm;
 
 in float depth;
 in vec2 v_UV;
@@ -218,7 +219,8 @@ void main() {
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
     }
-    shadow += hit * max(0.0, (1 - dot(hitPos-a, hitPos-a)));
+    float shfact = ((dot(LDir, v_gs_norm) <= 0.04) && (dot(LDir, norm) > 0)) ? 0 : 1;
+    shadow += hit * max(0.0, (1 - dot(hitPos-a, hitPos-a))) * shfact;
   #endif
 
 	shadow = clamp(shadow, 0, 1);

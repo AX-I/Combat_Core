@@ -34,6 +34,7 @@ out VS_OUT_NORM {
   float v_depth;
   vec3 v_pos;
   vec2 v_UV;
+  vec3 v_norm;
 } vout_norm;
 
 
@@ -50,9 +51,10 @@ void main() {
 	float depth = 1.0 / pos.z;
 
     vout_norm.v_depth = depth;
-    vout_norm.v_pos = in_vert;
+    vout_norm.v_pos = in_vert * depth;
 
     vout_norm.v_UV = tmp_UV * depth;
+    vout_norm.v_norm = in_norm * depth;
 	  //v_norm = in_norm * depth;
 
     pos.xy /= abs(pos.z);

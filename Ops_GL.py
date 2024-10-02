@@ -934,7 +934,7 @@ class CLDraw:
         elif '2d' in mtl:
             ts = trisetup2d
         else:
-            ts = trisetup
+            ts = trisetupNorm
 
         p = self.VBO[i]
 
@@ -955,13 +955,11 @@ class CLDraw:
                 prog = prog.replace(sp, self.shaderParams[sp])
 
             progKwargs = {}
+
+            progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
             if 'calcNorm' in mtl:
-                progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
-                ts = trisetupNorm
-                prog = prog.replace('vec3 norm = normalize(v_norm)',
-                                    'vec3 norm = normalize(v_gs_norm)')
-                prog = prog.replace('in vec3 v_norm',
-                                    'in vec3 v_gs_norm')
+                prog = prog.replace('vec3 norm = normalize(v_norm',
+                                    'vec3 norm = normalize(v_gs_norm')
 
             draw = ctx.program(
                 vertex_shader=ts,
