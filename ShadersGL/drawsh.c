@@ -15,12 +15,13 @@
 uniform float R[64]; // [0,1]
 
 #define SCR_SHADOW
+#define SCR_SOFT
 
 #define RAYCAST_LENGTH 64
 #define RAYCAST_STEP 2
-#define RAYCAST_TARGET_DIST 2.0
-#define RAYCAST_SURFACE_DEPTH 0.2f
-#define RAYCAST_DBIAS 0.05f
+#define RAYCAST_TARGET_DIST 99.0
+#define RAYCAST_SURFACE_DEPTH 0.f
+#define RAYCAST_DBIAS 0.02f
 uniform float width;
 uniform float height;
 uniform float vscale;
@@ -128,6 +129,8 @@ void main() {
 
   uint rng_state = uint(3.1416 * (tc.x + width*tc.y));
   uint rid1 = rand_xorshift(rng_state) & uint(63);
+  rng_state = rand_xorshift(rng_state);
+  uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf;
 
   for (int j=0; j<SHS; j++) {
@@ -179,10 +182,17 @@ void main() {
 
   #ifdef SCR_SHADOW
     vec2 rxy = tc;
-    vec3 target = a - LDir*99;//RAYCAST_TARGET_DIST;
+    #ifdef SCR_SOFT
+      vec3 LDirTG1 = normalize(cross(LDir, vec3(1,0,0)));
+      vec3 LDirTG2 = normalize(cross(LDir, LDirTG1));
+      vec3 LDirSample = LDir + 0.1 * LDirTG1 * R[rid1] + 0.1 * LDirTG2 * R[rid2];
+    #else
+      vec3 LDirSample = LDir;
+    #endif
+    vec3 target = a - LDirSample*RAYCAST_TARGET_DIST;
     float rpz = dot(target, SVd);
     if (rpz < 0) { // direction is reversed
-      target = a + (-dot(SVd, a) / dot(SVd, LDir) * 0.99) * LDir;
+      target = a + (-dot(SVd, a) / dot(SVd, LDirSample) * 0.99) * LDirSample;
       rpz = dot(target, SVd);
     }
     vec2 rp = vec2(dot(target, SVx) * -sVScale / rpz + wF/2,
@@ -210,7 +220,7 @@ void main() {
         if ((currdist < 1.f/sz) &&
             (currdist > 1.f/sz - sd)) {
 
-            hit = (rn > 1) ? 1 : 0;
+            hit = (rn > 2) ? 1 : 0;
             
             hitPos = currdist * (SVd - vec3((sx-wF/2)/sVScale) * SVx + vec3((sy-hF/2)/sVScale) * SVy);
         }
@@ -219,7 +229,7 @@ void main() {
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
     }
-    float shfact = ((dot(LDir, v_gs_norm) <= 0.04) && (dot(LDir, norm) > 0)) ? 0 : 1;
+    float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
     shadow += hit * max(0.0, (1 - dot(hitPos-a, hitPos-a))) * shfact;
   #endif
 
