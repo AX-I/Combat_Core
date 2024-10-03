@@ -35,6 +35,7 @@ out VS_OUT_NORM {
   vec3 v_pos;
   vec2 v_UV;
   vec3 v_norm;
+  vec3 vertLight;
 } vout_norm;
 
 
@@ -93,5 +94,6 @@ void main() {
 
 
     vertLight = light;
+    vout_norm.vertLight = light;
 
 }
