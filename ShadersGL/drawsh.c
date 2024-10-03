@@ -258,7 +258,7 @@ void main() {
 
 	if (ignoreShadow == 1) shadow = 0;
 
-  float ao = texture(ssao, tc/vec2(width, height)).r;
+  float ao = 1 - texture(ssao, tc/vec2(width, height)).r;
 
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
@@ -286,7 +286,7 @@ void main() {
     else {light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;}
 
     for (int i = 1; i < lenD; i++) {
-		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i] * (1 - ao);
+		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i] * ao;
 	}
 
   vec3 spec = vec3(0);
@@ -301,7 +301,7 @@ void main() {
     float nd = dot(a, norm);
     vec3 refl = normalize(a - 2 * nd * norm);
     theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
-    spec += specular * (theta * theta * specRimEnv) * (1 - ao);
+    spec += specular * (theta * theta * specRimEnv) * ao;
 
 	// Sun specular
 	a = normalize(a);
@@ -314,20 +314,20 @@ void main() {
 
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 
-  int pxFact;
+  float pxFact;
   for (int i = 0; i < lenP; i++) {
     vec3 pl = v_pos * tz - PPos[i];
-    pxFact = (i == idP ? 1 : 0);
+    pxFact = (i == idP ? 1-pxShadow : ao);
     if (dot(norm, pl) > 0.0) {
-	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i] * (1- pxShadow*pxFact);
+	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i] * pxFact;
 
       vec3 h = normalize(normalize(pl) + a);
       theta = max(0.f, dot(h,norm));
-      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl)) * (1- pxShadow*pxFact);
+      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl)) * pxFact;
     }
   }
 
-    light += vertLight * (1 - ao);
+    light += vertLight * ao;
 
     light += highColor;
 
