@@ -195,13 +195,13 @@ void main() {
     vec2 rxy = tc;
 
     // vec3 PxDir = LDir;
-    vec3 PxDir = normalize(a - (PPos[idP]-vpos));
+    vec3 PxDir = a - (PPos[idP]-vpos);
     #ifdef SCR_SOFT
       vec3 LDirTG1 = normalize(cross(PxDir, vec3(1,0,0)));
       vec3 LDirTG2 = normalize(cross(PxDir, LDirTG1));
-      vec3 LDirSample = PxDir + 0.1 * LDirTG1 * R[rid1] + 0.1 * LDirTG2 * R[rid2];
+      vec3 LDirSample = normalize(PxDir + 0.2 * LDirTG1 * (R[rid1]-0.5) + 0.2 * LDirTG2 * (R[rid2]-0.5));
     #else
-      vec3 LDirSample = PxDir;
+      vec3 LDirSample = normalize(PxDir);
     #endif
     vec3 target = a - LDirSample*RAYCAST_TARGET_DIST;
     float rpz = dot(target, SVd);
