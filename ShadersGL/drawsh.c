@@ -18,7 +18,7 @@ uniform float R[64]; // [0,1]
 #define SCR_SOFT
 
 #define RAYCAST_LENGTH 128
-#define RAYCAST_STEP 2
+#define RAYCAST_STEP 4
 #define RAYCAST_TARGET_DIST 99.0
 #define RAYCAST_SURFACE_DEPTH 0.f
 #define RAYCAST_DBIAS 0.2f
@@ -226,6 +226,11 @@ void main() {
     sz = 1.f/tz;
     float sd = RAYCAST_SURFACE_DEPTH;
     int rn = 0;
+
+    int dither = int(RAYCAST_STEP * 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1)));
+    sx += slopex * dither / vx;
+    sy += slopey * dither / vx;
+    sz += slopez * dither / vx;
 
     for (rn = 0; (hit == 0) && (rn < RAYCAST_LENGTH) &&
                  (sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF) && (sz > 0);
