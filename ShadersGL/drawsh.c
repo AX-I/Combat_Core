@@ -134,7 +134,8 @@ void main() {
   uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf;
 
-  for (int j=0; j<SHS; j++) {
+  if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
+   for (int j=0; j<SHS; j++) {
     sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
     for (int k=0; k<4; k++) {
       sxy = floor(sf + vec2(k>>1, k&1)) / wS;
@@ -142,13 +143,14 @@ void main() {
       sr2 = abs(sf.y - sxy.y*wS);
       shadow += texture(SM, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
     }
+   }
   }
 
   // Baked shadowmap
   if (wS_im > 0) {
     sf = sxyz.xy * sScale/2 + 0.5;
     sf = clamp(sf, 0.0, 1.0);
-    shadow += 1.0 - texture(SM_im, sf).r;
+    shadow = max(shadow, 1.0 - texture(SM_im, sf).r);
   }
 
 
