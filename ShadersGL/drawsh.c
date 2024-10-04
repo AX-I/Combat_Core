@@ -22,7 +22,7 @@ uniform float R[64]; // [0,1]
 #define RAYCAST_TARGET_DIST 99.0
 #define RAYCAST_SURFACE_DEPTH 0.f
 #define RAYCAST_DBIAS 0.2f
-#define RAYCAST_FADE_DIST 2.f
+#define RAYCAST_FADE_DIST 4.f
 uniform float width;
 uniform float height;
 uniform float vscale;
