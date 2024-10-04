@@ -15,14 +15,7 @@
 uniform float R[64]; // [0,1]
 
 #define SCR_SHADOW
-#define SCR_SOFT
 
-#define RAYCAST_LENGTH 128
-#define RAYCAST_STEP 4
-#define RAYCAST_TARGET_DIST 99.0
-#define RAYCAST_SURFACE_DEPTH 0.f
-#define RAYCAST_DBIAS 0.2f
-#define RAYCAST_FADE_DIST 2.f
 uniform float width;
 uniform float height;
 uniform float vscale;
@@ -184,83 +177,18 @@ void main() {
 
 
     int idP = 0;
-  #ifdef SCR_SHADOW
-    float maxP = 0;
-    for (int i = 0; i < lenP; i++) {
-      vec3 pl = v_pos*tz - PPos[i];
-      float curP = dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * dot(PInt[i], vec3(0.2126f, 0.7152f, 0.0722f));
-      if (curP > maxP) {
-        maxP = curP; idP = i;
-      }
-    }
-
-    vec2 rxy = tc;
-
-    // vec3 PxDir = LDir;
-    vec3 PxDir = a - (PPos[idP]-vpos);
-    #ifdef SCR_SOFT
-      vec3 LDirTG1 = normalize(cross(PxDir, vec3(1,0,0)));
-      vec3 LDirTG2 = normalize(cross(PxDir, LDirTG1));
-      vec3 LDirSample = normalize(PxDir + 0.2 * LDirTG1 * (R[rid1]-0.5) + 0.2 * LDirTG2 * (R[rid2]-0.5));
-    #else
-      vec3 LDirSample = normalize(PxDir);
-    #endif
-    vec3 target = a - LDirSample*RAYCAST_TARGET_DIST;
-    float rpz = dot(target, SVd);
-    if (rpz < 0) { // direction is reversed
-      target = a + (-dot(SVd, a) / dot(SVd, LDirSample) * 0.99) * LDirSample;
-      rpz = dot(target, SVd);
-    }
-    vec2 rp = vec2(dot(target, SVx) * -sVScale / rpz + wF/2,
-                   dot(target, SVy) * sVScale / rpz + hF/2);
-
-    int hit = 0;
-    vec3 hitPos;
-
-    float dt = max(abs(rp.x - rxy.x), abs(rp.y - rxy.y));
-    int vx = RAYCAST_STEP;
-    float slopex = (rp.x - rxy.x) / dt * vx;
-    float slopey = (rp.y - rxy.y) / dt * vx;
-    float slopez = (1.f/rpz - depth) / dt * vx;
-
-    float sy = tc.y;
-    float sx = tc.x;
-    sz = 1.f/tz;
-    float sd = RAYCAST_SURFACE_DEPTH;
-    int rn = 0;
-
-    int dither = int(RAYCAST_STEP * 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1)));
-    sx += slopex * dither / vx;
-    sy += slopey * dither / vx;
-    sz += slopez * dither / vx;
-
-    for (rn = 0; (hit == 0) && (rn < RAYCAST_LENGTH) &&
-                 (sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF) && (sz > 0);
-         rn += vx) {
-        float currdist = texture(db, vec2(int(sx)+0.5f, int(sy)+0.5f) * wh).r;
-        if ((currdist < 1.f/sz) &&
-            (currdist > 1.f/sz - sd)) {
-
-            hit = (rn > 2) ? 1 : 0;
-            
-            hitPos = currdist * (SVd - vec3((sx-wF/2)/sVScale) * SVx + vec3((sy-hF/2)/sVScale) * SVy);
-        }
-        sx += slopex;
-        sy += slopey;
-        sz += slopez;
-        sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
-    }
-    float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
-    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - dot(hitPos-a, hitPos-a))) * shfact;
-  #else
     float pxShadow = 0;
+  #ifdef SCR_SHADOW
+    float shfact = ((dot(LDir, v_gs_norm) <= 0.04) && (dot(LDir, norm) > 0)) ? 0 : 1;
+    pxShadow = texture(ssao, tc*wh).g * shfact;
+    idP = int(texture(ssao, tc*wh).b * 16);
   #endif
 
 	shadow = clamp(shadow, 0, 1);
 
 	if (ignoreShadow == 1) shadow = 0;
 
-  float ao = 1 - texture(ssao, tc/vec2(width, height)).r;
+  float ao = 1 - texture(ssao, tc*wh).r;
 
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);

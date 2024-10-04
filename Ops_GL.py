@@ -377,6 +377,13 @@ class CLDraw:
             except KeyError:
                 pass
 
+        try:
+            self.ssaoProg['PInt'].write(self.PInt.tobytes())
+            self.ssaoProg['PPos'].write(self.PPos.tobytes())
+            self.ssaoProg['lenP'] = lp
+        except (AttributeError, KeyError):
+            pass
+
     def translateBatch(self, batch: dict):
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
@@ -645,10 +652,10 @@ class CLDraw:
         ra = np.random.rand(64)
         self.ssaoProg['R'].write(ra.astype('float32'))
 
-        self.ssaoBUF = ctx.texture((self.W//AOscale, self.H//AOscale), 1, dtype='f1')
+        self.ssaoBUF = ctx.texture((self.W//AOscale, self.H//AOscale), 3, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
 
-        self.ssaoBUF2 = ctx.texture((self.W, self.H), 1, dtype='f1')
+        self.ssaoBUF2 = ctx.texture((self.W, self.H), 3, dtype='f1')
         self.ssaoFBO2 = ctx.framebuffer(self.ssaoBUF2)
 
 
@@ -1121,6 +1128,9 @@ class CLDraw:
             self.ssaoProg['vscale'].write(np.float32(self.sScale))
             self.ssaoProg['texd'] = 1
             self.DBT.use(location=1)
+
+            self.ssaoProg['vpos'].write(self.vc)
+            self.ssaoProg['rawVM'].write(self.rawVM)
 
             self.ssaoVao.render(moderngl.TRIANGLES)
 

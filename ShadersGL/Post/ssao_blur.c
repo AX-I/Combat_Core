@@ -12,7 +12,7 @@ uniform sampler2D texd;
 uniform float width;
 uniform float height;
 
-out float f_color;
+out vec3 f_color;
 
 
 void main() {
@@ -54,5 +54,5 @@ void main() {
 
 	ao /= nsamples;
 
-  f_color = ao;
+  f_color = vec3(ao, texture(ssao, tc*wh).gb);
 }
