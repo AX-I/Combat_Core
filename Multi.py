@@ -222,6 +222,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.tonemap = 'aces'
         self.doSSAO = False
+        self.doScrSh = False
         self.showDebug = False
         self.doMB = True
 
@@ -277,6 +278,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("g", self.foc1)
         self.bindKey("G", self.foc2)
         self.bindKey("h", self.tgAO)
+        self.bindKey("H", self.tgScrSh)
+
         self.bindKey("n", self.tgDebug)
         self.bindKey("y", self.tgMB)
         self.bindKey('t', self.tgTM1)
@@ -572,6 +575,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def tgAO(self):
         self.doSSAO = not self.doSSAO
         self.draw.ssao(self.doSSAO)
+    def tgScrSh(self):
+        self.doScrSh = not self.doScrSh
+        s = '#define SCR_SHADOW'
+        self.draw.shaderParams[s] = s * self.doScrSh
+        self.reloadShaders()
     def foc1(self):
         self.exposure *= 1.1
         print(self.exposure)

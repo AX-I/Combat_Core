@@ -169,7 +169,8 @@ class CLDraw:
 
         self.stTime = time.time()
 
-        self.shaderParams = {'{REFL_LENGTH}':str(self.H)}
+        self.shaderParams = {'{REFL_LENGTH}':str(self.H),
+                             '#define SCR_SHADOW':''}
 
         self.batchCache = {}
 
