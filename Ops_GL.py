@@ -1028,7 +1028,11 @@ class CLDraw:
                 [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
                  (self.BN[i], '1f /v', 'boneNum')])
         else:
-            vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+            try:
+                vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+            except KeyError:
+                vao = ctx.vertex_array(draw,
+                    [(p, '3f 3x4 2f /v', 'in_vert', 'in_UV')])
 
         self.oldShaders[i] = dict(mtl)
 
