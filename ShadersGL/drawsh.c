@@ -250,6 +250,9 @@ void main() {
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
     }
+
+    vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
+
     float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
     float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - dot(hitPos-a, hitPos-a))) * shfact;
   #else

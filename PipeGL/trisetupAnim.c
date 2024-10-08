@@ -41,13 +41,6 @@ uniform int stage;
 
 out float depth;
 
-out VS_OUT_NORM {
-  float v_depth;
-  vec3 v_pos;
-  vec2 v_UV;
-  vec3 v_norm;
-  vec3 vertLight;
-} vout_norm;
 
 void main() {
 
@@ -71,11 +64,6 @@ void main() {
     v_pos = b_vert * depth;
     v_UV = tmp_UV * depth;
 	v_norm = b_norm * depth;
-
-  vout_norm.v_pos = b_vert * depth;
-  vout_norm.v_UV = tmp_UV * depth;
-  vout_norm.v_norm = b_norm * depth;
-  vout_norm.v_depth = depth;
 
     pos.xy /= abs(pos.z);
     if (pos.z < 0) pos.z /= 1000.;
@@ -113,6 +101,5 @@ void main() {
 
 
     vertLight = light;
-    vout_norm.vertLight = light;
 
 }
