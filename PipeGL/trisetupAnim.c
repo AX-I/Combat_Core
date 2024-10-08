@@ -41,6 +41,7 @@ uniform int stage;
 
 out float depth;
 
+
 void main() {
 
     vec3 p = in_vert;

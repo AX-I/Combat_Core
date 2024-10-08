@@ -1,6 +1,6 @@
 #version 330
 
-#define KSIZE 12
+#define KSIZE 8
 
 #define MAX_CONTINUITY 0.2f
 

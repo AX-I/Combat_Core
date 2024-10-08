@@ -22,19 +22,9 @@ def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
     return t
 
-trisetup = makeProgram("trisetup.c", "PipeGL/")
-trisetupAnim = makeProgram("trisetup_anim.c", "PipeGL/")
-trisetupOrtho = makeProgram("trisetupOrtho.c", "PipeGL/")
-trisetupOrthoAnim = makeProgram("trisetupOrtho_anim.c", "PipeGL/")
-trisetup2d = makeProgram("trisetup_2d.c", "PipeGL/")
 
-trisetupNorm = makeProgram('trisetup_norm.c', 'PipeGL/')
+TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Norm Wave'
 
-trisetupWave = makeProgram('trisetupWave.c', 'PipeGL/')
-
-if True: #if sys.platform == 'darwin':
-    trisetup = trisetup.replace('[128]', '[12]')
-    trisetupAnim = trisetupAnim.replace('[128]', '[12]')
 
 
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
@@ -46,6 +36,8 @@ TRANSPARENT_SHADERS = set(
 POST_SHADERS = 'gamma lens FXAA dof ssao'
 
 def loadShaders():
+    for f in TRISETUP_SHADERS.split(' '):
+        globals()[f'trisetup{f}'] = makeProgram(f'trisetup{f}.c', 'PipeGL/').replace('[128]', '[12]')
     for f in DRAW_SHADERS.split(' '):
         globals()[f'draw{f}'] = makeProgram('draw{}.c'.format(f.lower()))
     for f in POST_SHADERS.split(' '):
@@ -177,7 +169,8 @@ class CLDraw:
 
         self.stTime = time.time()
 
-        self.shaderParams = {'{REFL_LENGTH}':str(self.H)}
+        self.shaderParams = {'{REFL_LENGTH}':str(self.H),
+                             '#define SCR_SHADOW':''}
 
         self.batchCache = {}
 
@@ -941,6 +934,8 @@ class CLDraw:
             ts = trisetupAnim
         elif '2d' in mtl:
             ts = trisetup2d
+        elif 'calcNorm' in mtl:
+            ts = trisetupNorm
         else:
             ts = trisetup
 
@@ -963,13 +958,11 @@ class CLDraw:
                 prog = prog.replace(sp, self.shaderParams[sp])
 
             progKwargs = {}
+
             if 'calcNorm' in mtl:
                 progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
-                ts = trisetupNorm
-                prog = prog.replace('vec3 norm = normalize(v_norm)',
-                                    'vec3 norm = normalize(v_gs_norm)')
-                prog = prog.replace('in vec3 v_norm',
-                                    'in vec3 v_gs_norm')
+                prog = prog.replace('vec3 norm = normalize(v_norm',
+                                    'vec3 norm = normalize(v_gs_norm')
 
             draw = ctx.program(
                 vertex_shader=ts,
@@ -1037,7 +1030,11 @@ class CLDraw:
                 [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
                  (self.BN[i], '1f /v', 'boneNum')])
         else:
-            vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+            try:
+                vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
+            except KeyError:
+                vao = ctx.vertex_array(draw,
+                    [(p, '3f 3x4 2f /v', 'in_vert', 'in_UV')])
 
         self.oldShaders[i] = dict(mtl)
 
@@ -1181,6 +1178,12 @@ class CLDraw:
                         print('Normal map {} not found'.format(shaders[i]['normal']))
                 if 'ignoreShadow' in shaders[i]:
                     self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
+
+                try:
+                    self.DRAW[i]['rawVM'].write(self.rawVM)
+                    self.DRAW[i]['db'] = 1
+                except KeyError:
+                    pass
 
                 vao.render(moderngl.TRIANGLES)
 
