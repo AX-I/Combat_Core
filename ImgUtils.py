@@ -28,6 +28,12 @@ class NPTextDraw:
 
 
 class NPCanvas:
+    def __init__(self, W, H):
+        self.UItexts = {}
+        self._textImg = Image.new("RGB", (1,1))
+        self.textSize = ImageDraw.Draw(self._textImg)
+        self.W2 = W//2
+        self.H2 = H//2
 
     def imgText(self, dText: str, dFill: tuple, dFont,
                 blur=4, bFill=(0,0,0), method='box') -> np.array:

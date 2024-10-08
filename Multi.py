@@ -24,6 +24,7 @@ import numpy
 import numpy.random as nr
 import random
 import time
+from Utils import displayFPS
 
 nr.seed(int((time.time() * 1000) % 1000))
 random.seed(int((time.time() * 1000) % 1000))
@@ -2689,6 +2690,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.rgb[:8,5*30-2:5*31+2] = [[0,0,0]]
         self.rgb[:8,5*30:5*31] = [[0,255,0]]
 
+        displayFPS(self)
         self.showAINav()
 
     def showAINav(self):

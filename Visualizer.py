@@ -41,15 +41,7 @@ if PLATFORM == "win32":
     import win32gui
     from PIL.ImageWin import Dib, HWND
 
-if PLATFORM == "darwin":
-    _ARIAL = "Arial.ttf"
-    _ARIALBD = "Arial Bold.ttf"
-elif PLATFORM == "linux":
-    _ARIAL = "FreeSans.ttf"
-    _ARIALBD = "FreeSansBold.ttf"
-elif PLATFORM == "win32":
-    _ARIAL = "arial.ttf"
-    _ARIALBD = "arialbd.ttf"
+from Utils import _ARIAL, _ARIALBD
 
 if PLATFORM == "linux":
     from Xlib import X, display

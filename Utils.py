@@ -27,6 +27,35 @@ import numpy as np
 import multiprocessing as mp
 from PIL import Image
 
+import sys
+PLATFORM = sys.platform
+
+_FONTS = {
+    'darwin': ('Arial.ttf', 'Arial Bold.ttf'),
+    'linux': ('FreeSans.ttf', 'FreeSansBold.ttf'),
+    'win32': ('arial.ttf', 'arialbd.ttf'),
+}
+_ARIAL, _ARIALBD = _FONTS[PLATFORM]
+
+
+def displayFPS(self):
+    try: _ = self.textDraw
+    except:
+        from PIL import ImageFont
+        from ImgUtils import NPCanvas
+        self.textDraw = NPCanvas(self.W,self.H)
+        self.debugFont = ImageFont.truetype(_ARIALBD, 16)
+        self.fpsAccum = 1
+        self.fpsDisplay = 1
+    if self.frameNum % 10 == 0:
+        self.fpsDisplay = round(10 / self.fpsAccum, 1)
+        self.fpsAccum = 0
+    self.fpsAccum += self.frameTime
+
+    self.textDraw.drawText(self.rgb, f'{self.fpsDisplay}', (255,255,255),
+                           self.debugFont, (-self.H2+20,-self.W2+20), blur=0)
+
+
 def raySphereIntersect(p, v, c, r):
     m = (c-p) @ v
     d = (c-p) - m * v
