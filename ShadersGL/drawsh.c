@@ -22,7 +22,8 @@ uniform float R[64]; // [0,1]
 #define RAYCAST_TARGET_DIST 99.0
 #define RAYCAST_SURFACE_DEPTH 0.f
 #define RAYCAST_DBIAS 0.2f
-#define RAYCAST_FADE_DIST 4.f
+#define RAYCAST_FADE_DIST 2.f
+#define LIGHT_SIZE 0.3
 uniform float width;
 uniform float height;
 uniform float vscale;
@@ -254,7 +255,8 @@ void main() {
     vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
 
     float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
-    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - dot(hitPos-a, hitPos-a))) * shfact;
+    shfact *= (length(hitPos+vpos-PPos[idP]) < LIGHT_SIZE) ? 0 : 1;
+    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - length(hitPos-a))) * shfact;
   #else
     float pxShadow = 0;
   #endif
