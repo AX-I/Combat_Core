@@ -147,6 +147,7 @@ void main() {
 
       vec3 Ro = vec3((sxy+0.5/wS-0.5)/sScale*2, 0) * SV + SPos;
       sz = dot(v_pos*tz - Ro, v_gs_norm) / dot(LDir, v_gs_norm);
+      sz = max(sz0-0.5, sz);
       sz = (min(sz,sz0)/2 - SBIAS - NEAR)/FAR + 0.5;
 
       shadow += texture(SM, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
@@ -181,6 +182,7 @@ void main() {
 
         vec3 Ro = vec3((sxy+0.5/wS2-0.5)/sScale2*2, 0) * SV2 + SPos2;
         sz = dot(v_pos*tz - Ro, v_gs_norm) / dot(LDir, v_gs_norm);
+        sz = max(sz0-0.1, sz);
         sz = (min(sz,sz0)/2 - SBIAS - 0.0 - NEAR)/FAR + 0.5;
 
         shadow += texture(SM2, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
