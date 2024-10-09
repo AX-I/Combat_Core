@@ -7,9 +7,9 @@
 #define NBIAS 0.1
 
 // # of PCF taps
-#define SHS 25
+#define SHS 16
 // square root
-#define SHSR 5
+#define SHSR 4
 #define SHSOFT1 0.8
 #define SHSOFT2 0.96
 uniform float R[64]; // [0,1]
@@ -72,7 +72,6 @@ uniform vec3 highMult;
 out vec4 f_color;
 
 in vec3 v_norm;
-flat in vec3 v_gs_norm;
 
 in float depth;
 in vec2 v_UV;
@@ -121,6 +120,7 @@ void main() {
   float sz = (sxyz.z/2 - SBIAS - normbias - NEAR)/FAR + 0.5;
 	vec2 sf = sxyz.xy * sScale/2 + 0.5;
 	sf = clamp(sf, 0.0, 1.0) * wS;
+  float sz0 = sxyz.z;
 
 	vec2 sxy;
 	float sr1, sr2;
@@ -135,6 +135,8 @@ void main() {
   uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf;
 
+  vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
+
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
    for (int j=0; j<SHS; j++) {
     sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
@@ -142,6 +144,11 @@ void main() {
       sxy = floor(sf + vec2(k>>1, k&1)) / wS;
       sr1 = abs(sf.x - sxy.x*wS);
       sr2 = abs(sf.y - sxy.y*wS);
+
+      vec3 Ro = vec3((sxy+0.5/wS-0.5)/sScale*2, 0) * SV + SPos;
+      sz = dot(v_pos*tz - Ro, v_gs_norm) / dot(LDir, v_gs_norm);
+      sz = (min(sz,sz0)/2 - SBIAS - NEAR)/FAR + 0.5;
+
       shadow += texture(SM, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
     }
    }
@@ -158,9 +165,12 @@ void main() {
 	sxyz = SV2 * (v_pos*tz - SPos2);
 	sz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
 	sf = sxyz.xy * sScale2/2 + 0.5;
+
+  sz0 = sxyz.z;
+
 	if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
 	  sf *= wS2;
-    sf0 = sf;
+    sf0 = sf - 0.5;
 
     for (int j=0; j<SHS; j++) {
       sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT2 * rot(3.14/2* R[rid1]);
@@ -168,6 +178,11 @@ void main() {
         sxy = floor(sf + vec2(k>>1, k&1)) / wS2;
         sr1 = abs(sf.x - sxy.x*wS2);
         sr2 = abs(sf.y - sxy.y*wS2);
+
+        vec3 Ro = vec3((sxy+0.5/wS2-0.5)/sScale2*2, 0) * SV2 + SPos2;
+        sz = dot(v_pos*tz - Ro, v_gs_norm) / dot(LDir, v_gs_norm);
+        sz = (min(sz,sz0)/2 - SBIAS - 0.0 - NEAR)/FAR + 0.5;
+
         shadow += texture(SM2, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
       }
     }
@@ -252,7 +267,6 @@ void main() {
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
     }
 
-    vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
 
     float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
     shfact *= (length(hitPos+vpos-PPos[idP]) < LIGHT_SIZE) ? 0 : 1;
