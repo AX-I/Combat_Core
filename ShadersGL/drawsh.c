@@ -7,9 +7,9 @@
 #define NBIAS 0.1
 
 // # of PCF taps
-#define SHS 25
+#define SHS 16
 // square root
-#define SHSR 5
+#define SHSR 4
 #define SHSOFT1 0.8
 #define SHSOFT2 0.96
 uniform float R[64]; // [0,1]
@@ -133,7 +133,7 @@ void main() {
   uint rid1 = rand_xorshift(rng_state) & uint(63);
   rng_state = rand_xorshift(rng_state);
   uint rid2 = rand_xorshift(rng_state) & uint(63);
-  vec2 sf0 = sf;
+  vec2 sf0 = sf - 0.5;
 
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
    for (int j=0; j<SHS; j++) {
@@ -160,7 +160,7 @@ void main() {
 	sf = sxyz.xy * sScale2/2 + 0.5;
 	if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
 	  sf *= wS2;
-    sf0 = sf;
+    sf0 = sf - 0.5;
 
     for (int j=0; j<SHS; j++) {
       sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT2 * rot(3.14/2* R[rid1]);
