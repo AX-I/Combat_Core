@@ -24,6 +24,8 @@ uniform float R[64]; // [0,1]
 #define RAYCAST_DBIAS 0.2f
 #define RAYCAST_FADE_DIST 2.f
 #define LIGHT_SIZE 0.3
+
+#define RAYCAST_FAR_D_MULT 0.05f
 uniform float width;
 uniform float height;
 uniform float vscale;
@@ -135,7 +137,9 @@ void main() {
   uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf - 0.5;
 
+  int farShadow = 1;
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
+   farShadow = 0;
    for (int j=0; j<SHS; j++) {
     sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
     for (int k=0; k<4; k++) {
@@ -197,8 +201,7 @@ void main() {
 
     vec2 rxy = tc;
 
-    // vec3 PxDir = LDir;
-    vec3 PxDir = a - (PPos[idP]-vpos);
+    vec3 PxDir = (farShadow > 0) ? LDir : a - (PPos[idP]-vpos);
     #ifdef SCR_SOFT
       vec3 LDirTG1 = normalize(cross(PxDir, vec3(1,0,0)));
       vec3 LDirTG2 = normalize(cross(PxDir, LDirTG1));
@@ -249,17 +252,19 @@ void main() {
         sx += slopex;
         sy += slopey;
         sz += slopez;
-        sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS;
+        sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS * (1-farShadow) + (RAYCAST_FAR_D_MULT * 1.f/sz) * farShadow;
     }
 
     vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
 
-    float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? 0 : 1;
+    float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? farShadow : 1;
     shfact *= (length(hitPos+vpos-PPos[idP]) < LIGHT_SIZE) ? 0 : 1;
-    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - length(hitPos-a))) * shfact;
+    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - (1-farShadow)*length(hitPos-a))) * shfact;
   #else
     float pxShadow = 0;
   #endif
+
+  if (farShadow > 0) shadow += pxShadow;
 
 	shadow = clamp(shadow, 0, 1);
 
