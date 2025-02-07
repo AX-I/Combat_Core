@@ -5,5 +5,4 @@ out float color;
 
 void main() {
 	color = 1.0 / depth;
-    gl_FragDepth = gl_FragCoord.z;
 }

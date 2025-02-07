@@ -115,8 +115,7 @@ class CLDraw:
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
         self.DBT.repeat_x = False
         self.DBT.repeat_y = False
-        temp = ctx.depth_texture((self.W, self.H))
-        self.fboZ = ctx.framebuffer((self.DBT,), temp)
+        self.fboZ = ctx.framebuffer((self.DBT,), self.DB)
 
         self.XYZ = []
         self.UV = []
@@ -1143,6 +1142,7 @@ class CLDraw:
 
         self.fbo.use()
         self.fbo.depth_mask = True
+        ctx.depth_func = '<='
 
         if self.doSSAO:
             self.ssaoBUF2.use(location=8)
@@ -1187,7 +1187,7 @@ class CLDraw:
 
                 vao.render(moderngl.TRIANGLES)
 
-
+        ctx.depth_func = '<'
         self.fbo.depth_mask = False
         ctx.enable(moderngl.BLEND)
 
