@@ -648,6 +648,9 @@ class CLDraw:
         self.ssaoBUF = ctx.texture((self.W//AOscale, self.H//AOscale), 1, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
 
+        self.ssaoBUF.repeat_x = False
+        self.ssaoBUF.repeat_y = False
+
         self.ssaoBUF2 = ctx.texture((self.W, self.H), 1, dtype='f1')
         self.ssaoFBO2 = ctx.framebuffer(self.ssaoBUF2)
 

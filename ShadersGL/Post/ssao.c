@@ -38,6 +38,8 @@ void main() {
 
 	float ao = 0.f;
 
+  float geomAccum = 0.f;
+
 	uint rng_state = uint(cy * hF + cx);
 
 	float d = texture(texd, tc*wh).r;
@@ -79,7 +81,9 @@ void main() {
 
 		svec = normalize(svec);
 
-		if (dot(svec, norm) < 0) svec = svec - 2*norm*dot(svec, norm);
+		if (dot(svec, norm) < 0) svec -= 2*norm*dot(svec, norm);
+
+    float geom = dot(svec, norm);
 
 		rid1 = rand_xorshift(rng_state) & uint(63);
 		rng_state = rand_xorshift(rng_state);
@@ -98,15 +102,16 @@ void main() {
 			float sampd = texture(texd, vec2(int(sx) + 0.5*sig_x, int(sy) + 0.5*sig_y)*wh).r;
 
 			float disct = clamp(2.f - (d-sampd)/FALLOFF_DIST, 0.f, 1.f);
-		    ao += disct * ((sampd < sz - bias) ? 1.f : 0.f);
 
-   	    }
+      ao += disct * geom * ((sampd < sz - bias) ? 1.f : 0.f);
+      geomAccum += geom;
+    }
 	}
-	ao /= nsamples;
+	ao /= geomAccum;
 
 	if (d > 200) ao = 0;
 
-	ao = clamp(ao*1.25f, 0.f, 1.f);
+	ao = clamp(ao*1.5f, 0.f, 1.f);
 
   f_color = ao;
 }
