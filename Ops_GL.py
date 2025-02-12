@@ -556,7 +556,6 @@ class CLDraw:
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO.use()
 
         self.dProg['x'].write(np.float32(x))
@@ -592,7 +591,6 @@ class CLDraw:
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO.use()
 
         exp = time.perf_counter() - self.moTime
@@ -683,7 +681,6 @@ class CLDraw:
         ctx.disable(moderngl.BLEND)
         ctx.disable(moderngl.DEPTH_TEST)
 
-        self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO.use()
         self.dofProg['focus'] = self.dofFocus
         self.dofProg['aperture'] = self.dofAperture * self.IRES
@@ -751,7 +748,6 @@ class CLDraw:
         ctx.disable(moderngl.BLEND)
 
         # Downsample once
-        self.POSTFBO1.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO1.use()
 
         self.blurProg1['width'].write(np.float32(self.W//2))
@@ -763,7 +759,6 @@ class CLDraw:
         self.blurVao1.render(moderngl.TRIANGLES)
 
         # Vertical blur
-        self.POSTFBO2.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO2.use()
 
         self.POSTBUF1.use(location=0)
@@ -772,7 +767,6 @@ class CLDraw:
         self.blurVao2.render(moderngl.TRIANGLES)
 
         # Horizontal blur
-        self.POSTFBO1.clear(0.0, 0.0, 0.0, 0.0)
         self.POSTFBO1.use()
 
         self.POSTBUF2.use(location=0)
@@ -802,10 +796,8 @@ class CLDraw:
         ctx.disable(moderngl.BLEND)
 
         if self.USE_FSR or useFxaa:
-            self.fs_fsr.clear(0.0, 0.0, 0.0, 0.0)
             self.fs_fsr.use()
         else:
-            self.fs.clear(0.0, 0.0, 0.0, 0.0)
             self.fs.use()
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
@@ -1213,7 +1205,6 @@ class CLDraw:
                 ctx.disable(moderngl.CULL_FACE)
                 ctx.disable(moderngl.DEPTH_TEST)
                 ctx.disable(moderngl.BLEND)
-                self.POSTFBO.clear(0.0, 0.0, 0.0, 0.0)
                 self.blit(self.POSTFBO, self.FB, self.W, self.H)
                 ctx.enable(moderngl.DEPTH_TEST)
                 ctx.enable(moderngl.BLEND)
