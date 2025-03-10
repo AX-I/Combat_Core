@@ -41,6 +41,12 @@ def readAudio(f):
         vf = pyogg.FlacFile(f)
     if f.endswith('.ogg'):
         vf = pyogg.VorbisFile(f)
+    if f.endswith('.wav'):
+        w = wave.open(f, "rb")
+        assert w.getframerate() == 22050
+        vf = np.frombuffer(w.readframes(w.getnframes()), 'int16')
+        vf = vf.reshape((-1, w.getnchannels()))
+        return vf
 
     if vf.frequency == 44100:
         return np.ascontiguousarray(vf.as_array()[::2])
@@ -61,8 +67,11 @@ class arrayWave:
         self.frame = 0
     def getnframes(self):
         return self.ar.shape[0]
-    def readframes(self, n):
-        out = self.ar[self.frame:self.frame+n]
+    def readframes(self, n, chdelay=(0,0)):
+        cL = self.ar[self.frame+chdelay[1]:self.frame+chdelay[1]+n,0]
+        cR = self.ar[self.frame+chdelay[0]:self.frame+chdelay[0]+n,1]
+        ms = min(cL.shape[0], cR.shape[0])
+        out = np.stack((cL[:ms],cR[:ms]), -1)
         self.frame += n
         return out
     def rewind(self):
@@ -131,9 +140,14 @@ class SoundManager:
                                      'baseVol':cmd['Play'][1],
                                      'params':cmd['Play'][3]}
                                 self.ptcount += 1
+                        elif type(cmd['Play'][2]) is dict:
+                            self.playFile(cmd['Play'][0], cmd['Play'][1],
+                                          **cmd['Play'][2])
                         else:
+                            attn, chdelay = self.sndAttn(*cmd['Play'][2], usechdelay=True)
                             self.playFile(cmd["Play"][0],
-                                      cmd['Play'][1] * self.sndAttn(*cmd['Play'][2]))
+                                          cmd['Play'][1] * attn,
+                                          chdelay=chdelay)
 
                     elif 'SetPos' in cmd:
                         self.pos = cmd['SetPos']['pos']
@@ -186,7 +200,7 @@ class SoundManager:
 
         for i in list(self.tracks.keys()):
             t = self.tracks[i]
-            d = t["wave"].readframes(CHUNK)
+            d = t["wave"].readframes(CHUNK, chdelay=t['chdelay'])
             s = np.frombuffer(d, "int16").reshape((-1, self.channels))
 
             trackVol = self.globalVol
@@ -206,8 +220,8 @@ class SoundManager:
                     t["frame"] -= t['N']
                     t["wave"].rewind()
                     if written < CHUNK:
-                        s = np.frombuffer(t['wave'].readframes(CHUNK-written),
-                                          'int16').reshape((-1, self.channels))
+                        s = t['wave'].readframes(CHUNK-written, chdelay=t['chdelay'])
+                        s = np.frombuffer(s, 'int16').reshape((-1, self.channels))
                         s = s * (t["vol"] * trackVol)
                         frames[written:] += s.astype('int16')
                 else:
@@ -225,19 +239,17 @@ class SoundManager:
         
         self.stream.write(frames.tobytes())
         
-    def playFile(self, f, volume=(0.5, 0.5), loop=False):
+    def playFile(self, f, volume=(0.5, 0.5), loop=False, chdelay=(0,0)):
         if f in self.preloadTracks:
             a = arrayWave(self.preloadTracks[f])
         else:
-            if f.endswith('.wav'):
-                a = wave.open(f, "rb")
-            else:
-                a = arrayWave(readAudio(f))
+            a = arrayWave(readAudio(f))
 
         n = a.getnframes()
 
         track = {"wave":a, "frame":0, "N":n, 'filename': f,
-                 "vol":np.array(volume, "float"), "loop":loop}
+                 "vol":np.array(volume, "float"), "loop":loop,
+                 'chdelay':chdelay}
         
         self.tcount += 1
         self.tracks[self.tcount] = track
@@ -255,8 +267,9 @@ class SoundManager:
     def close(self):
         self.p.terminate()
 
-    def sndAttn(self, src, mult=5, const=1.2, doWrap=False, minDist=None,
-                maxDist=None):
+    def sndAttn(self, src, mult=5, const=1.2, doWrap=0.2,
+                minDist=None, maxDist=None,
+                usechdelay=False):
         svec = (src - self.pos)
         dist = eucLen(svec)
         if minDist is None:
@@ -276,6 +289,10 @@ class SoundManager:
             if type(doWrap) is float:
                 wrap = max(wrap, doWrap)
             pan = 0.2 + 0.7 * (pan * (1-wrap) + 0.5 * wrap)
+
+        if usechdelay:
+            return attn * pan, (max(0,int(-LR * 22)), max(0,int(LR * 22)))
+
         return attn * pan
 
 if __name__ == "__main__":
