@@ -194,8 +194,13 @@ class SoundManager:
             if p['track'] not in self.tracks:
                 del self.positionTracks[i]
                 continue
-            self.tracks[p['track']]['vol'] *= 0.5
-            self.tracks[p['track']]['vol'] += 0.5 * p['baseVol'] * self.sndAttn(*p['params'])
+            attn, chdelay = self.sndAttn(*p['params'], usechdelay=True)
+            t = self.tracks[p['track']]
+            t['vol'] *= 0.5
+            t['vol'] += 0.5 * p['baseVol'] * attn
+            tc = t['chdelay']
+            t['chdelay'] = (int((tc[0] + chdelay[0])*0.5),
+                            int((tc[1] + chdelay[1])*0.5))
 
 
         for i in list(self.tracks.keys()):
