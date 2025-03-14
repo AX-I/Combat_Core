@@ -65,14 +65,33 @@ class arrayWave:
         """Wave interface for array"""
         self.ar = ar
         self.frame = 0
+        self._prevdelay = None
     def getnframes(self):
         return self.ar.shape[0]
     def readframes(self, n, chdelay=(0,0)):
-        cL = self.ar[self.frame+chdelay[1]:self.frame+chdelay[1]+n,0]
-        cR = self.ar[self.frame+chdelay[0]:self.frame+chdelay[0]+n,1]
+        if not self._prevdelay:
+            self._prevdelay = chdelay
+
+        cL = self.ar[self.frame+self._prevdelay[1]:self.frame+chdelay[1]+n,0]
+        cR = self.ar[self.frame+self._prevdelay[0]:self.frame+chdelay[0]+n,1]
+
+        if cL.shape[0] == (n + chdelay[1] - self._prevdelay[1]):
+            cL = np.interp(
+                np.linspace(0, 1, n),
+                np.linspace(0, 1, n + chdelay[1] - self._prevdelay[1]),
+                cL
+            ).astype('int16')
+        if cR.shape[0] == (n + chdelay[0] - self._prevdelay[0]):
+            cR = np.interp(
+                np.linspace(0, 1, n),
+                np.linspace(0, 1, n + chdelay[0] - self._prevdelay[0]),
+                cR
+            ).astype('int16')
+
         ms = min(cL.shape[0], cR.shape[0])
         out = np.stack((cL[:ms],cR[:ms]), -1)
         self.frame += n
+        self._prevdelay = chdelay
         return out
     def rewind(self):
         self.frame = 0
@@ -198,9 +217,7 @@ class SoundManager:
             t = self.tracks[p['track']]
             t['vol'] *= 0.5
             t['vol'] += 0.5 * p['baseVol'] * attn
-            tc = t['chdelay']
-            t['chdelay'] = (int((tc[0] + chdelay[0])*0.5),
-                            int((tc[1] + chdelay[1])*0.5))
+            t['chdelay'] = chdelay
 
 
         for i in list(self.tracks.keys()):
