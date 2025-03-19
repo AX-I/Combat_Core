@@ -67,6 +67,7 @@ class arrayWave:
         self.frame = 0
         self._prevdelay = None
         self._prevvol = None
+        self._looping = False
     def getnframes(self):
         return self.ar.shape[0]
     def readframes(self, n, chdelay=(0,0), vol=(1,1)):
@@ -74,19 +75,35 @@ class arrayWave:
             self._prevdelay = chdelay
             self._prevvol = vol
 
-        cL = self.ar[self.frame+self._prevdelay[1]:self.frame+chdelay[1]+n,0]
-        cR = self.ar[self.frame+self._prevdelay[0]:self.frame+chdelay[0]+n,1]
+        startL = self.frame-self._prevdelay[0]
+        startR = self.frame-self._prevdelay[1]
+        padL = []; padR = []
+        if startL < 0:
+            if self._looping:
+                padL = self.ar[startL:,0]
+            else:
+                padL = np.zeros((self._prevdelay[0]-self.frame,),'int16')
+            startL = 0
+        if startR < 0:
+            if self._looping:
+                padR = self.ar[startR:,1]
+            else:
+                padR = np.zeros((self._prevdelay[1]-self.frame,),'int16')
+            startR = 0
 
-        if cL.shape[0] == (n + chdelay[1] - self._prevdelay[1]):
+        cL = np.concatenate((padL, self.ar[startL:self.frame-chdelay[0]+n,0]))
+        cR = np.concatenate((padR, self.ar[startR:self.frame-chdelay[1]+n,1]))
+
+        if cL.shape[0] == (n - chdelay[0] + self._prevdelay[0]):
             cL = np.interp(
                 np.linspace(0, 1, n),
-                np.linspace(0, 1, n + chdelay[1] - self._prevdelay[1]),
+                np.linspace(0, 1, n - chdelay[0] + self._prevdelay[0]),
                 cL
             )
-        if cR.shape[0] == (n + chdelay[0] - self._prevdelay[0]):
+        if cR.shape[0] == (n - chdelay[1] + self._prevdelay[1]):
             cR = np.interp(
                 np.linspace(0, 1, n),
-                np.linspace(0, 1, n + chdelay[0] - self._prevdelay[0]),
+                np.linspace(0, 1, n - chdelay[1] + self._prevdelay[1]),
                 cR
             )
 
@@ -101,6 +118,7 @@ class arrayWave:
         return out
     def rewind(self):
         self.frame = 0
+        self._looping = True
 
 class SoundManager:
     def __init__(self, si):
