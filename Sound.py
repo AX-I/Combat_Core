@@ -26,6 +26,7 @@ import pyaudio
 import wave
 import pyogg
 import threading, queue
+from functools import cache
 
 import time
 from queue import Empty
@@ -36,6 +37,7 @@ CHUNK = 1024
 def eucLen(a):
     return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
 
+@cache
 def readAudio(f):
     if f.endswith('.flac'):
         vf = pyogg.FlacFile(f)
