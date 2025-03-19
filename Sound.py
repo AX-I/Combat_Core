@@ -96,21 +96,25 @@ class arrayWave:
         cL = np.concatenate((padL, self.ar[startL:self.frame-chdelay[0]+n,0]))
         cR = np.concatenate((padR, self.ar[startR:self.frame-chdelay[1]+n,1]))
 
-        if cL.shape[0] == (n - chdelay[0] + self._prevdelay[0]):
+        m = n - chdelay[0] + self._prevdelay[0]
+        if cL.shape[0] == m:
             cL = np.interp(
-                np.linspace(0, 1, n),
-                np.linspace(0, 1, n - chdelay[0] + self._prevdelay[0]),
+                1/n * np.arange(n),
+                1/m * np.arange(m),
                 cL
             )
-        if cR.shape[0] == (n - chdelay[1] + self._prevdelay[1]):
+        m = n - chdelay[1] + self._prevdelay[1]
+        if cR.shape[0] == m:
             cR = np.interp(
-                np.linspace(0, 1, n),
-                np.linspace(0, 1, n - chdelay[1] + self._prevdelay[1]),
+                1/n * np.arange(n),
+                1/m * np.arange(m),
                 cR
             )
 
-        cL = cL * np.linspace(self._prevvol[0], vol[0], cL.shape[0])
-        cR = cR * np.linspace(self._prevvol[1], vol[1], cR.shape[0])
+        cL = cL * (self._prevvol[0] + (vol[0] - self._prevvol[0]) \
+                   / cL.shape[0] * np.arange(cL.shape[0]))
+        cR = cR * (self._prevvol[1] + (vol[1] - self._prevvol[1]) \
+                   / cR.shape[0] * np.arange(cR.shape[0]))
 
         ms = min(cL.shape[0], cR.shape[0])
         out = np.stack((cL[:ms].astype('int16'),cR[:ms].astype('int16')), -1)
