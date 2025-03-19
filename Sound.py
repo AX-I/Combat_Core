@@ -66,11 +66,13 @@ class arrayWave:
         self.ar = ar
         self.frame = 0
         self._prevdelay = None
+        self._prevvol = None
     def getnframes(self):
         return self.ar.shape[0]
-    def readframes(self, n, chdelay=(0,0)):
+    def readframes(self, n, chdelay=(0,0), vol=(1,1)):
         if not self._prevdelay:
             self._prevdelay = chdelay
+            self._prevvol = vol
 
         cL = self.ar[self.frame+self._prevdelay[1]:self.frame+chdelay[1]+n,0]
         cR = self.ar[self.frame+self._prevdelay[0]:self.frame+chdelay[0]+n,1]
@@ -80,18 +82,22 @@ class arrayWave:
                 np.linspace(0, 1, n),
                 np.linspace(0, 1, n + chdelay[1] - self._prevdelay[1]),
                 cL
-            ).astype('int16')
+            )
         if cR.shape[0] == (n + chdelay[0] - self._prevdelay[0]):
             cR = np.interp(
                 np.linspace(0, 1, n),
                 np.linspace(0, 1, n + chdelay[0] - self._prevdelay[0]),
                 cR
-            ).astype('int16')
+            )
+
+        cL = cL * np.linspace(self._prevvol[0], vol[0], cL.shape[0])
+        cR = cR * np.linspace(self._prevvol[1], vol[1], cR.shape[0])
 
         ms = min(cL.shape[0], cR.shape[0])
-        out = np.stack((cL[:ms],cR[:ms]), -1)
+        out = np.stack((cL[:ms].astype('int16'),cR[:ms].astype('int16')), -1)
         self.frame += n
         self._prevdelay = chdelay
+        self._prevvol = vol
         return out
     def rewind(self):
         self.frame = 0
@@ -215,21 +221,20 @@ class SoundManager:
                 continue
             attn, chdelay = self.sndAttn(*p['params'], usechdelay=True)
             t = self.tracks[p['track']]
-            t['vol'] *= 0.5
-            t['vol'] += 0.5 * p['baseVol'] * attn
+            t['vol'] = p['baseVol'] * attn
             t['chdelay'] = chdelay
 
 
         for i in list(self.tracks.keys()):
             t = self.tracks[i]
-            d = t["wave"].readframes(CHUNK, chdelay=t['chdelay'])
+            d = t["wave"].readframes(CHUNK, chdelay=t['chdelay'], vol=t["vol"])
             s = np.frombuffer(d, "int16").reshape((-1, self.channels))
 
             trackVol = self.globalVol
             if '*' not in self.fadeTracks \
                and t['filename'] not in self.fadeTracks:
                 trackVol = 1
-            s = s * (t["vol"] * trackVol)
+            s = s * trackVol
             if s.shape[0] == CHUNK:
                 frames += s.astype("int16")
                 written = CHUNK
@@ -242,9 +247,9 @@ class SoundManager:
                     t["frame"] -= t['N']
                     t["wave"].rewind()
                     if written < CHUNK:
-                        s = t['wave'].readframes(CHUNK-written, chdelay=t['chdelay'])
+                        s = t['wave'].readframes(CHUNK-written, chdelay=t['chdelay'], vol=t["vol"])
                         s = np.frombuffer(s, 'int16').reshape((-1, self.channels))
-                        s = s * (t["vol"] * trackVol)
+                        s = s * trackVol
                         frames[written:] += s.astype('int16')
                 else:
                     del self.tracks[i]
