@@ -80,13 +80,13 @@ class arrayWave:
         startL = self.frame-self._prevdelay[0]
         startR = self.frame-self._prevdelay[1]
         padL = []; padR = []
-        if startL < 0:
+        if startL < 0 and self.frame-chdelay[0]+n >= 0:
             if self._looping:
                 padL = self.ar[startL:,0]
             else:
                 padL = np.zeros((self._prevdelay[0]-self.frame,),'int16')
             startL = 0
-        if startR < 0:
+        if startR < 0 and self.frame-chdelay[1]+n >= 0:
             if self._looping:
                 padR = self.ar[startR:,1]
             else:
@@ -338,7 +338,8 @@ class SoundManager:
             pan = 0.2 + 0.7 * (pan * (1-wrap) + 0.5 * wrap)
 
         if usechdelay:
-            return attn * pan, (max(0,int(-LR * 22)), max(0,int(LR * 22)))
+            dl = int(dist * 10)
+            return attn * pan, (dl + max(0,int(-LR * 22)), dl + max(0,int(LR * 22)))
 
         return attn * pan
 
