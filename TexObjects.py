@@ -23,7 +23,6 @@
 from math import sin, cos, pi
 import numpy
 import numpy as np
-import numexpr as ne
 from PIL import Image
 from Utils import anglesToCoords
 import json
@@ -67,7 +66,7 @@ class TexSkyBox:
         if tex.split(".")[-1] == "ahdr":
             ti = i #cv2.resize(i, (m, m*6))
             avg = np.average(ti)
-            ne.evaluate("ti / avg * 256 * hdrScale", out=ti)
+            ti *= 1/avg * 256 * hdrScale
             ta = numpy.array(ti)[:,:,::-1]
         else:
             ti = Image.open(tex).convert("RGB")

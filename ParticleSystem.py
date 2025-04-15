@@ -24,7 +24,6 @@ import numpy as np
 import numpy.random as nr
 from Utils import viewVec
 from math import sin, cos, pi
-import numexpr as ne
 
 def vVvert(a, b):
     b2 = b - pi/2
