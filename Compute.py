@@ -66,7 +66,7 @@ class ThreeDBackend:
                  scale=600, fovx=None,
                  downSample=1, record=None):
 
-        pipe = rec = mp.Queue(2)
+        pipe = rec = mp.Queue(1)
 
         self.evtQ = mp.Queue(64)
         self.infQ = mp.Queue(16)
