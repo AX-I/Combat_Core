@@ -58,10 +58,6 @@ def readAudio(f):
     print('Only support 22.05kHz and 44.1kHz .ogg and .flac files')
 
 
-def readAudioThread(f, q):
-    q.put((f, readAudio(f)))
-
-
 class arrayWave:
     def __init__(self, ar):
         """Wave interface for array"""
@@ -142,7 +138,6 @@ class SoundManager:
 
         self.preloadTracks = {}
         self.preloadThreads = set()
-        self.preloadQ = queue.Queue(16)
 
     def run(self, w=2, r=22050, n=2):
         """w = 2 for int16"""
@@ -159,12 +154,6 @@ class SoundManager:
             batchDone = False
             num = 0
             while not batchDone:
-                if len(self.preloadThreads) > 0:
-                    try: p = self.preloadQ.get_nowait()
-                    except Empty: pass
-                    else:
-                        self.preloadTracks[p[0]] = p[1]
-                        #print('Recieved preload', p[0])
                 try: cmd = self.si.get(True, 0.01)
                 except Empty: batchDone = True
                 else:
@@ -287,10 +276,7 @@ class SoundManager:
         self.stream.write(frames.tobytes())
         
     def playFile(self, f, volume=(0.5, 0.5), loop=False, chdelay=(0,0)):
-        if f in self.preloadTracks:
-            a = arrayWave(self.preloadTracks[f])
-        else:
-            a = arrayWave(readAudio(f))
+        a = arrayWave(readAudio(f))
 
         n = a.getnframes()
 
@@ -306,8 +292,8 @@ class SoundManager:
             print('Already preloaded')
             return
 
-        t = threading.Thread(target=readAudioThread,
-                             args=(f, self.preloadQ))
+        t = threading.Thread(target=readAudio,
+                             args=(f,))
         t.start()
         self.preloadThreads.add(t)
 
