@@ -181,7 +181,7 @@ class VertObject:
     def created(self):
         self.create()
         self.numWedges = len(self.wedgePoints)
-        self.cStart = len(self.viewer.vertpoints[self.texNum])
+        self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum])
         self.cEnd = self.cStart + self.numWedges
         self.wedgePoints = numpy.array(self.wedgePoints)
         if self.overrideNorms is None:
@@ -226,10 +226,10 @@ class VertObject:
             newnorms = self.vertNorms @ self.rotMat
         
         if early:
-            self.viewer.vertpoints[tn].extend(newpoints)
-            self.viewer.vertnorms[tn].extend(newnorms)
-            self.viewer.vertu[tn].extend(self.u)
-            self.viewer.vertv[tn].extend(self.v)
+            self.viewer.vertpoints[tn].append(newpoints)
+            self.viewer.vertnorms[tn].append(newnorms)
+            self.viewer.vertu[tn].append(self.u)
+            self.viewer.vertv[tn].append(self.v)
             if self.animated:
                 if len(self.viewer.vertBones[tn]) > 0:
                     self.viewer.vertBones[tn] = np.concatenate(

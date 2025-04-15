@@ -214,10 +214,10 @@ class ThreeDBackend:
         self.vertU = []
         self.vertV = []
         for _ in range(len(self.vertpoints)):
-            self.vertPoints.append(np.array(self.vertpoints[0]))
-            self.vertNorms.append(np.array(self.vertnorms[0]))
-            self.vertU.append(np.array(self.vertu[0]))
-            self.vertV.append(np.array(self.vertv[0]))
+            self.vertPoints.append(np.concatenate(self.vertpoints[0]))
+            self.vertNorms.append(np.concatenate(self.vertnorms[0]))
+            self.vertU.append(np.concatenate(self.vertu[0]))
+            self.vertV.append(np.concatenate(self.vertv[0]))
             del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
 
