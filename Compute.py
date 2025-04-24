@@ -506,15 +506,17 @@ class ThreeDBackend:
         self.totTime = 0
 
         self.onStart()
+        self.vv = self.viewVec()
 
         while (not self.doQuit):
-            self.vv = self.viewVec()
-
             self.startRender()
 
-            self.frameUpdate()
+            while not self.evtQ.empty():
+                self.processEvent()
 
             self.vv = self.viewVec()
+
+            self.frameUpdate()
 
             r = self.finishRender()
             data = ("render", np.array(r, dtype="object"))
@@ -523,8 +525,6 @@ class ThreeDBackend:
             except Full:
                 self.full += 1
 
-            while not self.evtQ.empty():
-                self.processEvent()
 
             self.frameNum += 1
             dt = time.perf_counter() - self.startTime
