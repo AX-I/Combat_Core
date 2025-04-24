@@ -1410,7 +1410,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.draw.blur(self.exposure * 0.707)
 
         self.oldVMat = np.array(self.vMat)
-        self.oldVPos = np.array(self.pos)
+        self.oldVPos = np.array(self.tempPos)
 
         for i in range(len(self.blackHoles)):
             b = self.blackHoles[i]
@@ -1482,6 +1482,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def onStart(self):
         self.gameStarted = False
+        self.tempPos = np.array(self.pos)
 
         if self.stage == 4:
             self.si.put({'Play':(PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
@@ -1881,6 +1882,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.si.put({'SetPos':{'pos':self.pos,
                                'vvh':self.vVhorz()}})
+        self.tempPos[:] = self.pos
 
         if self.VRMode: self.frameUpdateVR()
 
