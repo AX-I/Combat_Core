@@ -1422,3 +1422,8 @@ class CLDraw:
     def getDB(self):
         shape = (self.H, self.W)
         return np.frombuffer(self.DBT.read(), 'float32').reshape(shape)
+
+    def getDBpoint(self):
+        data = self.fboZ.read(viewport=(self.W//2, self.H//2, 1, 1),
+                              components=1, dtype='f4')
+        return np.frombuffer(data, 'float32').item()
