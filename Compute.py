@@ -324,7 +324,7 @@ class ThreeDBackend:
 
         self.draw.addNrmMap(nrm, name, **kwargs)
 
-    def render(self):
+    def startRender(self):
 
         self.vc = self.viewCoords()
         if not self.VRMode:
@@ -358,6 +358,7 @@ class ThreeDBackend:
                              shader)
 
 
+    def finishRender(self):
         self.postProcess()
 
         result = self.draw.getFrame()
@@ -509,15 +510,13 @@ class ThreeDBackend:
         while (not self.doQuit):
             self.vv = self.viewVec()
 
-            self.speed[:] = self.svert * self.vv
-            self.speed += self.shorz * -self.vVhorz()
-            self.pos += self.camSpeed * self.speed
+            self.startRender()
 
             self.frameUpdate()
 
             self.vv = self.viewVec()
 
-            r = self.render()
+            r = self.finishRender()
             data = ("render", np.array(r, dtype="object"))
             try:
                 self.P.put_nowait(data)
