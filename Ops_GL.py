@@ -162,6 +162,7 @@ class CLDraw:
         self.dofAperture = 12
         self.doSSAO = False
 
+        self.setupLights()
         self.setupBlur()
         self.setupNoise()
         self.noiseDist = 0
@@ -173,7 +174,7 @@ class CLDraw:
 
         self.batchCache = {}
 
-        self.AOscale = 1
+        self.AOscale = 2
 
     def reloadShaders(self, **kwargs):
         while True:
@@ -244,8 +245,6 @@ class CLDraw:
         tex = ctx.texture3d((16,16,16), 1, n, dtype='f2')
         self.noiseTex = tex
 
-    def setSkyTex(self, r, g, b, size):
-        pass
     def setHostSkyTex(self, tex):
         pass
 
@@ -284,9 +283,7 @@ class CLDraw:
         self.BO[tn][bn] = o
 
     def setBoneTransform(self, name, bt):
-        self.BT[name] = np.zeros((32*4, 4), 'float32')
-        self.BT[name][:4*self.boneNums[name]] = bt.astype("float32")
-        self.BT[name] = self.BT[name].tobytes()
+        self.BT[name] = bt.astype('float32').tobytes()
 
     def boneTransform(self, cStart, cEnd, tn, name, offset):
         try:
@@ -314,40 +311,38 @@ class CLDraw:
             b[4*i+3] *= tt
         return b
 
+    def setupLights(self):
+        self.DInt = np.zeros((8, 3), 'float32')
+        self.DDir = np.zeros((8, 3), 'float32')
+        self.PInt = np.zeros((16, 3), 'float32')
+        self.PPos = np.zeros((16, 3), 'float32')
+
+        self.SInt = np.zeros((12, 3), 'float32')
+        self.SPos = np.zeros((12, 3), 'float32')
+        self.SDir = np.zeros((12, 3), 'float32')
+
     def vertLight(self, mask, dirI, dirD,
                   pointI=None, pointP=None,
                   spotI=None, spotD=None, spotP=None):
 
         ld = dirI.shape[0]
-        self.DInt = np.zeros((8, 3), 'float32')
-        self.DDir = np.zeros((8, 3), 'float32')
         self.DInt[:ld] = dirI
         self.DDir[:ld] = dirD
-
 
         if pointI is 1:
             pointI = np.zeros((1,3))
             pointP = np.zeros((1,3))
-        lp = min(16, pointI.shape[0])
 
-        self.PInt = np.zeros((16, 3), 'float32')
-        self.PPos = np.zeros((16, 3), 'float32')
+        lp = min(16, pointI.shape[0])
         self.PInt[:lp] = pointI[:lp]
         self.PPos[:lp] = pointP[:lp]
-
 
         if spotI is 1 or spotI is None:
             spotI = np.zeros((1,3))
             spotP = np.zeros((1,3))
             spotD = np.zeros((1,3))
 
-        ssize = 12 # if sys.platform == 'darwin' else 128
-
-        ls = min(ssize, spotP.shape[0])
-
-        self.SInt = np.zeros((ssize, 3), 'float32')
-        self.SPos = np.zeros((ssize, 3), 'float32')
-        self.SDir = np.zeros((ssize, 3), 'float32')
+        ls = min(12, spotP.shape[0])
         self.SInt[:ls] = spotI[:ls]
         self.SPos[:ls] = spotP[:ls]
         self.SDir[:ls] = spotD[:ls]
@@ -516,8 +511,7 @@ class CLDraw:
         self.psProg['vmat'].write(self.vmat)
         self.psProg['vpos'].write(self.vc)
 
-        p = xyz
-        vertices = np.stack((p[:,0], p[:,1], p[:,2]), axis=-1)
+        vertices = xyz
 
         try:
             PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
@@ -621,9 +615,7 @@ class CLDraw:
         self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def setupSSAO(self):
-        AOscale = int(self.AOscale)
-        print('AOscale', AOscale)
-        self.AOscale = 2 / self.AOscale
+        AOscale = self.AOscale
 
         ssao_blur = makeProgram('Post/ssao_blur.c')
 

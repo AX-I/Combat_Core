@@ -34,7 +34,7 @@ from VertObjects import VertSphere, VertModel, VertTerrain, VertTerrain0, VertPl
 
 from ParticleSystem import ContinuousParticleSystem
 import sys, os
-from PIL import Image, PngImagePlugin
+from PIL import Image
 import json
 
 import ctypes
@@ -111,12 +111,6 @@ class ThreeDBackend:
 
         self.uInfo = None
         self.recVideo = False
-
-        self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
-        self.nFrames = 0
-        self.tacc = False
-        self.dofPos = np.array([0.,0,0])
-        self.dsNum = -1000
 
         self.particleSystems = []
 
@@ -197,7 +191,6 @@ class ThreeDBackend:
         self.W2 = w//2
         self.H2 = h//2
         self.setFOV(self.fovX, self.scale)
-        self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
 
     def start(self):
         self.loadStart = time.time()
@@ -236,16 +229,6 @@ class ThreeDBackend:
         self.draw = Ops.CLDraw(self.W, self.H, ires=settings['IRES'], use_fsr=1)
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
-
-        self.skyTex = np.array(self.skyTex)
-        self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
-
-        self.draw.setSkyTex(self.skyTex[:,:,0],
-                            self.skyTex[:,:,1],
-                            self.skyTex[:,:,2],
-                            self.skyTex.shape[0])
-
-        self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
 
         if self.texLoadManager is not None:
             self.texLoadManager.collectTex(self.vtextures)
