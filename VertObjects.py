@@ -184,6 +184,15 @@ class VertObject:
             self.invertNorms = True
 
     def created(self):
+        if self.instanced:
+            tn = self.texNum
+            self.viewer.instanceData[tn].append(
+                {'pos':self.coords, 'rot':self.angles, 'scale':self.scale}
+            )
+            if self.viewer.vertpoints[tn]:
+                # first instance is already created
+                return
+
         self.create()
         self.numWedges = len(self.wedgePoints)
         self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum])
@@ -215,13 +224,16 @@ class VertObject:
         elif self.texMode == "clamp":
             np.clip(self.u, 0, 1, out=self.u)
             np.clip(self.v, 0, 1, out=self.v)
-        self.transform(origin=self.origin, early=True)
+
+        if not self.instanced:
+            self.transform(origin=self.origin)
+        self.submitToViewer(origin=self.origin, early=True)
+
         if self.static:
             del self.u, self.v
             del self.wedgePoints, self.vertNorms
     
-    def transform(self, origin=False, early=False):
-        tn = self.texNum
+    def transform(self, origin=False):
         if origin is False:
             newpoints = (self.wedgePoints * self.scale) @ self.rotMat + self.coords            
             newnorms = self.vertNorms @ self.rotMat
@@ -229,10 +241,15 @@ class VertObject:
             origin = numpy.expand_dims(origin, 0)
             newpoints = ((self.wedgePoints-origin) * self.scale) @ self.rotMat + origin + self.coords
             newnorms = self.vertNorms @ self.rotMat
-        
+        self.wedgePoints = newpoints
+        self.vertNorms = newnorms
+
+    def submitToViewer(self, origin=False, early=False):
+        tn = self.texNum
+
         if early:
-            self.viewer.vertpoints[tn].append(newpoints)
-            self.viewer.vertnorms[tn].append(newnorms)
+            self.viewer.vertpoints[tn].append(self.wedgePoints)
+            self.viewer.vertnorms[tn].append(self.vertNorms)
             self.viewer.vertu[tn].append(self.u)
             self.viewer.vertv[tn].append(self.v)
             if self.animated:
