@@ -25,6 +25,8 @@ def makeProgram(f, path="ShadersGL/"):
 
 TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Norm Wave'
 
+def SHADER_DEF(key, shader):
+    return shader.replace(f'//{{{key}}}', '')
 
 
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
@@ -879,7 +881,25 @@ class CLDraw:
                              uv[:,0], uv[:,1]), axis=-1)
 
         vbo = ctx.buffer(vertices.astype('float32').tobytes())
-        vao = ctx.vertex_array(draw, vbo, 'in_vert', 'in_norm', 'in_UV')
+
+        if instances is not None:
+            draw = ctx.program(vertex_shader=SHADER_DEF('INST', trisetup),
+                               fragment_shader=drawSh)
+
+            inst_data = np.array([(*o['pos'], o['scale']) for o in instances])
+            inst_buf = ctx.buffer(inst_data.astype('float32').tobytes())
+
+            vbo.extra = {'instances':inst_buf, 'num_inst':inst_data.shape[0]}
+
+            vao = ctx.vertex_array(draw,
+                [(vbo, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
+                 (inst_buf, '4f /i', 'inst_pos_scale')])
+
+            vao.extra = {'num_inst':vbo.extra['num_inst']}
+
+        else:
+            vao = ctx.vertex_array(draw, vbo, 'in_vert', 'in_norm', 'in_UV')
+
         draw['tex1'] = texNum
         draw['SM'] = 0
 
@@ -925,6 +945,8 @@ class CLDraw:
             ts = trisetup2d
         elif 'calcNorm' in mtl:
             ts = trisetupNorm
+        elif self.VBO[i].extra:
+            ts = SHADER_DEF('INST', trisetup)
         else:
             ts = trisetup
 
@@ -1018,6 +1040,13 @@ class CLDraw:
             vao = ctx.vertex_array(draw,
                 [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
                  (self.BN[i], '1f /v', 'boneNum')])
+
+        elif p.extra:
+            vao = ctx.vertex_array(draw,
+                [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
+                 (p.extra['instances'], '4f /i', 'inst_pos_scale')])
+
+            vao.extra = {'num_inst':p.extra['num_inst']}
         else:
             try:
                 vao = ctx.vertex_array(draw, p, 'in_vert', 'in_norm', 'in_UV')
@@ -1175,7 +1204,11 @@ class CLDraw:
                 except KeyError:
                     pass
 
-                vao.render(moderngl.TRIANGLES)
+                if vao.extra:
+                    vao.render(moderngl.TRIANGLES,
+                               instances=vao.extra['num_inst'])
+                else:
+                    vao.render(moderngl.TRIANGLES)
 
         ctx.depth_func = '<'
         self.fbo.depth_mask = False
