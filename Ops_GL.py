@@ -1344,8 +1344,8 @@ class CLDraw:
         if not updateShaders: return
 
         for n in range(len(self.VBO)):
+            vbo = self.VBO[n]
             if n in self.BN:
-                vbo = self.VBO[n]
                 if 'alpha' in self.oldShaders[n]:
                     dm = drawMinAlpha
                     vbosetup = (vbo, '3f 3x4 2f4 /v', 'in_vert', 'in_UV')
@@ -1362,10 +1362,18 @@ class CLDraw:
                 self.SVA[n].release()
                 self.SVA[n] = vao
 
-            elif 'alpha' in self.oldShaders[n]:
-                vbo = self.VBO[n]
-                vao = ctx.vertex_array(self.drawSA,
-                                       [(vbo, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
+            if 'alpha' in self.oldShaders[n]:
+                param = (vbo, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')
+                draw = self.drawSA
+            else:
+                param = (vbo, '3f4 5x4 /v', 'in_vert')
+                draw = self.drawS
+            if vbo.extra:
+                fmt = [param, (vbo.extra['instances'], '4f /i', 'inst_pos_scale')]
+            else: fmt = [param]
+
+            if ('alpha' in self.oldShaders[n]) or vbo.extra:
+                vao = ctx.vertex_array(draw, fmt)
                 self.SVA[n].release()
                 self.SVA[n] = vao
 
@@ -1401,7 +1409,10 @@ class CLDraw:
                     self.TA[ta].use(location=2)
 
                 sva = self.SVA[n]
-                sva.render(moderngl.TRIANGLES)
+                if self.VBO[n].extra:
+                    sva.render(moderngl.TRIANGLES, instances=self.VBO[n].extra['num_inst'])
+                else:
+                    sva.render(moderngl.TRIANGLES)
 
         sm['tex'].use(location=4+i)
         if 'sm_baked' in sm:
