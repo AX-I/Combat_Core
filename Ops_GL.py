@@ -1115,6 +1115,12 @@ class CLDraw:
                     draw = ctx.program(vertex_shader=trisetupAnim, fragment_shader=dZ)
                     vao = ctx.vertex_array(draw,
                         [va1, (self.BN[i], '1f /v', 'boneNum')])
+                elif p.extra:
+                    draw = ctx.program(vertex_shader=SHADER_DEF('INST', trisetup),
+                                       fragment_shader=dZ)
+                    vao = ctx.vertex_array(draw,
+                        [va1, (p.extra['instances'], '4f /i', 'inst_pos_scale')])
+                    vao.extra = {'num_inst':p.extra['num_inst']}
                 else:
                     draw = ctx.program(vertex_shader=trisetup, fragment_shader=dZ)
                     vao = ctx.vertex_array(draw, [va1])
@@ -1128,15 +1134,20 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            self.DRAWZ[i][1]['vscale'].write(self.sScale)
-            self.DRAWZ[i][1]['vpos'].write(self.vc)
-            self.DRAWZ[i][1]['vmat'].write(self.vmat)
+            draw = self.DRAWZ[i][1]
+            draw['vscale'].write(self.sScale)
+            draw['vpos'].write(self.vc)
+            draw['vmat'].write(self.vmat)
 
             if 'alpha' in shaders[i]:
                 sa = shaders[i]['alpha']
                 self.TA[sa].use(location=2)
 
-            self.DRAWZ[i][0].render(moderngl.TRIANGLES)
+            vao = self.DRAWZ[i][0]
+            if vao.extra:
+                vao.render(moderngl.TRIANGLES, instances=vao.extra['num_inst'])
+            else:
+                vao.render(moderngl.TRIANGLES)
 
 
         if self.doSSAO:
