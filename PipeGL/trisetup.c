@@ -2,6 +2,7 @@
 
 #version 330
 
+//{INST} #define INSTANCED
 #define NEAR 0.1
 
 uniform mat3 vmat;
@@ -9,6 +10,10 @@ uniform vec3 vpos;
 uniform float vscale;
 //uniform float far;
 uniform float aspect;
+
+#ifdef INSTANCED
+in vec4 inst_pos_scale;
+#endif
 
 in vec3 in_vert;
 out vec3 v_pos;
@@ -38,8 +43,13 @@ out VS_OUT {
 } vs_out;
 
 void main() {
+  #ifdef INSTANCED
+    vec3 world_pos = in_vert*inst_pos_scale.w + inst_pos_scale.xyz;
+  #else
+    vec3 world_pos = in_vert;
+  #endif
 
-    vec3 pos = vmat*(in_vert-vpos);
+    vec3 pos = vmat*(world_pos-vpos);
 
     vec2 tmp_UV = in_UV;
 	if ((tmp_UV.x >= uv_lo.x) && (tmp_UV.x <= uv_hi.x) &&
@@ -49,7 +59,7 @@ void main() {
 
 	depth = 1.0 / pos.z;
 	vs_out.depth = depth;
-    v_pos = in_vert * depth;
+    v_pos = world_pos * depth;
     v_UV = tmp_UV * depth;
 	v_norm = in_norm * depth;
 
