@@ -96,6 +96,8 @@ class ThreeDBackend:
         self.vertv = []
         self.vtextures = []
 
+        self.instanceData = {}
+
         self.renderMask = None
 
         self.vertBones = []
@@ -236,13 +238,17 @@ class ThreeDBackend:
             self.texLoadManager.cleanup()
 
         for i in range(len(self.vtextures)):
+            inst = None
+            if i in self.instanceData:
+                inst = self.instanceData[i]
+
             tex = self.vtextures[i]
             self.draw.addTextureGroup(
                 self.vertPoints[i].reshape((-1,3)),
                 np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
                 self.vertNorms[i].reshape((-1,3)),
-                tex,
-                self.matShaders[i])
+                tex, shader=self.matShaders[i],
+                instances=inst)
             self.vtextures[i] = np.array([1])
 
         for f in self.matShaders:
