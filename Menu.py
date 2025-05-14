@@ -18,6 +18,9 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
+AUTOSTART = None # {'stage':4, 'char':0, 'ai':[1,2]}
+
+
 from tkinter import Frame, Tk, N, E, S, W
 from tkinter import (
     TclError, Toplevel, Label, Text, Button, Listbox, Entry, Checkbutton,
@@ -258,6 +261,19 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         print('Ready in', time.time() - self.profTime)
 
         self.menuLoop()
+
+        if not AUTOSTART: return
+
+        self.mkRouter(False)
+        self.update()
+        self.goStart()
+        self.update()
+        self.goStart(AUTOSTART['stage'])
+        for i in AUTOSTART['ai']:
+            self.tgAI()
+            self.selChar(i)
+        self.update()
+        self.selChar(AUTOSTART['char'])
 
     def menuInit(self):
         self.W = np.int32(self.W)
