@@ -2695,6 +2695,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         displayFPS(self)
         self.showAINav()
 
+        if self.frameNum % 30 == 0:
+            self.printProfile(recur=True)
+
     def showAINav(self):
         if self.stage not in (1, 3): return
 
@@ -2734,7 +2737,6 @@ def run():
             app.start()
             print("Running")
             app.runBackend()
-            app.printProfile()
             if hasattr(app, 'statTime'):
                 games = 1
                 tim = time.time() - app.statTime

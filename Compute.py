@@ -39,6 +39,7 @@ import json
 
 import ctypes
 
+os.system('color')
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -634,8 +635,16 @@ class ThreeDBackend:
                 self.totMax = max(self.totMax, t - self.frameStart)
         self.prevT = t
 
-    def printProfile(self):
-        os.system('color')
+    def printProfile(self, recur=False):
+        if self.frameNum == 0: return
+
+        if recur:
+            try: _ = self.firstRecur
+            except:
+                self.firstRecur = True
+                print('\n' * len(self.ftx))
+            print('\033[A' * (len(self.ftx) + 1), end='')
+
         print('Avg     Max')
         for i in range(len(self.ftx)):
             x = self.ftx[i]
@@ -648,6 +657,11 @@ class ThreeDBackend:
 
         tt = (self.ftime[x] - self.ftime['.']) / self.frameNum
         print(f'\033[96m{tt:.4f}  {self.totMax:.4f} Total \033[0m')
+
+        if not recur: return
+        for i in self.ftime:
+            self.ftmax[i] = 0
+            self.totMax = 0
 
 if __name__ == "__main__":
     pass

@@ -47,8 +47,8 @@ def displayFPS(self):
         self.debugFont = ImageFont.truetype(_ARIALBD, 16)
         self.fpsAccum = 1
         self.fpsDisplay = 1
-    if self.frameNum % 10 == 0:
-        self.fpsDisplay = round(10 / self.fpsAccum, 1)
+    if self.frameNum % 30 == 0:
+        self.fpsDisplay = round(30 / self.fpsAccum, 1)
         self.fpsAccum = 0
     self.fpsAccum += self.frameTime
 
