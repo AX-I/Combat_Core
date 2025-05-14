@@ -852,7 +852,10 @@ class CLDraw:
             if max(tex.size) > 128:
                 tex.anisotropy = a
 
-    def addTextureGroup(self, xyz, uv, vn, rgb, shader=None, mip=None):
+    def addTextureGroup(self, xyz, uv, vn, rgb,
+                        shader=None, mip=None,
+                        instances=None):
+
         texNum = len(self.TEX)
 
         rr = np.array(rgb/65535, order='C', dtype='float16')
