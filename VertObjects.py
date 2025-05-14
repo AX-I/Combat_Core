@@ -31,11 +31,13 @@ def rgbToString(rgb):
 
 class VertObject:    
     def __init__(self, *args, texture=None, texMode="default", gamma=True,
-                 maxWedgeDims=1, useShaders={}, **kwargs):
+                 maxWedgeDims=1, useShaders={}, instanced=False, **kwargs):
         self.maxWedgeDims = maxWedgeDims
         self.numWedges = 0
         self.estWedges = 0
         self.enabled = True
+
+        self.instanced = instanced
 
         self.castShadow = False
         self.receiveShadow = False
@@ -137,6 +139,9 @@ class VertObject:
             self.viewer.vertu.append([])
             self.viewer.vertv.append([])
             self.viewer.vertBones.append([])
+
+            if self.instanced:
+                self.viewer.instanceData[self.texNum] = []
             
             s = {'shader':'sh', 'args':{}}
             if self.mip is not None: s["mip"] = self.mip
