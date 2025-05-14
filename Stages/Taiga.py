@@ -63,6 +63,7 @@ def setupStage(self):
 
     nr.seed(1); random.seed(1)
     options = {"filename":mpath+"pine/Pine.obj", "static":True,
+               'instanced':True,
            "texMode":None, "scale":0.2, "shadow":"C"}
     options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
                 'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
