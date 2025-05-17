@@ -195,8 +195,8 @@ class VertObject:
 
         self.create()
         self.numWedges = len(self.wedgePoints)
-        self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum])
-        self.cEnd = self.cStart + self.numWedges
+        self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum]) * 3
+        self.cEnd = self.cStart + self.numWedges * 3
         self.wedgePoints = numpy.array(self.wedgePoints)
         if self.overrideNorms is None:
             self.vertNorms = np.array(self.vertNorms).reshape((-1, 3))

@@ -331,7 +331,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.matShaders[vo.texNum].update(kwargs['useShaders'])
         if Phys.eucDist(args[1], vo.coords) > 0.001:
             self.draw.translate(np.array(args[1]) - vo.coords,
-                                vo.cStart*3, vo.cEnd*3, vo.texNum)
+                                vo.cStart, vo.cEnd, vo.texNum)
             vo.coords = args[1]
         if type(self.vertObjects[-1]) is VertModel:
             if self.vertObjects[-1].prevMtl is not None:
@@ -466,7 +466,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         r = self.restRings
         self.ringPos = np.array(a['b1'].offset[:3])
         self.draw.translate(a['b1'].offset[:3],
-                            r.cStart*3, r.cEnd*3, r.texNum)
+                            r.cStart, r.cEnd, r.texNum)
         a['legIKoffset'] = 0
         a['tempYPos'] = float(a['b1'].offset[1])
 
@@ -540,7 +540,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if 'deathTime' in a:
                     del a['deathTime']
                 self.draw.translate(-self.ringPos,
-                                    r.cStart*3, r.cEnd*3, r.texNum)
+                                    r.cStart, r.cEnd, r.texNum)
                 a['movingOld'] = True
 
     def setYoffsetTest(self, p):
@@ -913,7 +913,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         e["start"] = time.time()
         self.matShaders[e["obj"].texNum]['args'].update(emPow=4)
 
-        self.draw.translate(e["pos"], e["obj"].cStart*3, e["obj"].cEnd*3,
+        self.draw.translate(e["pos"], e["obj"].cStart, e["obj"].cEnd,
                             e["obj"].texNum)
 
         self.expNum = (self.expNum + 1) % len(self.exploders)
@@ -1835,7 +1835,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if i["t"] == t: return
         if t is None: t = self.frameNum
 
-        cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
+        cs, ce, tn = i["obj"].cStart, i["obj"].cEnd, i["obj"].texNum
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
 
@@ -1862,7 +1862,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def resetPickup(self):
         i = self.pickups[0]
-        cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
+        cs, ce, tn = i["obj"].cStart, i["obj"].cEnd, i["obj"].texNum
         self.draw.translate(-i["pos"], cs, ce, tn)
         i["pos"] = None
         i['t'] = -self.frameNum
@@ -2047,7 +2047,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if fxobj.timeStart > 0:
                 break
 
-            objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+            objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
 
             norm = np.cross(idir, (1,1,1))
             norm /= Phys.eucLen(norm)
@@ -2063,7 +2063,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         for fxobj in self.impulseFX:
             if fxobj.timeStart > 0:
-                objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+                objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
 
                 ctime = CURRTIME - fxobj.timeStart
                 life = 0.3
@@ -2124,7 +2124,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if sum(diff*diff) > 0:
                 if s.texNum not in batch:
                     batch[s.texNum] = []
-                batch[s.texNum].append((diff, s.cStart*3, s.cEnd*3))
+                batch[s.texNum].append((diff, s.cStart, s.cEnd))
 
             if self.spheres[i][0] == 'blank':
                 # 015 is one side of rect, 234 is other side
@@ -2140,9 +2140,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     lpi[self.lpCount[i]] = self.srbs[i].pos
 
                 diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
-                batch[s.texNum].append((diff, s.cStart*3, s.cStart*3+2))
-                batch[s.texNum].append((diff2, s.cStart*3+2, s.cStart*3+5))
-                batch[s.texNum].append((diff, s.cStart*3+5, s.cStart*3+6))
+                batch[s.texNum].append((diff, s.cStart, s.cStart+2))
+                batch[s.texNum].append((diff2, s.cStart+2, s.cStart+5))
+                batch[s.texNum].append((diff, s.cStart+5, s.cStart+6))
 
             self.lpCount[i] += 1
             self.lpCount[i] %= self.lp.shape[1]
@@ -2165,7 +2165,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
                 frameScale = self.exscale ** (time.time() - e["start"])
 
-                cs, ce, tn = e["obj"].cStart*3, e["obj"].cEnd*3, e["obj"].texNum
+                cs, ce, tn = e["obj"].cStart, e["obj"].cEnd, e["obj"].texNum
                 self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
                 e["scale"] *= frameScale / e["scale"]
                 self.matShaders[tn].update(args={'emPow': 2 / e["scale"]})
@@ -2537,8 +2537,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     # For debug
                     ts = self.testSphere
                     diff = a['b1'].offset[:3] + test - ts.coords
-                    self.draw.translate(diff, ts.cStart*3,
-                                        ts.cEnd*3, ts.texNum)
+                    self.draw.translate(diff, ts.cStart,
+                                        ts.cEnd, ts.texNum)
                     ts.coords += diff
 
                 if 'vrC' in a:
