@@ -1176,6 +1176,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets):
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
+                               instanced=True,
                                useShaders={'shader':"emissive",'args':{'emPow':2}})
             self.spheres.append(("blank", self.vertObjects[-1]))
 
@@ -1198,6 +1199,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 2):
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
                                texture=PATH+"../Assets/Red.png",
+                               instanced=True,
                                useShaders={'shader':"emissive",'args':{'emPow':2.5}})
             self.spheres.append(("red", self.vertObjects[-1]))
 
@@ -1227,6 +1229,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertRing, [0,0,0], n=16,
                 radius=(0.5,1.2), z=0.3, uMult=5,
                 texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
+                instanced=True,
                 shadow="", useShaders={'shader':'add', 'args':{'emPow':0.6},
                                        'noline':True})
             obj = self.vertObjects[-1]
@@ -1263,6 +1266,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 3):
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Orange.png",
+                               instanced=True,
                                useShaders={'shader':'add','args':{'emPow':0.4}})
             self.spheres.append(("orange", self.vertObjects[-1]))
 
@@ -1288,6 +1292,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 5):
             self.addVertObject(VertSphere, p, n=12, scale=0.3,
                                texture=PATH+"../Assets/Black.png",
+                               instanced=True,
                                useShaders={"emissive":0.0})
             self.spheres.append(("black", self.vertObjects[-1]))
 

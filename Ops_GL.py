@@ -379,19 +379,28 @@ class CLDraw:
         for tn in batch:
             tb = batch[tn]
             if len(tb) == 0: continue
-            size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
+
+            vbo_width = 8
+            GPU_BUF = self.VBO[tn]
+
+            if self.VBO[tn].extra:
+                vbo_width = 4
+                GPU_BUF = self.VBO[tn].extra['instances']
+
+            size = vbo_width*4
+
             try:
                 dat = self.batchCache[tn]
             except KeyError:
-                raw = self.VBO[tn].read()
-                dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, 8))
+                raw = GPU_BUF.read()
+                dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, vbo_width))
                 self.batchCache[tn] = dat
 
             for i in range(len(tb)):
                 dat[tb[i][1]:tb[i][2],:3] += np.expand_dims(tb[i][0], 0)
-            self.VBO[tn].write(dat[mStart:mEnd], offset=mStart*size)
+            GPU_BUF.write(dat[mStart:mEnd], offset=mStart*size)
 
     def translate(self, diff, cStart, cEnd, tn):
         size = 8*4

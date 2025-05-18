@@ -70,7 +70,7 @@ class VertObject:
         
         self.viewer = args[0]
         self.coords = numpy.array(args[1], dtype="float")
-        self.scale = numpy.array([1, 1, 1])
+        self.scale = 1
         self.angles = [0.,0.,0.]
         self.rotMat = numpy.array([[1, 0, 0],
                                    [0, 1, 0],
@@ -160,7 +160,7 @@ class VertObject:
         if "enabled" in kwargs:
             self.enabled = kwargs["enabled"]
         if "scale" in kwargs:
-            self.scale = numpy.array(kwargs["scale"])
+            self.scale = kwargs["scale"]
         if "rot" in kwargs:
             rr = kwargs["rot"]
             rotX = numpy.array([[1, 0, 0],
@@ -186,6 +186,10 @@ class VertObject:
     def created(self):
         if self.instanced:
             tn = self.texNum
+
+            self.cStart = len(self.viewer.instanceData[tn])
+            self.cEnd = self.cStart + 1
+
             self.viewer.instanceData[tn].append(
                 {'pos':self.coords, 'rot':self.angles, 'scale':self.scale}
             )
@@ -195,8 +199,9 @@ class VertObject:
 
         self.create()
         self.numWedges = len(self.wedgePoints)
-        self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum]) * 3
-        self.cEnd = self.cStart + self.numWedges * 3
+        if not self.instanced:
+            self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum]) * 3
+            self.cEnd = self.cStart + self.numWedges * 3
         self.wedgePoints = numpy.array(self.wedgePoints)
         if self.overrideNorms is None:
             self.vertNorms = np.array(self.vertNorms).reshape((-1, 3))
