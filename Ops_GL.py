@@ -71,6 +71,10 @@ ctx.front_face = 'cw'
 def align34(a):
     return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
+class TransformInfo:
+    gpu_buf: moderngl.Buffer = None
+    size: int = None
+
 class CLDraw:
     def __init__(self, w, h, ires=1, use_fsr=0):
 
@@ -175,6 +179,7 @@ class CLDraw:
                              '#define SCR_SHADOW':''}
 
         self.batchCache = {}
+        self.TINFO = TransformInfo()
 
         self.AOscale = 2
 
@@ -374,6 +379,30 @@ class CLDraw:
             except KeyError:
                 pass
 
+    def transformPrep(self, tn):
+        assert self.TINFO.gpu_buf is None
+
+        if self.VBO[tn].extra:
+            GPU_BUF = self.VBO[tn].extra['instances']
+            vbo_width = 4
+        else:
+            GPU_BUF = self.VBO[tn]
+            vbo_width = 8
+
+        try: dat = self.batchCache[tn]
+        except KeyError:
+            raw = GPU_BUF.read()
+            dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, vbo_width))
+            self.batchCache[tn] = dat
+
+        self.TINFO.gpu_buf = GPU_BUF
+        self.TINFO.size = vbo_width*4
+        return dat
+
+    def transformWrite(self, dat, offset=0):
+        self.TINFO.gpu_buf.write(dat, offset=offset*self.TINFO.size)
+        self.TINFO.gpu_buf = None
+
     def translateBatch(self, batch: dict):
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
@@ -382,66 +411,47 @@ class CLDraw:
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
 
-            vbo_width = 8
-            GPU_BUF = self.VBO[tn]
-
-            if self.VBO[tn].extra:
-                vbo_width = 4
-                GPU_BUF = self.VBO[tn].extra['instances']
-
-            size = vbo_width*4
-
-            try:
-                dat = self.batchCache[tn]
-            except KeyError:
-                raw = GPU_BUF.read()
-                dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, vbo_width))
-                self.batchCache[tn] = dat
-
+            dat = self.transformPrep(tn)
             for i in range(len(tb)):
                 dat[tb[i][1]:tb[i][2],:3] += np.expand_dims(tb[i][0], 0)
-            GPU_BUF.write(dat[mStart:mEnd], offset=mStart*size)
+            self.transformWrite(dat[mStart:mEnd], offset=mStart)
 
     def translate(self, diff, cStart, cEnd, tn):
-        size = 8*4
-        raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
-        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
-        dat[:,:3] += np.expand_dims(diff, 0)
-        self.VBO[tn].write(dat, offset=cStart*size)
+        dat = self.transformPrep(tn)
+        dat[cStart:cEnd,:3] += np.expand_dims(diff, 0)
+        self.transformWrite(dat[cStart:cEnd], offset=cStart)
 
     def scale(self, origin, diff, cStart, cEnd, tn):
         o = np.expand_dims(origin, 0)
-        size = 8*4
-        raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
-        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
-        dat[:,:3] = (dat[:,:3] - o) * diff + o
-        self.VBO[tn].write(dat, offset=cStart*size)
+        dat = self.transformPrep(tn)
+        if self.VBO[tn].extra:
+            dat[cStart:cEnd,3] *= diff
+        else:
+            dat[cStart:cEnd,:3] = (dat[cStart:cEnd,:3] - o) * diff + o
+        self.transformWrite(dat[cStart:cEnd], offset=cStart)
 
     def rotateBatch(self, batch: dict):
         """batch = {tn: [(diff, cStart, cEnd), ..], ..}"""
         for tn in batch:
             tb = batch[tn]
             if len(tb) == 0: continue
-            size = 8*4
             mEnd = max(a[2] for a in tb)
             mStart = min(a[1] for a in tb)
-            try:
-                dat = self.batchCache[tn]
-            except KeyError:
-                raw = self.VBO[tn].read()
-                dat = np.array(np.frombuffer(raw, 'float32')).reshape((-1, 8))
-                self.batchCache[tn] = dat
+
+            dat = self.transformPrep(tn)
+            if self.VBO[tn].extra: continue
 
             for i in range(len(tb)):
                 dat[tb[i][1]:tb[i][2],:3] = dat[tb[i][1]:tb[i][2],:3] @ tb[i][0]
-            self.VBO[tn].write(dat[mStart:mEnd], offset=mStart*size)
+            self.transformWrite(dat[mStart:mEnd], offset=mStart)
 
     def rotate(self, rotMat, cStart, cEnd, tn):
-        size = 8*4
-        raw = self.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
-        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
-        dat[:,:3] = dat[:,:3] @ rotMat
-        self.VBO[tn].write(dat, offset=cStart*size)
+        dat = self.transformPrep(tn)
+        if self.VBO[tn].extra:
+            pass
+        else:
+            dat[cStart:cEnd,:3] = dat[cStart:cEnd,:3] @ rotMat
+        self.transformWrite(dat[cStart:cEnd], offset=cStart)
 
 
     def highlight(self, color, tn, mult=False):
