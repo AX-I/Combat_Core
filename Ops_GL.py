@@ -71,6 +71,8 @@ ctx.front_face = 'cw'
 def align34(a):
     return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
+INSTANCE_FORMAT = ('4f 3f 3f 3f /i', 'inst_pos_scale', 'inst_rot_0', 'inst_rot_1', 'inst_rot_2')
+
 class TransformInfo:
     gpu_buf: moderngl.Buffer = None
     size: int = None
@@ -384,7 +386,7 @@ class CLDraw:
 
         if self.VBO[tn].extra:
             GPU_BUF = self.VBO[tn].extra['instances']
-            vbo_width = 4
+            vbo_width = 13
         else:
             GPU_BUF = self.VBO[tn]
             vbo_width = 8
@@ -439,16 +441,20 @@ class CLDraw:
             mStart = min(a[1] for a in tb)
 
             dat = self.transformPrep(tn)
-            if self.VBO[tn].extra: continue
-
-            for i in range(len(tb)):
-                dat[tb[i][1]:tb[i][2],:3] = dat[tb[i][1]:tb[i][2],:3] @ tb[i][0]
+            if self.VBO[tn].extra:
+                for i in range(len(tb)):
+                    cur_rot = dat[tb[i][1]:tb[i][2],4:].reshape((-1,3,3))
+                    dat[tb[i][1]:tb[i][2],4:] = (cur_rot @ tb[i][0]).reshape((-1,9))
+            else:
+                for i in range(len(tb)):
+                    dat[tb[i][1]:tb[i][2],:3] = dat[tb[i][1]:tb[i][2],:3] @ tb[i][0]
             self.transformWrite(dat[mStart:mEnd], offset=mStart)
 
     def rotate(self, rotMat, cStart, cEnd, tn):
         dat = self.transformPrep(tn)
         if self.VBO[tn].extra:
-            pass
+            cur_rot = dat[cStart:cEnd,4:].reshape((3,3))
+            dat[cStart:cEnd,4:] = (cur_rot @ rotMat).flatten()
         else:
             dat[cStart:cEnd,:3] = dat[cStart:cEnd,:3] @ rotMat
         self.transformWrite(dat[cStart:cEnd], offset=cStart)
@@ -905,14 +911,15 @@ class CLDraw:
             draw = ctx.program(vertex_shader=SHADER_DEF('INST', trisetup),
                                fragment_shader=drawSh)
 
-            inst_data = np.array([(*o['pos'], o['scale']) for o in instances])
+            inst_data = np.array([(*o['pos'], o['scale'], *o['rot'].flatten()) \
+                                  for o in instances])
             inst_buf = ctx.buffer(inst_data.astype('float32').tobytes())
 
             vbo.extra = {'instances':inst_buf, 'num_inst':inst_data.shape[0]}
 
             vao = ctx.vertex_array(draw,
                 [(vbo, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
-                 (inst_buf, '4f /i', 'inst_pos_scale')])
+                 (inst_buf, *INSTANCE_FORMAT)])
 
             vao.extra = {'num_inst':vbo.extra['num_inst']}
 
@@ -1063,7 +1070,7 @@ class CLDraw:
         elif p.extra:
             vao = ctx.vertex_array(draw,
                 [(p, '3f 3f 2f /v', 'in_vert', 'in_norm', 'in_UV'),
-                 (p.extra['instances'], '4f /i', 'inst_pos_scale')])
+                 (p.extra['instances'], *INSTANCE_FORMAT)])
 
             vao.extra = {'num_inst':p.extra['num_inst']}
         else:
@@ -1138,7 +1145,7 @@ class CLDraw:
                     draw = ctx.program(vertex_shader=SHADER_DEF('INST', trisetup),
                                        fragment_shader=dZ)
                     vao = ctx.vertex_array(draw,
-                        [va1, (p.extra['instances'], '4f /i', 'inst_pos_scale')])
+                        [va1, (p.extra['instances'], *INSTANCE_FORMAT)])
                     vao.extra = {'num_inst':p.extra['num_inst']}
                 else:
                     draw = ctx.program(vertex_shader=trisetup, fragment_shader=dZ)
@@ -1388,7 +1395,7 @@ class CLDraw:
                 param = (vbo, '3f4 5x4 /v', 'in_vert')
                 draw = self.drawS
             if vbo.extra:
-                fmt = [param, (vbo.extra['instances'], '4f /i', 'inst_pos_scale')]
+                fmt = [param, (vbo.extra['instances'], *INSTANCE_FORMAT)]
             else: fmt = [param]
 
             if ('alpha' in self.oldShaders[n]) or vbo.extra:

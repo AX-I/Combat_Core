@@ -191,7 +191,7 @@ class VertObject:
             self.cEnd = self.cStart + 1
 
             self.viewer.instanceData[tn].append(
-                {'pos':self.coords, 'rot':self.angles, 'scale':self.scale}
+                {'pos':self.coords, 'rot':self.rotMat, 'scale':self.scale}
             )
             if self.viewer.vertpoints[tn]:
                 # first instance is already created
