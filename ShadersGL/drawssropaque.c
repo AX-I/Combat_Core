@@ -12,7 +12,7 @@
 #define REFL_DBIAS 0.2f
 #define REFL_FADE 60.f
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 out vec4 f_color;
 

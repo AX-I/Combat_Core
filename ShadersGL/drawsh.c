@@ -91,7 +91,7 @@ uniform float NMmipBias;
 
 in vec3 vertLight;
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 uniform float specular;
 uniform float roughness;

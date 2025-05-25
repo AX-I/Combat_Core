@@ -18,8 +18,14 @@ PATH = OpsConv.PATH
 ctx = OpsConv.getContext_GL()
 print("Using", ctx.info["GL_RENDERER"])
 
+UBO_VMP = '''layout (std140) uniform vMatPos {
+  mat3 vmat; // 0-12
+  vec3 vpos; // 12-16
+};'''
+
 def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
+    t = t.replace('#include UBO_VMP', UBO_VMP)
     return t
 
 
@@ -192,6 +198,9 @@ class CLDraw:
         self.TINFO = TransformInfo()
 
         self.AOscale = 2
+
+        self.vMatPos = np.zeros((16,), 'float32')
+        self.ubo_vMatPos = ctx.buffer(self.vMatPos)
 
     def usePOSTFBO(self, inplace=False):
         if inplace and not self.started_post:
@@ -556,9 +565,6 @@ class CLDraw:
             self.psProg['useTex'] = 0
             self.psProg['fadeUV'] = shader
 
-        self.psProg['vmat'].write(self.vmat)
-        self.psProg['vpos'].write(self.vc)
-
         vertices = xyz
 
         try:
@@ -862,18 +868,17 @@ class CLDraw:
 
     def setPos(self, vc):
         self.vc = vc.astype('float32')
-        for draw in self.DRAW:
-            try: draw['vpos'].write(self.vc)
-            except: pass
+        self.vMatPos[12:15] = self.vc
 
     def setVM(self, vM):
         self.rawVM = vM.astype('float32')
         vmat = np.array([-vM[1], vM[2], vM[0]])
         vmat = np.array(vmat.T, order='C')
         self.vmat = vmat.astype('float32')
-        for draw in self.DRAW:
-            try: draw['vmat'].write(self.vmat)
-            except: pass
+
+        self.vMatPos[:3] = self.vmat[0]
+        self.vMatPos[4:7] = self.vmat[1]
+        self.vMatPos[8:11] = self.vmat[2]
 
     def setAnisotropy(self, a):
         for tex in self.TEX:
@@ -1114,6 +1119,9 @@ class CLDraw:
     def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
         self.started_post = False
 
+        self.ubo_vMatPos.write(self.vMatPos.tobytes())
+        self.ubo_vMatPos.bind_to_uniform_block()
+
         if mask is None:
             mask = [False] * len(shaders)
 
@@ -1167,8 +1175,6 @@ class CLDraw:
 
             draw = self.DRAWZ[i][1]
             draw['vscale'].write(self.sScale)
-            draw['vpos'].write(self.vc)
-            draw['vmat'].write(self.vmat)
 
             if 'alpha' in shaders[i]:
                 sa = shaders[i]['alpha']
