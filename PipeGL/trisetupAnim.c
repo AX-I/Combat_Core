@@ -4,8 +4,8 @@
 
 #define NEAR 0.1
 
-uniform mat3 vmat;
-uniform vec3 vpos;
+#include UBO_VMP
+
 uniform float vscale;
 
 uniform float aspect;
