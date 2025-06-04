@@ -1347,6 +1347,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = np.array([0., 0, 0])
             self.addVertObject(VertSphere, p, n=24, scale=0.25,
                                texture=PATH+"../Assets/Orange1.png",
+                               instanced=True,
                                useShaders={'shader':"add", 'args':{'emPow':2.}})
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
