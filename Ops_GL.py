@@ -1313,13 +1313,16 @@ class CLDraw:
             self.DRAW[i]['tex1'] = 0
             self.TEX[i].use(location=0)
 
-            vao.render(moderngl.TRIANGLES)
+            n_inst = 1
+            if vao.extra: n_inst = vao.extra['num_inst']
+
+            vao.render(moderngl.TRIANGLES, instances=n_inst)
 
             if shader == 'SSRopaque':
                 ctx.depth_func = '<'
             if shader == 'add' or shader == 'sub':
                 if 'noline' not in shaders[i]:
-                    vao.render(moderngl.LINES)
+                    vao.render(moderngl.LINES, instances=n_inst)
 
         self.fbo.depth_mask = True
 
