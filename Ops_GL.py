@@ -1387,6 +1387,7 @@ class CLDraw:
                                        [vbosetup, (self.BN[n], '1f /v', 'boneNum')])
                 self.SVA[n].release()
                 self.SVA[n] = vao
+                continue
 
             if 'alpha' in self.oldShaders[n]:
                 param = (vbo, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')
@@ -1436,8 +1437,11 @@ class CLDraw:
 
                 sva = self.SVA[n]
                 if self.VBO[n].extra:
+                    sva.program['isInstanced'] = 1
                     sva.render(moderngl.TRIANGLES, instances=self.VBO[n].extra['num_inst'])
                 else:
+                    try: sva.program['isInstanced'] = 0
+                    except: pass
                     sva.render(moderngl.TRIANGLES)
 
         sm['tex'].use(location=4+i)
