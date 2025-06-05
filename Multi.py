@@ -1880,10 +1880,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameStart = time.perf_counter()
         self.frameProfile('.')
 
-        try:
+        if hasattr(self.STAGECONFIG, 'frameUpdate'):
             self.STAGECONFIG.frameUpdate(self)
-        except AttributeError:
-            pass
+
         self.frameProfile('Stage')
 
         self.si.put({'SetPos':{'pos':self.pos,
