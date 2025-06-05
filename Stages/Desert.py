@@ -59,14 +59,15 @@ def setupStage(self):
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
 def frameUpdate(self):
-    if self.frameNum == 1:
+    if self.frameNum == 0:
         tpath = 'C:/Users/L/Downloads/Textures/ornate-celtic-gold/'
         self.addNrmMap(tpath + "ornate-celtic-gold-normal.png", 'gold')
         self.addNrmMap(PATH + '../Assets/aerial_beach_01_nor_gl_1k.png', 'sand',
                        mip=True)
         self.clothTime = 0
-    updateCloth(self)
-    print('Cloth', self.clothTime / self.frameNum, end='\r')
+    else:
+        updateCloth(self)
+        print('Cloth', self.clothTime / self.frameNum, end='\r')
 
 def updateCloth(self):
     g = np.repeat(np.array([[0,-9.81,0.2 * sin(time.time())]], dtype='float32'),
@@ -77,17 +78,21 @@ def updateCloth(self):
     for s in self.srbs:
         if not s.disabled:
             coll = s.colliders[0]
+            break
 
     st = time.perf_counter()
     self.clothSim.step(g, collider=coll, collVMult=2, iters=16)
     self.clothTime += time.perf_counter() - st
 
     tn = self.cloth.texNum
-    cStart, cEnd = self.cloth.cStart*3, self.cloth.cEnd*3
+    cStart, cEnd = self.cloth.cStart, self.cloth.cEnd
 
     size = 8*4
-    raw = self.draw.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
-    dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
+    try: dat = self.clothDat
+    except:
+        raw = self.draw.VBO[tn].read(size=(cEnd-cStart)*size, offset=cStart*size)
+        dat = np.array(np.frombuffer(raw, 'float32')).reshape((cEnd-cStart, 8))
+        self.clothDat = dat
 
     U = self.clothSim.Ucur
 
