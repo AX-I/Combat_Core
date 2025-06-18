@@ -194,6 +194,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                     "New Stage", "Forest", 'Strachan']
         self.localIP = None
 
+        self._imShape = None
+
 
 
     def openImageCover(self, fn, blur=0):
@@ -201,7 +203,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         i = Image.open(fn).convert('RGBA')
         fac = max(self.W / i.size[0], self.H / i.size[1])
         if blur: i = i.filter(ImageFilter.BoxBlur(blur/fac))
-        i = i.resize((int(i.size[0] * fac), int(i.size[1] * fac)), Image.BILINEAR)
+        self._imShape = (int(i.size[0] * fac), int(i.size[1] * fac))
         return i
 
     def startMenu(self):
@@ -268,6 +270,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.update()
         self.goStart()
         self.update()
+        print('Stage select in', time.time() - self.profTime)
         self.goStart(AUTOSTART['stage'])
         for i in AUTOSTART['ai']:
             self.tgAI()
@@ -433,8 +436,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
+        shape = self._imShape
+        self._imShape = None
         if (USE_CL + USE_GL) == 0: return x
-        return CLObject(self.ctx, self.cq, name, x)
+        return CLObject(self.ctx, self.cq, name, x, shape)
 
 
     def blendCursor(self, frame: np.array) -> None:

@@ -22,7 +22,7 @@ class GLObject:
     vbo: mgl.Buffer
     vao: mgl.VertexArray
 
-    def __init__(self, ctx, cq, name: str, x: np.array):
+    def __init__(self, ctx, cq, name: str, x: np.array, shape: tuple = None):
         x = (x/255).astype('float16')
 
         buf = ctx.texture(x.shape[1::-1], x.shape[2], x, dtype='f2')
@@ -31,7 +31,9 @@ class GLObject:
 
         self.name = name
         self.buf = buf
-        self.shape = np.array(x.shape, dtype='int32')
+        if shape is None: shape = x.shape
+        else: shape = shape[::-1]
+        self.shape = np.array(shape, dtype='int32')
         self.filters = {}
 
         self.prog = ctx.program(vertex_shader=VS, fragment_shader=FS)
