@@ -59,7 +59,7 @@ def getTexture(fn, cgamma=True, texMul=1):
     else:       ta *= 64
     ta *= texMul
 
-    return ta.astype("uint16")
+    return np.array(ta/65535, order='C', dtype='float16')
 
 
 class ThreeDBackend:

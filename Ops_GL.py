@@ -885,7 +885,10 @@ class CLDraw:
 
         texNum = len(self.TEX)
 
-        rr = np.array(rgb/65535, order='C', dtype='float16')
+        if rgb.dtype == 'float16':
+            rr = rgb
+        else:
+            rr = np.array(rgb/65535, order='C', dtype='float16')
 
         p = xyz.astype("float32")
 
