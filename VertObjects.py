@@ -600,10 +600,8 @@ class VertModel(VertObject):
         self.filename = filename
         self.size = size
         self.estWedges = 0
-        with open(filename) as f:
-            for line in f:
-                if line[0] == "f":
-                    self.estWedges += len(line.split()) - 3
+        with open(filename, 'rb') as f:
+            self.estWedges += f.read().count(b'\nf ')
 
         self.mc = mc
         self.blender = blender
