@@ -154,6 +154,7 @@ class ThreeDBackend:
             os.mkdir(PATH + "Screenshots")
 
         self.record = record
+        self.batchKB = None
 
         bargs = (self.recP, self.evtQ, self.infQ,
                  self.W, self.H, self.mouseSensitivity,
@@ -275,7 +276,9 @@ class ThreeDBackend:
         d = self.directionalLights[0]
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
+        self.startBatchKB()
         self.customizeFrontend()
+        self.endBatchKB()
 
         self.vMat = np.stack((self.viewVec(),self.vVhorz(),self.vVvert()))
 
@@ -605,8 +608,18 @@ class ThreeDBackend:
 
     def changeTitle(self, t):
         self.P.put(("title", str(t)))
+
+    def startBatchKB(self):
+        self.batchKB = []
+    def endBatchKB(self):
+        self.P.put(('keyBatch', self.batchKB))
+        self.batchKB = None
+
     def bindKey(self, k, f):
-        self.P.put(("key", k))
+        if self.batchKB is None:
+            self.P.put(("key", k))
+        else:
+            self.batchKB.append(k)
         self.handles[k] = f
 
     def frameUpdate(self):

@@ -290,6 +290,14 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
             except: pass
             self.frameKeys[a] = 1
 
+    def customKeyPress(self, e):
+        k = e.keysym
+        if e.state & 0x4:
+            k = f'Control-{k}'
+        if len(k) > 1:
+            k = f'<{k}>'
+        self.customAction(k, None)
+
     def checkPipe(self, cont=True):
         try: action = self.P.get(True, 0.02)
         except Empty: self.empty += 1
@@ -307,6 +315,9 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
                 elif action[0] == "key":
                     self.d.bind(action[1],
                                 lambda x: self.customAction(action[1], x))
+                elif action[0] == 'keyBatch':
+                    for k in action[1]:
+                        self.d.bind(k, self.customKeyPress)
                 elif action[0] == "screenshot":
                     self.screenshot()
             except Exception as e:
