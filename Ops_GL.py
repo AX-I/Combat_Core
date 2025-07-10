@@ -170,6 +170,17 @@ class CLDraw:
         self.dofAperture = 12
         self.doSSAO = False
 
+        self.POSTBUF = (
+            ctx.texture((self.W, self.H), 3, dtype='f2'),
+            ctx.texture((self.W, self.H), 3, dtype='f2')
+        )
+        self.POSTFBO = (
+            ctx.framebuffer(self.POSTBUF[0]),
+            ctx.framebuffer(self.POSTBUF[1])
+        )
+        self.POST_N = 0
+        self.started_post = False
+
         self.setupLights()
         self.setupBlur()
         self.setupNoise()
@@ -184,6 +195,19 @@ class CLDraw:
         self.TINFO = TransformInfo()
 
         self.AOscale = 2
+
+    def usePOSTFBO(self, inplace=False):
+        if inplace and not self.started_post:
+            return
+        if not inplace:
+            self.POST_N = 1 - self.POST_N
+        self.POSTFBO[self.POST_N].use()
+
+    def getPOSTBUF(self, opposite=False):
+        if self.started_post:
+            return self.POSTBUF[opposite ^ self.POST_N]
+        self.started_post = True
+        return self.FB
 
     def reloadShaders(self, **kwargs):
         while True:
@@ -577,7 +601,8 @@ class CLDraw:
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.POSTFBO.use()
+        self.getPOSTBUF().use(location=0)
+        self.usePOSTFBO()
 
         self.dProg['x'].write(np.float32(x))
         self.dProg['y'].write(np.float32(y))
@@ -586,13 +611,9 @@ class CLDraw:
         self.dProg['strength'].write(np.float32(st))
         self.dProg['tex1'] = 0
         self.dProg['texd'] = 1
-        self.FB.use(location=0)
         self.DBT.use(location=1)
 
         self.dVao.render(moderngl.TRIANGLES)
-
-        # Copy to frame
-        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
 
     def motionBlur(self, oldPos, oldVMat):
         try: _ = self.moProg
@@ -612,7 +633,7 @@ class CLDraw:
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
-        self.POSTFBO.use()
+        self.usePOSTFBO()
 
         exp = time.perf_counter() - self.moTime
         self.moTime += exp
@@ -636,10 +657,7 @@ class CLDraw:
         self.moVao.render(moderngl.TRIANGLES)
 
         # Copy to oldbuf
-        self.blit(self.OLDFBO, self.FB, self.W, self.H)
-
-        # Copy to frame
-        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
+        self.blit(self.OLDFBO, self.getPOSTBUF(opposite=True), self.W, self.H)
 
     def setupSSAO(self):
         AOscale = self.AOscale
@@ -700,17 +718,14 @@ class CLDraw:
         ctx.disable(moderngl.BLEND)
         ctx.disable(moderngl.DEPTH_TEST)
 
-        self.POSTFBO.use()
+        self.getPOSTBUF().use(location=0)
+        self.usePOSTFBO()
         self.dofProg['focus'] = self.dofFocus
         self.dofProg['aperture'] = self.dofAperture * self.IRES
-        self.FB.use(location=0)
         self.DBT.use(location=1)
 
         self.dofVao.render(moderngl.TRIANGLES)
 
-        # Copy to frame
-        self.blit(self.fbo, self.POSTBUF, self.W, self.H)
-        ctx.enable(moderngl.DEPTH_TEST)
         ctx.enable(moderngl.BLEND)
 
 
@@ -719,7 +734,8 @@ class CLDraw:
     def applyLens(self, i):
         try: _ = self.lensProg
         except: self.setupLens()
-        self.fbo.use()
+
+        self.usePOSTFBO(inplace=True)
         ctx.disable(moderngl.DEPTH_TEST)
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
@@ -733,10 +749,6 @@ class CLDraw:
         self.VAO[i].render(moderngl.TRIANGLES)
 
     def setupBlur(self):
-        # Temp
-        self.POSTBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
-        self.POSTFBO = ctx.framebuffer(self.POSTBUF)
-
         # 1st pass
         self.POSTBUF1 = ctx.texture((self.W//2, self.H//2), 3, dtype='f2')
         self.POSTBUF1.repeat_x = False
@@ -773,7 +785,7 @@ class CLDraw:
         self.blurProg1['height'].write(np.float32(self.H//2))
         self.blurProg1['useLum'].write(np.int32(1))
         self.blurProg1['exposure'] = ex
-        self.FB.use(location=0)
+        self.getPOSTBUF().use(location=0)
 
         self.blurVao1.render(moderngl.TRIANGLES)
 
@@ -794,7 +806,7 @@ class CLDraw:
         self.blurVao2.render(moderngl.TRIANGLES)
 
         # Blend with frame
-        self.fbo.use()
+        self.usePOSTFBO(inplace=True)
         self.POSTBUF1.use(location=0)
 
         self.blurProg1['width'].write(np.float32(self.W))
@@ -822,7 +834,7 @@ class CLDraw:
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.post_prog['blackPoint'] = np.float32(blackPoint)
 
-        self.FB.use(location=0)
+        self.getPOSTBUF().use(location=0)
         self.DBT.use(location=1)
 
         self.post_vao.render(moderngl.TRIANGLES)
@@ -1111,6 +1123,7 @@ class CLDraw:
 
 
     def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
+        self.started_post = False
 
         if mask is None:
             mask = [False] * len(shaders)
@@ -1273,7 +1286,7 @@ class CLDraw:
                 ctx.disable(moderngl.CULL_FACE)
                 ctx.disable(moderngl.DEPTH_TEST)
                 ctx.disable(moderngl.BLEND)
-                self.blit(self.POSTFBO, self.FB, self.W, self.H)
+                self.blit(self.POSTFBO[0], self.FB, self.W, self.H)
                 ctx.enable(moderngl.DEPTH_TEST)
                 ctx.enable(moderngl.BLEND)
 
@@ -1283,7 +1296,7 @@ class CLDraw:
                     ctx.depth_func = '<='
                 else:
                     ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
-                self.POSTBUF.use(location=3)
+                self.POSTBUF[0].use(location=3)
                 self.DRAW[i]['currFrame'] = 3
                 self.DRAW[i]['db'] = 1
                 self.DRAW[i]['rawVM'].write(self.rawVM)
