@@ -324,6 +324,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.apFac = 0.4
         self.bindKey('7', self.dofLevel)
 
+        self.bindKey('8', self.tgBloom)
+
+    def tgBloom(self): self.doBloom = not self.doBloom
     def dofLess(self): self.apFac /= 1.1
     def dofMore(self): self.apFac *= 1.1
     def dofLevel(self):
