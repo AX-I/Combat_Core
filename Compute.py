@@ -20,6 +20,7 @@
 
 import multiprocessing as mp
 from queue import Empty, Full
+thisprocess = mp.current_process().name
 
 from math import sin, cos, pi, ceil, atan2
 import numpy as np
@@ -40,6 +41,15 @@ import json
 import ctypes
 
 os.system('color')
+
+DO_PROFILE = False
+
+if DO_PROFILE and (thisprocess == 'MainProcess'):
+    print('\033[46m Profiling! \033[0m')
+    from profilehooks import profile
+else:
+    def profile(**kwargs):
+        return lambda f: f
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -196,6 +206,7 @@ class ThreeDBackend:
         self.H2 = h//2
         self.setFOV(self.fovX, self.scale)
 
+    @profile(stdout=open('profile/start.txt', 'w'), filename='profile/start.pstats')
     def start(self):
         self.loadStart = time.time()
 
@@ -497,6 +508,24 @@ class ThreeDBackend:
             dy * cos(self.β),
             dx * sin(self.α) + dy * sin(self.β) * cos(self.α)])
 
+    @profile(stdout=open('profile/render.txt', 'w'), filename='profile/render.pstats')
+    def renderMethod(self):
+        self.startRender()
+
+        while not self.evtQ.empty():
+            self.processEvent()
+
+        self.vv = self.viewVec()
+
+        self.frameUpdate()
+
+        r = self.finishRender()
+        data = ("render", np.array(r, dtype="object"))
+        try:
+            self.P.put_nowait(data)
+        except Full:
+            self.full += 1
+
     def runBackend(self):
         self.doQuit = False
         self.pendingShader = True
@@ -519,22 +548,11 @@ class ThreeDBackend:
         self.vv = self.viewVec()
 
         while (not self.doQuit):
-            self.startRender()
+            self.renderMethod()
 
-            while not self.evtQ.empty():
-                self.processEvent()
-
-            self.vv = self.viewVec()
-
-            self.frameUpdate()
-
-            r = self.finishRender()
-            data = ("render", np.array(r, dtype="object"))
-            try:
-                self.P.put_nowait(data)
-            except Full:
-                self.full += 1
-
+            if DO_PROFILE and (self.frameNum > 100):
+                self.doQuit = True
+                self.proceed = False
 
             self.frameNum += 1
             dt = time.perf_counter() - self.startTime
