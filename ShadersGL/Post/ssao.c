@@ -70,12 +70,12 @@ void main() {
 	int sig_y = norm.y > 0 ? -1 : 1;
 
 	for (int i = 0; i < nsamples; i++) {
-		uint rid1 = rand_xorshift(rng_state) & uint(63);
 		rng_state = rand_xorshift(rng_state);
-		uint rid2 = rand_xorshift(rng_state) & uint(63);
+		uint rid1 = rng_state & uint(63);
 		rng_state = rand_xorshift(rng_state);
-		uint rid3 = rand_xorshift(rng_state) & uint(63);
+		uint rid2 = rng_state & uint(63);
 		rng_state = rand_xorshift(rng_state);
+		uint rid3 = rng_state & uint(63);
 
 		vec3 svec = vec3(R[rid1], R[rid2], R[rid3]) * 2.f - 1.f;
 
@@ -85,8 +85,8 @@ void main() {
 
     float geom = dot(svec, norm);
 
-		rid1 = rand_xorshift(rng_state) & uint(63);
 		rng_state = rand_xorshift(rng_state);
+		rid1 = rng_state & uint(63);
 
 		float rlen = R[rid1];
 		svec *= rlen*rlen * radius;

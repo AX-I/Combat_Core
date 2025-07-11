@@ -13,6 +13,15 @@ u = (x+1)/2
 v = (y+1)/2
 TRI = np.dstack([x,y,z,u,v])
 
+METHOD = {'alpha':1, 'add':2, 'screen':3, 'replace':4, 'hard light':5}
+EFFECT = {None:0, 'flip':1, 'crop':2, 'roll':3, 'rot':4, 'mult':5, 'fadey':6}
+
+blendParam = {'alpha':(mgl.FUNC_ADD, mgl.SRC_ALPHA, mgl.ONE_MINUS_SRC_ALPHA),
+              'add':(mgl.FUNC_ADD, mgl.ONE, mgl.ONE),
+              'screen':(mgl.FUNC_REVERSE_SUBTRACT, mgl.ONE_MINUS_DST_COLOR, mgl.ONE),
+              'replace':(mgl.FUNC_ADD, mgl.ONE, mgl.ZERO),
+              'hard light':(mgl.FUNC_ADD, mgl.ONE, mgl.SRC_ALPHA)}
+
 class GLObject:
     name: str
     buf: mgl.Texture
@@ -112,9 +121,6 @@ class NPCanvas:
                          'replace', 'hard light'}
             - effect in {None, 'flip', 'crop', 'roll', 'rot', 'mult', 'fadey'}
         """
-
-        METHOD = {'alpha':1, 'add':2, 'screen':3, 'replace':4, 'hard light':5}
-        EFFECT = {None:0, 'flip':1, 'crop':2, 'roll':3, 'rot':4, 'mult':5, 'fadey':6}
         effectApplied = EFFECT[effect]
 
         if 'flip' in source.filters:
@@ -128,11 +134,6 @@ class NPCanvas:
         source.buf.use(location=0)
         dest.use()
 
-        blendParam = {'alpha':(mgl.FUNC_ADD, mgl.SRC_ALPHA, mgl.ONE_MINUS_SRC_ALPHA),
-                      'add':(mgl.FUNC_ADD, mgl.ONE, mgl.ONE),
-                      'screen':(mgl.FUNC_REVERSE_SUBTRACT, mgl.ONE_MINUS_DST_COLOR, mgl.ONE),
-                      'replace':(mgl.FUNC_ADD, mgl.ONE, mgl.ZERO),
-                      'hard light':(mgl.FUNC_ADD, mgl.ONE, mgl.SRC_ALPHA)}
         self.ctx.blend_equation = blendParam[method][0]
         self.ctx.blend_func = blendParam[method][1:]
 

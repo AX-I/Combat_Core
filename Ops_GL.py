@@ -107,17 +107,14 @@ class CLDraw:
         except:
             print('Unable to get GL buffer id')
         self.FS_GL = ctx.texture((w, h), 3, dtype='f1')
-        self.DS_GL = ctx.depth_texture((w, h))
-        self.fs = ctx.framebuffer(self.FS_GL, self.DS_GL)
+        self.fs = ctx.framebuffer(self.FS_GL)
 
         self.FS2_GL = ctx.texture((w, h), 3, dtype='f1')
-        self.DS2_GL = ctx.depth_texture((w, h))
-        self.fs2 = ctx.framebuffer(self.FS2_GL, self.DS2_GL)
+        self.fs2 = ctx.framebuffer(self.FS2_GL)
 
         if self.USE_FSR or self.ENABLE_FXAA:
             self.F_FSR = ctx.texture((self.W, self.H), 3, dtype='f1')
-            self.D_FSR = ctx.depth_texture((self.W, self.H))
-            self.fs_fsr = ctx.framebuffer(self.F_FSR, self.D_FSR)
+            self.fs_fsr = ctx.framebuffer(self.F_FSR)
 
         # Readable depth buffer
         self.DBT = ctx.texture((self.W, self.H), 1, dtype='f4')
@@ -598,7 +595,6 @@ class CLDraw:
             self.dProg['height'].write(np.float32(self.H))
             self.dVao = ctx.vertex_array(self.dProg, self.post_vbo, 'in_vert')
 
-        ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
         self.getPOSTBUF().use(location=0)
@@ -630,10 +626,8 @@ class CLDraw:
             self.moProg['R'].write(ra.astype('float32'))
 
             self.OLDBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
-            self.OLDDB = ctx.depth_texture((self.W, self.H))
-            self.OLDFBO = ctx.framebuffer(self.OLDBUF, self.OLDDB)
+            self.OLDFBO = ctx.framebuffer(self.OLDBUF)
 
-        ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
         self.usePOSTFBO()
@@ -719,7 +713,6 @@ class CLDraw:
         except: self.setupDoF()
 
         ctx.disable(moderngl.BLEND)
-        ctx.disable(moderngl.DEPTH_TEST)
 
         self.getPOSTBUF().use(location=0)
         self.usePOSTFBO()
@@ -729,8 +722,6 @@ class CLDraw:
 
         self.dofVao.render(moderngl.TRIANGLES)
 
-        ctx.enable(moderngl.BLEND)
-
 
     def setupLens(self):
         pass
@@ -739,7 +730,7 @@ class CLDraw:
         except: self.setupLens()
 
         self.usePOSTFBO(inplace=True)
-        ctx.disable(moderngl.DEPTH_TEST)
+
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
         self.DRAW[i]['SM'] = 4
@@ -778,7 +769,6 @@ class CLDraw:
 
     def blur(self, ex):
 
-        ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
         # Downsample once
@@ -826,7 +816,6 @@ class CLDraw:
 
         useFxaa &= self.ENABLE_FXAA
 
-        ctx.disable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
 
         if self.USE_FSR or useFxaa:
@@ -863,9 +852,6 @@ class CLDraw:
             self.fsr_vao.render(moderngl.TRIANGLES)
         if not self.USE_FSR and useFxaa:
             self.fxaa_vao.render(moderngl.TRIANGLES)
-
-        ctx.enable(moderngl.DEPTH_TEST)
-        ctx.enable(moderngl.BLEND)
 
 
     def setScaleCull(self, s, cx, cy):
