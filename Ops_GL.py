@@ -626,6 +626,9 @@ class CLDraw:
             self.moProg['vscale'].write(self.sScale)
             self.moVao = ctx.vertex_array(self.moProg, self.post_vbo, 'in_vert')
 
+            ra = np.random.rand(64)
+            self.moProg['R'].write(ra.astype('float32'))
+
             self.OLDBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
             self.OLDDB = ctx.depth_texture((self.W, self.H))
             self.OLDFBO = ctx.framebuffer(self.OLDBUF, self.OLDDB)
