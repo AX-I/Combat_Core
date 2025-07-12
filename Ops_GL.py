@@ -1052,8 +1052,6 @@ class CLDraw:
             draw['isMetal'] = 1
 
         try:
-            draw['SM'] = 4
-            draw['SM2'] = 5
             draw['RAND'] = 2
         except KeyError: pass
 
@@ -1484,9 +1482,6 @@ class CLDraw:
 
         self.writeShUBO(i)
 
-        for n in range(len(self.DRAW)):
-            self.writeShArgs(n)
-
     def writeShUBO(self, i):
         sm = self.SHADOWMAP[i]
         ubo = sm['ubo_np']
@@ -1502,6 +1497,8 @@ class CLDraw:
     def writeShArgs(self, i):
         draw = self.DRAW[i]
         try:
+            draw['SM'] = 4
+            draw['SM2'] = 5
             draw['SM_im'] = 6
         except KeyError: pass
 
