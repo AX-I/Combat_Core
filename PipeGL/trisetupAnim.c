@@ -26,10 +26,7 @@ uniform vec2 uv_hi;
 uniform vec2 uv_offset;
 
 
-uniform vec3 SLInt[128];
-uniform vec3 SLPos[128];
-uniform vec3 SLDir[128];
-uniform int lenSL;
+#include UBO_LIGHTS
 out vec3 vertLight;
 
 
