@@ -39,12 +39,16 @@ UBO_FMT = {
 };
 ''',
     'UBO_LIGHTS': '''layout (std140, binding = 3) uniform Lights {
-  float lenD; // 0
-  float lenP; // 1
-  vec3 DInt[8]; // 4-35
-  vec3 DDir[8]; // 36-67
-  vec3 PInt[16]; // 68-131
-  vec3 PPos[16]; // 132-195
+  float lenD; // 0 *4
+  float lenP;
+  float lenSL;
+  vec3 DInt[8]; // 1-8
+  vec3 DDir[8]; // 9-16
+  vec3 PInt[16]; // 17-32
+  vec3 PPos[16]; // 33-48
+  vec3 SLInt[12]; // 49-60
+  vec3 SLPos[12]; // 61-72
+  vec3 SLDir[12]; // 73-84
 };
 '''
 }
@@ -378,11 +382,7 @@ class CLDraw:
         return b
 
     def setupLights(self):
-        self.SInt = np.zeros((12, 3), 'float32')
-        self.SPos = np.zeros((12, 3), 'float32')
-        self.SDir = np.zeros((12, 3), 'float32')
-
-        self.lightData = np.zeros((49,4), 'float32')
+        self.lightData = np.zeros((85,4), 'float32')
         self.ubo_lightData = ctx.buffer(self.lightData)
 
     def vertLight(self, mask, dirI, dirD,
@@ -397,39 +397,31 @@ class CLDraw:
 
         lp = min(16, pointI.shape[0])
 
-
-        self.lightData[0] = (ld,lp,0,0)
-        self.lightData[1:1+ld,:3] = dirI
-        self.lightData[9:9+ld,:3] = dirD
-
-        self.lightData[17:17+lp,:3] = pointI[:lp]
-        self.lightData[33:33+lp,:3] = pointP[:lp]
-
-        self.ubo_lightData.write(self.lightData.tobytes())
-        self.ubo_lightData.bind_to_uniform_block(3)
-
         if spotI is 1 or spotI is None:
             spotI = np.zeros((1,3))
             spotP = np.zeros((1,3))
             spotD = np.zeros((1,3))
 
         ls = min(12, spotP.shape[0])
-        self.SInt[:ls] = spotI[:ls]
-        self.SPos[:ls] = spotP[:ls]
-        self.SDir[:ls] = spotD[:ls]
 
+        self.lightData[0] = (ld,lp,ls,0)
+        self.lightData[1:1+ld,:3] = dirI
+        self.lightData[9:9+ld,:3] = dirD
 
+        self.lightData[17:17+lp,:3] = pointI[:lp]
+        self.lightData[33:33+lp,:3] = pointP[:lp]
+
+        self.lightData[49:49+ls,:3] = spotI[:ls]
+        self.lightData[61:61+ls,:3] = spotP[:ls]
+        self.lightData[73:73+ls,:3] = spotD[:ls]
+
+        self.ubo_lightData.write(self.lightData.tobytes())
+        self.ubo_lightData.bind_to_uniform_block(3)
+
+        zero = np.zeros(3, 'float32')
         for n in range(len(self.DRAW)):
             try:
-                self.DRAW[n]['highColor'].write(np.zeros(3, 'float32'))
-            except KeyError:
-                pass
-
-            try:
-                self.DRAW[n]['SLInt'].write(self.SInt.tobytes())
-                self.DRAW[n]['SLPos'].write(self.SPos.tobytes())
-                self.DRAW[n]['SLDir'].write(self.SDir.tobytes())
-                self.DRAW[n]['lenSL'] = ls
+                self.DRAW[n]['highColor'].write(zero)
             except KeyError:
                 pass
 
