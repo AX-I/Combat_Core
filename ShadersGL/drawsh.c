@@ -39,22 +39,15 @@ uniform vec3 LDir;
 uniform vec3 LInt;
 
 // Shadowmap 1
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
 // Shadowmap 2
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
 // Baked shadowmap sharing shadowmap 1 params
 uniform sampler2D SM_im;
-uniform int wS_im;
 
 uniform int ignoreShadow;
 

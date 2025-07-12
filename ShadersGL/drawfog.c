@@ -9,18 +9,15 @@
 #define G 0.5f
 #define GBACK -0.2f
 
-uniform mat3 vmat;
-uniform vec3 vpos;
+#include UBO_VMP
+uniform mat3 rawVM;
 uniform float vscale;
 uniform float aspect;
 
 in vec3 v_pos;
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
 uniform vec3 LInt;
 uniform vec3 LDir;
@@ -98,9 +95,9 @@ void main() {
       maxZ = min(maxZ, fogDist * ambDistFac);
     }
 
-	vec3 Vd = vmat[0];
-	vec3 Vx = vmat[1];
-	vec3 Vy = vmat[2];
+	vec3 Vd = rawVM[0];
+	vec3 Vx = rawVM[1];
+	vec3 Vy = rawVM[2];
 
 	uint rng_state = uint(cy * hF + cx);
 	rng_state += uint(59 * (cy * hF + cx) + 83 * cx);

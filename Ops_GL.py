@@ -18,14 +18,32 @@ PATH = OpsConv.PATH
 ctx = OpsConv.getContext_GL()
 print("Using", ctx.info["GL_RENDERER"])
 
-UBO_VMP = '''layout (std140) uniform vMatPos {
+UBO_FMT = {
+    'UBO_VMP': '''layout (std140, binding = 0) uniform vMatPos {
   mat3 vmat; // 0-12
   vec3 vpos; // 12-16
-};'''
+};''',
+    'UBO_SHM': '''layout (std140, binding = 1) uniform shArgs {
+  vec3 SPos; // 0-3
+  mat3 SV; // 4-16
+  float sScale; // 17
+  float wS; // 18
+  float wS_im; // 19
+};
+''',
+    'UBO_SH2': '''layout (std140, binding = 2) uniform shArgs2 {
+  vec3 SPos2; // 0-3
+  mat3 SV2; // 4-16
+  float sScale2; // 17
+  float wS2; // 18
+};
+'''
+}
 
 def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
-    t = t.replace('#include UBO_VMP', UBO_VMP)
+    for u in UBO_FMT:
+        t = t.replace(f'#include {u}', UBO_FMT[u])
     return t
 
 
@@ -739,10 +757,8 @@ class CLDraw:
 
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
-        self.DRAW[i]['SM'] = 4
-        self.DRAW[i]['SM2'] = 5
         self.DRAW[i]['db'] = 1
-        self.DRAW[i]['vmat'].write(self.rawVM)
+        self.DRAW[i]['rawVM'].write(self.rawVM)
         self.DRAW[i]['tex1'] = 0
         self.TEX[i].use(location=0)
 
@@ -1040,7 +1056,8 @@ class CLDraw:
             draw['isMetal'] = 1
 
         try:
-            draw['SM'] = 0
+            draw['SM'] = 4
+            draw['SM2'] = 5
             draw['RAND'] = 2
         except KeyError: pass
 
@@ -1120,7 +1137,7 @@ class CLDraw:
         self.started_post = False
 
         self.ubo_vMatPos.write(self.vMatPos.tobytes())
-        self.ubo_vMatPos.bind_to_uniform_block()
+        self.ubo_vMatPos.bind_to_uniform_block(0)
 
         if mask is None:
             mask = [False] * len(shaders)
@@ -1308,9 +1325,8 @@ class CLDraw:
             elif shader == 'fog':
                 ctx.blend_func = moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA
                 self.DBT.use(location=1)
-                self.DRAW[i]['SM'] = 4
                 self.DRAW[i]['db'] = 1
-                self.DRAW[i]['vmat'].write(self.rawVM)
+                self.DRAW[i]['rawVM'].write(self.rawVM)
             elif shader == 'lens':
                 self.lensTn = i
                 continue
@@ -1359,6 +1375,11 @@ class CLDraw:
         self.SHADOWMAP[i] = s
 
         s['tex'].filter = moderngl.NEAREST, moderngl.NEAREST
+
+
+        ubo = np.zeros((5,4), 'float32')
+        s['ubo_np'] = ubo
+        s['ubo'] = ctx.buffer(ubo)
 
         try: _ = self.drawS
         except AttributeError:
@@ -1465,32 +1486,27 @@ class CLDraw:
         self.fbo.use()
         ctx.enable(moderngl.BLEND)
 
+        self.writeShUBO(i)
+
         for n in range(len(self.DRAW)):
             self.writeShArgs(n)
 
-    def writeShArgs(self, i):
-        sm = self.SHADOWMAP[0]
-        draw = self.DRAW[i]
-        try:
-            draw['SM'] = 4
-            draw['SPos'].write(sm['pos'])
-            draw['SV'].write(sm['vec'])
-            draw['wS'] = np.int32(sm['dim'])
-            draw['sScale'].write(sm['scale'])
-        except KeyError: pass
-        try:
-            draw['SM_im'] = 6
-            sm['sm_baked'].use(location=6)
-            draw['wS_im'] = np.int32(sm['sm_baked_size'])
+    def writeShUBO(self, i):
+        sm = self.SHADOWMAP[i]
+        ubo = sm['ubo_np']
+        ubo[0,:3] = sm['pos']
+        ubo[1:4,:3] = sm['vec']
+        ubo[4,:2] = (sm['scale'], sm['dim'])
+        try: ubo[4,2] = sm['sm_baked_size']
         except KeyError: pass
 
-        sm = self.SHADOWMAP[1]
+        sm['ubo'].write(ubo.tobytes())
+        sm['ubo'].bind_to_uniform_block(1 + i)
+
+    def writeShArgs(self, i):
+        draw = self.DRAW[i]
         try:
-            draw['SM2'] = 5
-            draw['SPos2'].write(sm['pos'])
-            draw['SV2'].write(sm['vec'])
-            draw['wS2'] = np.int32(sm['dim'])
-            draw['sScale2'].write(sm['scale'])
+            draw['SM_im'] = 6
         except KeyError: pass
 
     def setPrimaryLight(self, dirI, dirD):

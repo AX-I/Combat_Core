@@ -5,25 +5,19 @@
 #define FAR 200.0
 
 
+#include UBO_VMP
+uniform mat3 rawVM;
 
-uniform mat3 vmat;
-uniform vec3 vpos;
 uniform float vscale;
 uniform float aspect;
 
 in vec3 v_pos;
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
 uniform vec3 LInt;
 uniform vec3 LDir;
@@ -59,9 +53,9 @@ void main() {
   float maxZ = v_norm.x + v_UV.x + aspect;
   if (maxZ != d) maxZ = d;
 
-	vec3 Vd = vmat[0];
-	vec3 Vx = vmat[1];
-	vec3 Vy = vmat[2];
+	vec3 Vd = rawVM[0];
+	vec3 Vx = rawVM[1];
+	vec3 Vy = rawVM[2];
 
 	
 
