@@ -37,6 +37,15 @@ UBO_FMT = {
   float sScale2; // 17
   float wS2; // 18
 };
+''',
+    'UBO_LIGHTS': '''layout (std140, binding = 3) uniform Lights {
+  float lenD; // 0
+  float lenP; // 1
+  vec3 DInt[8]; // 4-35
+  vec3 DDir[8]; // 36-67
+  vec3 PInt[16]; // 68-131
+  vec3 PPos[16]; // 132-195
+};
 '''
 }
 
@@ -369,30 +378,35 @@ class CLDraw:
         return b
 
     def setupLights(self):
-        self.DInt = np.zeros((8, 3), 'float32')
-        self.DDir = np.zeros((8, 3), 'float32')
-        self.PInt = np.zeros((16, 3), 'float32')
-        self.PPos = np.zeros((16, 3), 'float32')
-
         self.SInt = np.zeros((12, 3), 'float32')
         self.SPos = np.zeros((12, 3), 'float32')
         self.SDir = np.zeros((12, 3), 'float32')
+
+        self.lightData = np.zeros((49,4), 'float32')
+        self.ubo_lightData = ctx.buffer(self.lightData)
 
     def vertLight(self, mask, dirI, dirD,
                   pointI=None, pointP=None,
                   spotI=None, spotD=None, spotP=None):
 
         ld = dirI.shape[0]
-        self.DInt[:ld] = dirI
-        self.DDir[:ld] = dirD
 
         if pointI is 1:
             pointI = np.zeros((1,3))
             pointP = np.zeros((1,3))
 
         lp = min(16, pointI.shape[0])
-        self.PInt[:lp] = pointI[:lp]
-        self.PPos[:lp] = pointP[:lp]
+
+
+        self.lightData[0] = (ld,lp,0,0)
+        self.lightData[1:1+ld,:3] = dirI
+        self.lightData[9:9+ld,:3] = dirD
+
+        self.lightData[17:17+lp,:3] = pointI[:lp]
+        self.lightData[33:33+lp,:3] = pointP[:lp]
+
+        self.ubo_lightData.write(self.lightData.tobytes())
+        self.ubo_lightData.bind_to_uniform_block(3)
 
         if spotI is 1 or spotI is None:
             spotI = np.zeros((1,3))
@@ -407,16 +421,6 @@ class CLDraw:
 
         for n in range(len(self.DRAW)):
             try:
-                self.DRAW[n]['DInt'].write(self.DInt.tobytes())
-                self.DRAW[n]['DDir'].write(self.DDir.tobytes())
-                self.DRAW[n]['lenD'] = ld
-            except KeyError:
-                pass
-
-            try:
-                self.DRAW[n]['PInt'].write(self.PInt.tobytes())
-                self.DRAW[n]['PPos'].write(self.PPos.tobytes())
-                self.DRAW[n]['lenP'] = lp
                 self.DRAW[n]['highColor'].write(np.zeros(3, 'float32'))
             except KeyError:
                 pass

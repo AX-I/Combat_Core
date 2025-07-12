@@ -16,13 +16,7 @@ uniform sampler2D SM;
 uniform sampler2D SM2;
 #include UBO_SH2
 
-uniform vec3 DInt[8];
-uniform vec3 DDir[8];
-uniform int lenD;
-
-uniform vec3 PInt[16];
-uniform vec3 PPos[16];
-uniform int lenP;
+#include UBO_LIGHTS
 
 uniform vec3 highColor;
 uniform vec3 highMult;
