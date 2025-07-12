@@ -10,17 +10,11 @@ in vec3 v_pos;
 uniform vec3 LDir;
 uniform vec3 LInt;
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
 uniform vec3 DInt[8];
 uniform vec3 DDir[8];
@@ -51,7 +45,7 @@ uniform float NMmipBias;
 
 in vec3 vertLight;
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 uniform float specular;
 #define roughness 0.6f
