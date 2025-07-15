@@ -120,18 +120,19 @@ void main() {
   uint rid1 = rng_state & uint(63);
   uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf - 0.5;
+  vec4 stx;
 
   int farShadow = 1;
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
    farShadow = 0;
    for (int j=0; j<SHS; j++) {
     sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
-    for (int k=0; k<4; k++) {
-      sxy = floor(sf + vec2(k>>1, k&1)) / wS;
-      sr1 = abs(sf.x - sxy.x*wS);
-      sr2 = abs(sf.y - sxy.y*wS);
-      shadow += texture(SM, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
-    }
+
+    sr1 = fract(sf.x);
+    sr2 = fract(sf.y);
+    sf += 0.5;
+    stx = 1-step(sz, textureGather(SM, sf/wS).wzxy);
+    shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2)) / SHS;
    }
   }
 
@@ -152,12 +153,12 @@ void main() {
 
     for (int j=0; j<SHS; j++) {
       sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT2 * rot(3.14/2* R[rid1]);
-      for (int k=0; k<4; k++) {
-        sxy = floor(sf + vec2(k>>1, k&1)) / wS2;
-        sr1 = abs(sf.x - sxy.x*wS2);
-        sr2 = abs(sf.y - sxy.y*wS2);
-        shadow += texture(SM2, sxy).r < sz ? (1-sr1)*(1-sr2) / SHS : 0.0;
-      }
+
+      sr1 = fract(sf.x);
+      sr2 = fract(sf.y);
+      sf += 0.5;
+      stx = 1-step(sz, textureGather(SM2, sf/wS2).wzxy);
+      shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2)) / SHS;
     }
   }
   
