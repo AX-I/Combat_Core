@@ -995,7 +995,7 @@ class CLDraw:
 
             if 'envFallback' in mtl:
                 draw['useEquiEnv'] = 1
-                draw['equiEnv'] = 6
+                draw['equiEnv'] = 9
 
             try:
                 ra = np.random.rand(64)
@@ -1256,7 +1256,7 @@ class CLDraw:
                 self.POSTBUF[0].use(location=3)
                 self.DRAW[i]['currFrame'] = 3
                 if 'envFallback' in shaders[i]:
-                    self.TEX[shaders[i]['envFallback']].use(location=6)
+                    self.TEX[shaders[i]['envFallback']].use(location=9)
                 if 'normal' in shaders[i]:
                     try:
                         self.NM[shaders[i]['normal']].use(location=7)
