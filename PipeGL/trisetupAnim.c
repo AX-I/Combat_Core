@@ -6,10 +6,6 @@
 
 #include UBO_VMP
 
-uniform float vscale;
-
-uniform float aspect;
-
 uniform mat4 RR[32];
 uniform vec3 bOrigin[32];
 

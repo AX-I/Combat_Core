@@ -6,10 +6,6 @@
 
 
 #include UBO_VMP
-uniform mat3 rawVM;
-
-uniform float vscale;
-uniform float aspect;
 
 in vec3 v_pos;
 

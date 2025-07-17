@@ -13,7 +13,7 @@
 #define maxattn 0.1f
 #define ABSORB 0.3f
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 out vec4 f_color;
 
@@ -22,12 +22,9 @@ uniform vec3 LInt;
 
 uniform float width;
 uniform float height;
-uniform float vscale;
 
 in vec3 v_norm;
 in vec3 v_pos;
-
-uniform mat3 rawVM;
 
 in float depth;
 in vec2 v_UV;
