@@ -706,6 +706,10 @@ class CLDraw:
         ra = np.random.rand(64)
         self.ssaoProg['R'].write(ra.astype('float32'))
 
+        self.ssaoProg['texd'] = 1
+        self.ssaoBlur['texd'] = 1
+        self.ssaoBlur['ssao'] = 0
+
         self.ssaoBUF = ctx.texture((self.W//AOscale, self.H//AOscale), 1, dtype='f1')
         self.ssaoFBO = ctx.framebuffer(self.ssaoBUF)
 
@@ -762,8 +766,6 @@ class CLDraw:
 
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
-        self.DRAW[i]['db'] = 1
-        self.DRAW[i]['tex1'] = 0
         self.TEX[i].use(location=0)
 
         self.VAO[i].render(moderngl.TRIANGLES)
@@ -949,9 +951,6 @@ class CLDraw:
         else:
             vao = ctx.vertex_array(draw, vbo, 'in_vert', 'in_norm', 'in_UV')
 
-        draw['tex1'] = texNum
-        draw['SM'] = 0
-
         tex = ctx.texture(rr.shape[1::-1], 3, rr,
                           dtype='f2')
 
@@ -1072,6 +1071,11 @@ class CLDraw:
             draw['width'].write(np.float32(self.W))
             draw['height'].write(np.float32(self.H))
         except: pass
+
+        draw['tex1'] = 0
+
+        try: draw['db'] = 1
+        except KeyError: pass
 
         try: draw['ssao'] = 8
         except KeyError: pass
@@ -1196,7 +1200,6 @@ class CLDraw:
 
             self.ssaoFBO.use()
             self.ssaoProg['vscale'].write(np.float32(self.sScale))
-            self.ssaoProg['texd'] = 1
             self.DBT.use(location=1)
 
             self.ssaoVao.render(moderngl.TRIANGLES)
@@ -1204,8 +1207,6 @@ class CLDraw:
             # Blur
             self.ssaoFBO2.use()
             self.ssaoBUF.use(location=0)
-            self.ssaoBlur['ssao'] = 0
-            self.ssaoBlur['texd'] = 1
             self.ssaoBlurVao.render(moderngl.TRIANGLES)
 
 
@@ -1230,7 +1231,6 @@ class CLDraw:
                 ctx.disable(moderngl.CULL_FACE)
 
             if not shaders[i]['shader'] in TRANSPARENT_SHADERS:
-                self.DRAW[i]['tex1'] = 0
                 self.TEX[i].use(location=0)
 
                 if 'alpha' in shaders[i]:
@@ -1249,11 +1249,6 @@ class CLDraw:
                         print('Normal map {} not found'.format(shaders[i]['normal']))
                 if 'ignoreShadow' in shaders[i]:
                     self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
-
-                try:
-                    self.DRAW[i]['db'] = 1
-                except KeyError:
-                    pass
 
                 if vao.extra:
                     vao.render(moderngl.TRIANGLES,
@@ -1296,7 +1291,6 @@ class CLDraw:
                     ctx.blend_func = moderngl.ONE, moderngl.SRC_ALPHA
                 self.POSTBUF[0].use(location=3)
                 self.DRAW[i]['currFrame'] = 3
-                self.DRAW[i]['db'] = 1
                 if 'envFallback' in shaders[i]:
                     self.TEX[shaders[i]['envFallback']].use(location=6)
                 if 'normal' in shaders[i]:
@@ -1310,7 +1304,6 @@ class CLDraw:
             elif shader == 'fog':
                 ctx.blend_func = moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA
                 self.DBT.use(location=1)
-                self.DRAW[i]['db'] = 1
             elif shader == 'lens':
                 self.lensTn = i
                 continue
@@ -1321,7 +1314,6 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            self.DRAW[i]['tex1'] = 0
             self.TEX[i].use(location=0)
 
             n_inst = 1
