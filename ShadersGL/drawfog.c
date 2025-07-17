@@ -16,8 +16,7 @@ in vec3 v_pos;
 uniform sampler2D SM;
 #include UBO_SHM
 
-uniform vec3 LInt;
-uniform vec3 LDir;
+#include UBO_PRI_LIGHT
 
 uniform float width;
 uniform float height;

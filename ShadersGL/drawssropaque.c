@@ -18,9 +18,6 @@ out vec4 f_color;
 
 uniform vec3 reflFallback;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float width;
 uniform float height;
 
@@ -118,7 +115,7 @@ void main() {
     //float scatter = 0.2;//exp(ABSORB * (tz - texture(db, tc*wh).r));
     // is actually transmittance
 
-    vec3 tsr = (texture(tex1, v_UV / depth).rgb + LInt + LDir) * 0.001;
+    vec3 tsr = texture(tex1, v_UV / depth).rgb * 0.001;
 
 
     vec3 a = pos - vp;

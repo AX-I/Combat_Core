@@ -9,8 +9,7 @@
 
 in vec3 v_pos;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
+#include UBO_PRI_LIGHT
 
 uniform sampler2D SM;
 #include UBO_SHM

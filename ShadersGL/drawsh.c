@@ -33,8 +33,7 @@ uniform sampler2D ssao;
 
 in vec3 v_pos;
 //in vec3 v_color;
-uniform vec3 LDir;
-uniform vec3 LInt;
+#include UBO_PRI_LIGHT
 
 // Shadowmap 1
 uniform sampler2D SM;

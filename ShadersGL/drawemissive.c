@@ -2,9 +2,6 @@
 
 out vec3 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float emPow;
 
 uniform float fadeDist;
@@ -24,7 +21,7 @@ void main() {
     if (fadeDist != 0) {
       light *= vec3(clamp((tz-fadeBias)/(0.001+fadeDist), 0.f, 1.f));
     }
-    light += (LInt + LDir + norm) * 0.00001;
+    light += (norm) * 0.00001;
 
     vec3 rgb = texture(tex1, v_UV / depth).rgb * light;
     f_color = rgb;

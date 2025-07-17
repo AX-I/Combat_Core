@@ -2,9 +2,6 @@
 
 out vec3 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float emPow;
 
 uniform float fadeDist;
