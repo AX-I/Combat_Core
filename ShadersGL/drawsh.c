@@ -28,8 +28,6 @@ uniform float R[64]; // [0,1]
 #define RAYCAST_FAR_D_MULT 0.05f
 uniform float width;
 uniform float height;
-uniform float vscale;
-uniform mat3 rawVM;
 
 uniform sampler2D ssao;
 

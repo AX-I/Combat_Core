@@ -7,9 +7,7 @@
 
 #include UBO_VMP
 
-uniform float vscale;
 //uniform float far;
-uniform float aspect;
 
 #ifdef INSTANCED
 in vec4 inst_pos_scale;

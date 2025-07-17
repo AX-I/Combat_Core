@@ -23,12 +23,10 @@ uniform vec3 LInt;
 
 uniform float width;
 uniform float height;
-uniform float vscale;
 
 in vec3 v_norm;
 in vec3 v_pos;
 
-uniform mat3 rawVM;
 
 in float depth;
 in vec2 v_UV;

@@ -20,8 +20,11 @@ print("Using", ctx.info["GL_RENDERER"])
 
 UBO_FMT = {
     'UBO_VMP': '''layout (std140, binding = 0) uniform vMatPos {
-  mat3 vmat; // 0-12
-  vec3 vpos; // 12-16
+  mat3 vmat; // 0-2 *4
+  vec3 vpos; // 3
+  mat3 rawVM; // 4-6
+  float vscale; // 7
+  float aspect;
 };''',
     'UBO_SHM': '''layout (std140, binding = 1) uniform shArgs {
   vec3 SPos; // 0-3
@@ -230,8 +233,10 @@ class CLDraw:
 
         self.AOscale = 2
 
-        self.vMatPos = np.zeros((16,), 'float32')
+        self.vMatPos = np.zeros((8,4), 'float32')
         self.ubo_vMatPos = ctx.buffer(self.vMatPos)
+
+        self.vMatPos[7,1] = np.float32(self.H/self.W)
 
     def usePOSTFBO(self, inplace=False):
         if inplace and not self.started_post:
@@ -537,8 +542,6 @@ class CLDraw:
                 draw['height'].write(np.float32(self.H))
             except: pass
 
-            draw['vscale'].write(self.sScale)
-            draw['aspect'].write(np.float32(self.H/self.W))
             self.DRAW[tn] = draw
             self.writeShArgs(tn)
             self.VAO[tn] = ctx.vertex_array(draw, self.VBO[tn],
@@ -754,7 +757,6 @@ class CLDraw:
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
         self.DRAW[i]['db'] = 1
-        self.DRAW[i]['rawVM'].write(self.rawVM)
         self.DRAW[i]['tex1'] = 0
         self.TEX[i].use(location=0)
 
@@ -874,13 +876,11 @@ class CLDraw:
 
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s)
-        for draw in self.DRAW:
-            try: draw['vscale'].write(self.sScale)
-            except: pass
+        self.vMatPos[7,0] = self.sScale
 
     def setPos(self, vc):
         self.vc = vc.astype('float32')
-        self.vMatPos[12:15] = self.vc
+        self.vMatPos[3,:3] = self.vc
 
     def setVM(self, vM):
         self.rawVM = vM.astype('float32')
@@ -888,9 +888,8 @@ class CLDraw:
         vmat = np.array(vmat.T, order='C')
         self.vmat = vmat.astype('float32')
 
-        self.vMatPos[:3] = self.vmat[0]
-        self.vMatPos[4:7] = self.vmat[1]
-        self.vMatPos[8:11] = self.vmat[2]
+        self.vMatPos[:3,:3] = self.vmat
+        self.vMatPos[4:7,:3] = self.rawVM
 
     def setAnisotropy(self, a):
         for tex in self.TEX:
@@ -918,9 +917,6 @@ class CLDraw:
         uv = uv.astype("float32").reshape((p.shape[0], 2))
 
         draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawSh)
-
-        draw['vscale'].write(self.sScale)
-        draw['aspect'].write(np.float32(self.H/self.W))
 
         vertices = np.stack((p[:,0], p[:,1], p[:,2],
                              n[:,0], n[:,1], n[:,2],
@@ -1070,10 +1066,6 @@ class CLDraw:
             draw['width'].write(np.float32(self.W))
             draw['height'].write(np.float32(self.H))
         except: pass
-        try:
-            draw['vscale'].write(self.sScale)
-            draw['aspect'].write(np.float32(self.H/self.W))
-        except: pass
 
         try: draw['ssao'] = 8
         except KeyError: pass
@@ -1123,7 +1115,6 @@ class CLDraw:
         else:
             draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
             vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
-        draw['aspect'].write(np.float32(self.H/self.W))
         self.DRAWZ[i] = (vao, draw)
 
 
@@ -1177,15 +1168,11 @@ class CLDraw:
 
                 if 'alpha' in shaders[i]:
                     draw['TA'] = 2
-                draw['aspect'].write(np.float32(self.H/self.W))
                 self.DRAWZ[i] = (vao, draw)
             if 'cull' in shaders[i]:
                 ctx.enable(moderngl.CULL_FACE)
             else:
                 ctx.disable(moderngl.CULL_FACE)
-
-            draw = self.DRAWZ[i][1]
-            draw['vscale'].write(self.sScale)
 
             if 'alpha' in shaders[i]:
                 sa = shaders[i]['alpha']
@@ -1258,7 +1245,6 @@ class CLDraw:
                     self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
 
                 try:
-                    self.DRAW[i]['rawVM'].write(self.rawVM)
                     self.DRAW[i]['db'] = 1
                 except KeyError:
                     pass
@@ -1305,7 +1291,6 @@ class CLDraw:
                 self.POSTBUF[0].use(location=3)
                 self.DRAW[i]['currFrame'] = 3
                 self.DRAW[i]['db'] = 1
-                self.DRAW[i]['rawVM'].write(self.rawVM)
                 if 'envFallback' in shaders[i]:
                     self.TEX[shaders[i]['envFallback']].use(location=6)
                 if 'normal' in shaders[i]:
@@ -1320,7 +1305,6 @@ class CLDraw:
                 ctx.blend_func = moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA
                 self.DBT.use(location=1)
                 self.DRAW[i]['db'] = 1
-                self.DRAW[i]['rawVM'].write(self.rawVM)
             elif shader == 'lens':
                 self.lensTn = i
                 continue
