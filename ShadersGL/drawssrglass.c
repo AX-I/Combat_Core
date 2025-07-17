@@ -1,7 +1,7 @@
 // Screen Space Reflection
 // For AXI Combat
 
-#version 330
+#version 420
 
 #define REFL_STEP 2
 #define REFL_LENGTH {REFL_LENGTH}

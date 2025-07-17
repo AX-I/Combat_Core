@@ -1,6 +1,6 @@
 // For shadowmaps
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0

@@ -1,6 +1,6 @@
 // Test perspective correct
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 
