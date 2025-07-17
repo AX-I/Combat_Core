@@ -203,6 +203,8 @@ class CLDraw:
 
         self.AOscale = 2
 
+        self.rawVM = np.zeros((3,3), 'float32')
+
         self.vMatPos = np.zeros((8,4), 'float32')
         self.ubo_vMatPos = ctx.buffer(self.vMatPos)
 

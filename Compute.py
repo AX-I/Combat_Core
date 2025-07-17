@@ -351,8 +351,9 @@ class ThreeDBackend:
         if not self.VRMode:
             self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
 
-        self.draw.setPos(self.vc)
-        self.draw.setVM(self.vMat)
+        if self.frameNum > 0:
+            self.draw.setPos(self.vc)
+            self.draw.setVM(self.vMat)
 
         self.draw.clearZBuffer()
 
