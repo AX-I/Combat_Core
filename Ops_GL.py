@@ -53,7 +53,13 @@ UBO_FMT = {
   vec3 SLPos[12]; // 61-72
   vec3 SLDir[12]; // 73-84
 };
-'''
+''',
+    'UBO_SMP': '''layout (std140, binding = 4) uniform sMatPos {
+  vec3 vpos; // 0 *4
+  mat3 vmat; // 1-3
+  float vscale; // 4
+  float sbias;
+};''',
 }
 
 def makeProgram(f, path="ShadersGL/"):
@@ -1359,6 +1365,10 @@ class CLDraw:
         s['ubo_np'] = ubo
         s['ubo'] = ctx.buffer(ubo)
 
+        ubo = np.zeros((5,4), 'float32')
+        s['ubo_smp_np'] = ubo
+        s['ubo_smp'] = ctx.buffer(ubo)
+
         try: _ = self.drawS
         except AttributeError:
             self.drawS = ctx.program(vertex_shader=trisetupOrtho,
@@ -1424,19 +1434,7 @@ class CLDraw:
         sm = self.SHADOWMAP[i]
         sm['map'].use()
 
-        self.drawS['vscale'].write(sm['scale'])
-        self.drawS['vpos'].write(sm['pos'])
-        self.drawS['vmat'].write(sm['vec'])
-        self.drawS['sbias'] = bias/2
-        self.drawSA['vscale'].write(sm['scale'])
-        self.drawSA['vpos'].write(sm['pos'])
-        self.drawSA['vmat'].write(sm['vec'])
-        self.drawSA['sbias'] = bias/2
-        for n in self.drawSB:
-            self.drawSB[n]['vscale'].write(sm['scale'])
-            self.drawSB[n]['vpos'].write(sm['pos'])
-            self.drawSB[n]['vmat'].write(sm['vec'])
-            self.drawSB[n]['sbias'] = bias/2
+        self.writeSMP(sm, bias)
 
         ctx.enable(moderngl.DEPTH_TEST)
         ctx.disable(moderngl.BLEND)
@@ -1465,6 +1463,15 @@ class CLDraw:
         ctx.enable(moderngl.BLEND)
 
         self.writeShUBO(i)
+
+    def writeSMP(self, sm, bias):
+        ubo = sm['ubo_smp_np']
+        ubo[0,:3] = sm['pos']
+        ubo[1:4,:3] = sm['vec']
+        ubo[4,:2] = (sm['scale'], bias/2)
+
+        sm['ubo_smp'].write(ubo.tobytes())
+        sm['ubo_smp'].bind_to_uniform_block(4)
 
     def writeShUBO(self, i):
         sm = self.SHADOWMAP[i]
