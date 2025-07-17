@@ -18,49 +18,13 @@ PATH = OpsConv.PATH
 ctx = OpsConv.getContext_GL()
 print("Using", ctx.info["GL_RENDERER"])
 
-UBO_FMT = {
-    'UBO_VMP': '''layout (std140, binding = 0) uniform vMatPos {
-  mat3 vmat; // 0-2 *4
-  vec3 vpos; // 3
-  mat3 rawVM; // 4-6
-  float vscale; // 7
-  float aspect;
-};''',
-    'UBO_SHM': '''layout (std140, binding = 1) uniform shArgs {
-  vec3 SPos; // 0-3
-  mat3 SV; // 4-16
-  float sScale; // 17
-  float wS; // 18
-  float wS_im; // 19
-};
-''',
-    'UBO_SH2': '''layout (std140, binding = 2) uniform shArgs2 {
-  vec3 SPos2; // 0-3
-  mat3 SV2; // 4-16
-  float sScale2; // 17
-  float wS2; // 18
-};
-''',
-    'UBO_LIGHTS': '''layout (std140, binding = 3) uniform Lights {
-  float lenD; // 0 *4
-  float lenP;
-  float lenSL;
-  vec3 DInt[8]; // 1-8
-  vec3 DDir[8]; // 9-16
-  vec3 PInt[16]; // 17-32
-  vec3 PPos[16]; // 33-48
-  vec3 SLInt[12]; // 49-60
-  vec3 SLPos[12]; // 61-72
-  vec3 SLDir[12]; // 73-84
-};
-''',
-    'UBO_SMP': '''layout (std140, binding = 4) uniform sMatPos {
-  vec3 vpos; // 0 *4
-  mat3 vmat; // 1-3
-  float vscale; // 4
-  float sbias;
-};''',
-}
+UBO_FMT = {}
+with open('PipeGL/UBO_FMT.c') as fu:
+    for line in fu:
+        if line[0] == '#':
+            UBO_FMT[u := line[1:].strip()] = ''
+        else:
+            UBO_FMT[u] += line
 
 def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
