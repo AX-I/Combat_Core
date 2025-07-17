@@ -116,8 +116,8 @@ void main() {
   vec2 tc = gl_FragCoord.xy;
 
   uint rng_state = uint(3.1416 * (tc.x + width*tc.y));
-  uint rid1 = rand_xorshift(rng_state) & uint(63);
   rng_state = rand_xorshift(rng_state);
+  uint rid1 = rng_state & uint(63);
   uint rid2 = rand_xorshift(rng_state) & uint(63);
   vec2 sf0 = sf - 0.5;
 

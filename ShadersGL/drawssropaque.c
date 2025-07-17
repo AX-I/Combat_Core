@@ -92,14 +92,14 @@ void main() {
 
   if (roughness > 0) {
     uint rng_state = uint(cy * hF + cx);
-    uint rid1 = rand_xorshift(rng_state) & uint(63);
     rng_state = rand_xorshift(rng_state);
-    uint rid2 = rand_xorshift(rng_state) & uint(63);
+    uint rid1 = rng_state & uint(63);
     rng_state = rand_xorshift(rng_state);
-    uint rid3 = rand_xorshift(rng_state) & uint(63);
+    uint rid2 = rng_state & uint(63);
     rng_state = rand_xorshift(rng_state);
+    uint rid3 = rng_state & uint(63);
     vec3 svec = vec3(R[rid1], R[rid2], R[rid3]) * 2.f - 1.f;
-    if (dot(norm + roughness * normalize(svec), normalize(pos - vp)) < 0) {
+    if (dot(norm + roughness * normalize(svec), pos - vp) < 0) {
       svec *= -1;
     }
     norm += roughness * normalize(svec);
@@ -107,7 +107,7 @@ void main() {
   }
 
 
-    float fr = 1 - 0.8 * abs(dot(normalize(pos - vp), normalize(norm)));
+    float fr = 1 - 0.8 * abs(dot(normalize(pos - vp), norm));
     int frExp = 8;
     if (fresnelExp != 0) frExp = fresnelExp;
     fr = pow(fr, frExp);

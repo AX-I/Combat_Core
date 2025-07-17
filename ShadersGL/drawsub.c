@@ -19,10 +19,7 @@ mat2 rot(float t) {
 }
 
 void main() {
-  vec3 norm = v_norm / depth;
-  vec3 light = (norm) * 0.001;
-
-  vec3 rgb = tColor + vec3(0) * light;
+  vec3 rgb = tColor + (v_norm) * 0.00001;
 
   float opacity = (1 - emPow);
 

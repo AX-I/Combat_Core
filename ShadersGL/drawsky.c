@@ -13,9 +13,7 @@ uniform int isEqui;
 uniform float rotY;
 
 void main() {
-	vec3 norm = v_norm / depth;
-
-    vec3 light = 1 + (norm) * 0.001;
+    vec3 light = 1 + (v_norm) * 0.00001;
 
     vec2 uv = v_UV / depth;
 
