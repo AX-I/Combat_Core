@@ -1,6 +1,6 @@
 // Raymarch fog with 2-lobe HG phase function
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0

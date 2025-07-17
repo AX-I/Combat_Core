@@ -537,11 +537,8 @@ class CLDraw:
                                fragment_shader=drawSub,
                                geometry_shader=makeProgram('ps.c'))
 
-            draw['aspect'].write(np.float32(self.H/self.W))
-
             self.psProg = draw
 
-        self.psProg['vscale'].write(self.sScale)
         self.psProg['size'] = size
         self.psProg['emPow'].write(np.float32(1-opacity))
         self.psProg['tColor'].write(np.array(color[0], 'float32').tobytes())

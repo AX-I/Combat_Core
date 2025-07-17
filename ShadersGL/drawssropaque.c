@@ -2,7 +2,7 @@
 // For AXI Combat
 // Use as 2nd pass
 
-#version 330
+#version 420
 
 
 #define REFL_STEP 2
