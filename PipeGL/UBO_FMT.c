@@ -45,3 +45,9 @@ layout (std140, binding = 4) uniform sMatPos {
   float vscale; // 4
   float sbias;
 };
+
+#UBO_PRI_LIGHT
+layout (std140, binding = 5) uniform PrimaryLight {
+  vec3 LInt;
+  vec3 LDir;
+};

@@ -14,9 +14,6 @@
 
 out vec4 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float width;
 uniform float height;
 
@@ -45,8 +42,7 @@ void main() {
 	vec3 vp = vpos;
 	float sScale = vscale * hF / 2;
 
-	float tz = LDir.x + LInt.x;
-	if (tz != 1.0/depth) tz = 1.0/depth;
+	float tz = 1.0/depth;
 	vec3 pos = v_pos / depth;
 	vec3 norm = normalize(v_norm / depth);
 

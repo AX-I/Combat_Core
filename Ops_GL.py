@@ -357,6 +357,9 @@ class CLDraw:
         return b
 
     def setupLights(self):
+        self.primaryLight = np.zeros((2,4), 'float32')
+        self.ubo_primaryLight = ctx.buffer(self.primaryLight)
+
         self.lightData = np.zeros((85,4), 'float32')
         self.ubo_lightData = ctx.buffer(self.lightData)
 
@@ -1450,14 +1453,11 @@ class CLDraw:
         except KeyError: pass
 
     def setPrimaryLight(self, dirI, dirD):
-        i = dirI.astype("float32")
-        d = dirD.astype("float32")
+        self.primaryLight[0,:3] = dirI
+        self.primaryLight[1,:3] = dirD
 
-        for draw in self.DRAW:
-          try:
-            draw['LInt'].write(i)
-            draw['LDir'].write(d)
-          except KeyError: pass
+        self.ubo_primaryLight.write(self.primaryLight.tobytes())
+        self.ubo_primaryLight.bind_to_uniform_block(5)
 
     def getSHM(self, i):
         sm = self.SHADOWMAP[i]

@@ -15,8 +15,7 @@ uniform sampler2D SM;
 uniform sampler2D SM2;
 #include UBO_SH2
 
-uniform vec3 LInt;
-uniform vec3 LDir;
+#include UBO_PRI_LIGHT
 
 uniform float width;
 uniform float height;

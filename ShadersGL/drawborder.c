@@ -3,8 +3,6 @@
 out vec3 f_color;
 
 in vec3 v_pos;
-uniform vec3 LDir;
-uniform vec3 LInt;
 
 uniform float width;
 uniform float height;
@@ -50,7 +48,7 @@ void main() {
   vPow *= fac;
 
 
-    vec3 light = vPow + (LInt + LDir + norm) * 0.001;
+    vec3 light = vec3(vPow);
 
     vec3 rgb = texture(tex1, v_UV / depth).rgb * light;
     f_color = rgb;
