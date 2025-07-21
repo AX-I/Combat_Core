@@ -116,7 +116,7 @@ def getContext_GL():
 def getSettings(write=True):
     settings = {"Render":"GL",
                 "CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
-                "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1,
+                "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1, 'DOF':1,
                 "Uname":"0", "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
                 "AutoRes":0, "Mouse":20, "IRES":0.75}
     c = 0; newFile = False

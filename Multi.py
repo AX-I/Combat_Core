@@ -148,6 +148,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doBloom = kwargs["BL"]
         self.doSSR = kwargs["SSR"]
         self.doRTVL = kwargs["RTVL"]
+        self.dofLvl = kwargs['DOF']
         self.renderBackend = kwargs["Render"]
 
         ssrLevels = [0, 160, 320, 640]
@@ -316,9 +317,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('u', self.dofLess)
         self.bindKey('U', self.dofMore)
         self.apFac = 0.4
+        self.bindKey('7', self.dofLevel)
 
     def dofLess(self): self.apFac /= 1.1
     def dofMore(self): self.apFac *= 1.1
+    def dofLevel(self):
+        self.dofLvl = (self.dofLvl + 1) % 3
+        dl = self.dofLvl
+        print('Dof', ('off', 'low', 'high')[dl])
+        if dl == 0:
+            return
+
+        self.draw.shaderParams['{DOF_2P2}'] = f'{dl+1}'
+        self.draw.shaderParams['{DOF_P2}'] = f'{2**(dl+1)}'
+        self.draw.shaderParams['{DOF_SAMPLES}'] = f'{(2**(dl+1))**2}'
+        self.reloadShaders()
+
 
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
@@ -1392,7 +1406,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         print("Make in", time.time() - self.loadStart)
 
     def postProcess(self):
-        self.draw.applyDoF()
+        if self.dofLvl:
+            self.draw.applyDoF()
 
         try: self.draw.applyLens(self.draw.lensTn)
         except AttributeError: pass

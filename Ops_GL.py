@@ -196,7 +196,10 @@ class CLDraw:
         self.stTime = time.time()
 
         self.shaderParams = {'{REFL_LENGTH}':str(self.H),
-                             '#define SCR_SHADOW':''}
+                             '#define SCR_SHADOW':'',
+                             '{DOF_2P2}':'2',
+                             '{DOF_P2}':'4',
+                             '{DOF_SAMPLES}':'16'}
 
         self.batchCache = {}
         self.TINFO = TransformInfo()
@@ -694,8 +697,11 @@ class CLDraw:
             self.ssaoFBO2.clear(0)
 
     def setupDoF(self):
+        dsrc = dof
+        for sp in self.shaderParams:
+            dsrc = dsrc.replace(sp, self.shaderParams[sp])
         self.dofProg = ctx.program(vertex_shader=trisetup2d,
-                                   fragment_shader=dof)
+                                   fragment_shader=dsrc)
         self.dofProg['width'] = self.W
         self.dofProg['height'] = self.H
         self.dofProg['tex1'] = 0

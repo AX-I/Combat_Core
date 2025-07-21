@@ -2,12 +2,10 @@
 
 #version 330
 
-#define DOF_SAMPLES 64
-#define DOF_P2 8.f
-#define DOF_2P2 3
-#define DOF_P2M1 7
+#define DOF_SAMPLES {DOF_SAMPLES}
+#define DOF_P2 {DOF_P2}
+#define DOF_2P2 {DOF_2P2}
 
-#define MAX_UINT 4294967295.f
 #define PI2 6.28318531f
 
 uniform sampler2D tex1;
@@ -46,11 +44,11 @@ void main() {
   float ri,rj,si,sj;
 	for (int k = 0; k<DOF_SAMPLES; k++) {
 
-    ri = ((k&DOF_P2M1) + float(rng_state & 31u) / 31) / DOF_P2;
+    ri = ((k&(DOF_P2-1)) + float(rng_state & 31u) / 31) / DOF_P2;
     rng_state = rand_xorshift(rng_state);
     rj = ((k>>DOF_2P2) + float(rng_state & 31u) / 31) / DOF_P2;
     rng_state = rand_xorshift(rng_state);
-    float rq = sqrt(ri) * ((k == 0)?0:1);
+    float rq = sqrt(ri);
 
     si = coc * 1.07 * rq * cos(PI2 * rj);
     sj = coc * 1.07 * rq * sin(PI2 * rj);
@@ -65,9 +63,9 @@ void main() {
     if (coc * 1.07 * rq > ecoc) cover *= 0;
     nsamples += cover;
 
-    color += cover * texture(tex1, (tc + vec2(si, sj))*wh).rgb;
+    color += cover * texture(tex1, target*wh).rgb;
 	}
-	color /= nsamples;
+  color = (nsamples > 0) ? color/nsamples : texture(tex1, tc*wh).rgb;
 
   f_color = color;
 }
