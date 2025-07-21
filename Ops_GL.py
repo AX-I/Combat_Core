@@ -439,16 +439,16 @@ class CLDraw:
 
             dat = self.transformPrep(tn)
             for i in range(len(tb)):
-                dat[tb[i][1]:tb[i][2],:3] += np.expand_dims(tb[i][0], 0)
+                dat[tb[i][1]:tb[i][2],:3] += tb[i][0][None,:]
             self.transformWrite(dat[mStart:mEnd], offset=mStart)
 
     def translate(self, diff, cStart, cEnd, tn):
         dat = self.transformPrep(tn)
-        dat[cStart:cEnd,:3] += np.expand_dims(diff, 0)
+        dat[cStart:cEnd,:3] += diff[None,:]
         self.transformWrite(dat[cStart:cEnd], offset=cStart)
 
     def scale(self, origin, diff, cStart, cEnd, tn):
-        o = np.expand_dims(origin, 0)
+        o = origin[None,:]
         dat = self.transformPrep(tn)
         if self.VBO[tn].extra:
             dat[cStart:cEnd,3] *= diff
@@ -858,9 +858,8 @@ class CLDraw:
 
     def setVM(self, vM):
         self.rawVM = vM.astype('float32')
-        vmat = np.array([-vM[1], vM[2], vM[0]])
-        vmat = np.array(vmat.T, order='C')
-        self.vmat = vmat.astype('float32')
+        vmat = np.array([-vM[1], vM[2], vM[0]], 'float32', order='F').T
+        self.vmat = vmat
 
         self.vMatPos[:3,:3] = self.vmat
         self.vMatPos[4:7,:3] = self.rawVM
@@ -892,11 +891,9 @@ class CLDraw:
 
         draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawSh)
 
-        vertices = np.stack((p[:,0], p[:,1], p[:,2],
-                             n[:,0], n[:,1], n[:,2],
-                             uv[:,0], uv[:,1]), axis=-1)
+        vertices = np.concatenate((p, n, uv), axis=-1)
 
-        vbo = ctx.buffer(vertices.astype('float32').tobytes())
+        vbo = ctx.buffer(vertices.tobytes())
 
         if instances is not None:
             draw = ctx.program(vertex_shader=SHADER_DEF('INST', trisetup),
