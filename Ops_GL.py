@@ -1223,6 +1223,8 @@ class CLDraw:
         self.fbo.depth_mask = False
         ctx.enable(moderngl.BLEND)
 
+        hasReflBlit = False
+
         # Transparent
         for i in range(len(self.VBO)):
             if mask[i]: continue
@@ -1239,14 +1241,14 @@ class CLDraw:
                 except KeyError: pass
 
             elif 'SSR' in shader:
-                ctx.disable(moderngl.CULL_FACE)
-                ctx.disable(moderngl.DEPTH_TEST)
-                ctx.disable(moderngl.BLEND)
-                self.blit(self.POSTFBO[0], self.FB, self.W, self.H)
-                ctx.enable(moderngl.DEPTH_TEST)
-                ctx.enable(moderngl.BLEND)
+                if not hasReflBlit:
+                    ctx.disable(moderngl.CULL_FACE)
+                    ctx.disable(moderngl.BLEND)
+                    self.blit(self.POSTFBO[0], self.FB, self.W, self.H)
+                    ctx.enable(moderngl.BLEND)
+                    self.fbo.use()
+                    hasReflBlit = True
 
-                self.fbo.use()
                 if shader == 'SSRopaque':
                     ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
                     ctx.depth_func = '<='
