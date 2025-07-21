@@ -250,7 +250,7 @@ def movePillars(self, i):
         return
     btn['pos'] += tr[1]
     b = btn['obj']
-    self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+    self.draw.translate(tr, b.cStart, b.cEnd, b.texNum)
 
 def showPlatforms(self):
     if self.showPlatforms > 0:
@@ -386,7 +386,7 @@ def frameUpdate(self):
                 btn['fullyPressed'] = False
             b = btn['obj']
             btn['pos'] += mov
-            self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+            self.draw.translate(tr, b.cStart, b.cEnd, b.texNum)
         if btn['pos'] >= 0:
             btn['fullyLifted'] = True
 
@@ -422,7 +422,7 @@ def frameUpdate(self):
 
         for tn in self.pillarTexn:
             if tn not in batch: batch[tn] = []
-            batch[tn].append((tr*i, p.cStart*3, p.cEnd*3))
+            batch[tn].append((tr*i, p.cStart, p.cEnd))
             p = p.nextMtl
     self.draw.translateBatch(batch)
 
