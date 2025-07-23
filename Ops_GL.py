@@ -295,6 +295,11 @@ class CLDraw:
         tex = ctx.texture3d((16,16,16), 1, n, dtype='f2')
         self.noiseTex = tex
 
+        a = np.array(Image.open('../Assets/BlueNoise-16x16-LDR_LLL1_0.png'))[:,:,0]
+        self.blue_tex = ctx.texture(
+            a.shape[1::-1], 1, np.array(a, order='C', dtype='uint8'), dtype='f1'
+        )
+
     def setHostSkyTex(self, tex):
         pass
 
@@ -620,8 +625,7 @@ class CLDraw:
             self.moProg['vscale'].write(self.sScale)
             self.moVao = ctx.vertex_array(self.moProg, self.post_vbo, 'in_vert')
 
-            ra = np.random.rand(64)
-            self.moProg['R'].write(ra.astype('float32'))
+            self.moProg['blue'] = 2
 
             self.OLDBUF = ctx.texture((self.W, self.H), 3, dtype='f2')
             self.OLDFBO = ctx.framebuffer(self.OLDBUF)
@@ -638,6 +642,7 @@ class CLDraw:
         self.moProg['texd'] = 1
         self.OLDBUF.use(location=0)
         self.DBT.use(location=1)
+        self.blue_tex.use(location=2)
 
         self.moProg['Vpos'].write(self.vc)
         self.moProg['VV'].write(self.rawVM)

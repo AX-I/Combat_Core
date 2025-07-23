@@ -6,6 +6,8 @@
 uniform sampler2D tex1;
 uniform sampler2D texd;
 
+uniform sampler2D blue;
+
 uniform float EXPOSURE;
 
 uniform vec3 Vpos;
@@ -19,17 +21,9 @@ uniform vec3 oldVY;
 
 uniform float width;
 uniform float height;
-uniform float R[64];
 
 out vec3 f_color;
 
-
-uint rand_xorshift(uint rng_state) {
-    rng_state ^= (rng_state << 13);
-    rng_state ^= (rng_state >> 17);
-    rng_state ^= (rng_state << 5);
-    return rng_state;
-}
 
 void main() {
 
@@ -46,9 +40,6 @@ void main() {
 	float cx = tc.x;
 	float cy = tc.y;
 
-  uint rng_state = uint(cy * hF + cx);
-  uint rid1 = rand_xorshift(rng_state) & uint(63);
-
 	float sScale = vscale * hF / 2;
 
 
@@ -64,7 +55,8 @@ void main() {
 	float dy = oldY - cy;
 	float dx = oldX - cx;
   float accum = 1.f * 0.0001;
-	for (float i=R[rid1]*SSKIP; i <= SAMPLES; i+=SSKIP) {
+  float offset = texture(blue, vec2(((int(cx) & 15) + 0.5f)/16.f, ((int(cy) & 15) + 0.5f)/16.f)).r;
+	for (float i=offset*SSKIP; i <= SAMPLES; i+=SSKIP) {
 		float sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 1.f, hF-1.f);
 		float sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 1.f, wF-1.f);
 
