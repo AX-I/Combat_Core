@@ -159,6 +159,7 @@ class NPCanvas:
         self.post_vao = self.ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
 
+        self.post_prog['IRES'] = 1
         self.post_prog['width'] = self.W
         self.post_prog['height'] = self.H
 

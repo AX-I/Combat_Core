@@ -5,11 +5,10 @@
 #define CHROM
 #define VIGNETTE
 
-#define IRES 1.0
-
 uniform sampler2D tex1;
 out vec3 f_color;
 
+uniform float IRES;
 uniform float width;
 uniform float height;
 uniform float exposure;

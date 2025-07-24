@@ -181,11 +181,17 @@ class CLDraw:
             ctx.texture((self.W, self.H), 3, dtype='f2'),
             ctx.texture((self.W, self.H), 3, dtype='f2')
         )
+        for buf in self.POSTBUF:
+            buf.repeat_x = False
+            buf.repeat_y = False
+
         self.POSTFBO = (
             ctx.framebuffer(self.POSTBUF[0]),
             ctx.framebuffer(self.POSTBUF[1])
         )
         self.POST_N = 0
+        self.LAST_PB = None
+        self.LAST_PF = None
         self.started_post = False
 
         self.setupLights()
@@ -216,14 +222,24 @@ class CLDraw:
     def usePOSTFBO(self, inplace=False):
         if inplace and not self.started_post:
             return
+        if inplace and (self.LAST_PB == self.FB):
+            self.fbo.use()
+            self.LAST_PF = self.fbo
+            return
         if not inplace:
             self.POST_N = 1 - self.POST_N
         self.POSTFBO[self.POST_N].use()
+        self.LAST_PF = self.POSTFBO[self.POST_N]
 
     def getPOSTBUF(self, opposite=False):
         if self.started_post:
+            if (not opposite) and (self.LAST_PF == self.fbo):
+                return self.FB
+            self.LAST_PB = self.POSTBUF[opposite ^ self.POST_N]
             return self.POSTBUF[opposite ^ self.POST_N]
         self.started_post = True
+        ctx.disable(moderngl.DEPTH_TEST)
+        self.LAST_PB = self.FB
         return self.FB
 
     def reloadShaders(self, **kwargs):
@@ -252,11 +268,7 @@ class CLDraw:
     def setupPost(self):
         w, h = self.outW, self.outH
 
-        g1 = gamma
-        if not (self.USE_FSR or self.ENABLE_FXAA):
-            g1 = gamma.replace('#define IRES 1.0', f'#define IRES {self.IRES}')
-
-        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=g1)
+        self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
 
@@ -825,8 +837,11 @@ class CLDraw:
 
         if self.USE_FSR or useFxaa:
             self.fs_fsr.use()
+            self.post_prog['IRES'] = 1
         else:
             self.fs.use()
+            self.post_prog['IRES'] = self.IRES
+
         self.post_prog['exposure'] = ex
         self.post_prog['tonemap'] = np.int32(tm[tonemap])
         self.post_prog['blackPoint'] = np.float32(blackPoint)
