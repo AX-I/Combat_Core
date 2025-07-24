@@ -63,6 +63,7 @@ def setupStage(self):
 
     nr.seed(1); random.seed(1)
     options = {"filename":mpath+"pine/Pine.obj", "static":True,
+               'instanced':True,
            "texMode":None, "scale":0.2, "shadow":"C"}
     options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
                 'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
@@ -132,8 +133,8 @@ def setupStage(self):
     # Background Mountain
     pfile = tgpath + "Mountain.obj"
     opts = {'filename':pfile, 'mip':2, 'texMul':0.8, 'useShaders':
-            {'args':{'specular': 0.4}, 'normal':'mountain', 'ignoreShadow':1},
-            'shadow':'', 'static':True}
+            {'args':{'specular': 0.4}, 'normal':'mountain'},
+            'shadow':'R', 'static':True}
     self.addVertObject(VertModel, [22,46,-441], rot=(0,0,0), scale=2.2,
                        **opts)
     self.addVertObject(VertModel, [-666,66,-11], rot=(0,-pi/2,0), scale=3.3,
@@ -199,11 +200,13 @@ def setupStage(self):
     for i in range(2*len(self.players)):
         self.addVertObject(VertModel, [0,0,0],
                            filename=mpath + 'Ski.obj', cache=False,
+                           instanced=True,
                            mip=2, useShaders={'spec': 0.4},
                            scale=0.6, rot=(0,-pi/2,0))
         self.skis.append(self.vertObjects[-1])
-        self.addVertObject(VertModel, [0,-1.9,0], # obj is 1.6 height
+        self.addVertObject(VertModel, [0,0,0],
                            filename=mpath + 'Pole.obj', cache=False,
+                           instanced=True,
                            useShaders={'spec': 0.4},
                            scale=1.2, rot=(0,pi/2,0))
         self.poles.append(self.vertObjects[-1])
@@ -364,7 +367,7 @@ def frameUpdateAfter(self):
         if p['id'] == 5: continue
 
         s = self.skis[i]
-        objArgs = (s.cStart*3, s.cEnd*3)
+        objArgs = (s.cStart, s.cEnd)
 
         foot = p['b1'].children[1+(i%2)].children[0].children[0]
         relpos = np.array([0.3,-0.08-self.footSize[p['id']],0,1])
@@ -409,7 +412,7 @@ def frameUpdateAfter(self):
         if p['id'] == 5: continue
 
         s = self.poles[i]
-        objArgs = (s.cStart*3, s.cEnd*3)
+        objArgs = (s.cStart, s.cEnd)
 
         hand = p['b1'].children[0].children[i%2].children[0].children[0]
         pos = (np.array([0,-0.04,-0.14 + 0.28*(i%2),1.]) @ hand.TM)[:3]

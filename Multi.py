@@ -24,6 +24,7 @@ import numpy
 import numpy.random as nr
 import random
 import time
+from Utils import displayFPS
 
 nr.seed(int((time.time() * 1000) % 1000))
 random.seed(int((time.time() * 1000) % 1000))
@@ -147,6 +148,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doBloom = kwargs["BL"]
         self.doSSR = kwargs["SSR"]
         self.doRTVL = kwargs["RTVL"]
+        self.dofLvl = kwargs['DOF']
         self.renderBackend = kwargs["Render"]
 
         ssrLevels = [0, 160, 320, 640]
@@ -222,6 +224,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.tonemap = 'aces'
         self.doSSAO = False
+        self.doScrSh = False
         self.showDebug = False
         self.doMB = True
 
@@ -277,6 +280,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("g", self.foc1)
         self.bindKey("G", self.foc2)
         self.bindKey("h", self.tgAO)
+        self.bindKey("H", self.tgScrSh)
+
         self.bindKey("n", self.tgDebug)
         self.bindKey("y", self.tgMB)
         self.bindKey('t', self.tgTM1)
@@ -312,9 +317,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey('u', self.dofLess)
         self.bindKey('U', self.dofMore)
         self.apFac = 0.4
+        self.bindKey('7', self.dofLevel)
 
     def dofLess(self): self.apFac /= 1.1
     def dofMore(self): self.apFac *= 1.1
+    def dofLevel(self):
+        self.dofLvl = (self.dofLvl + 1) % 3
+        dl = self.dofLvl
+        print('Dof', ('off', 'low', 'high')[dl])
+        if dl == 0:
+            return
+
+        self.draw.shaderParams['{DOF_2P2}'] = f'{dl+1}'
+        self.draw.shaderParams['{DOF_P2}'] = f'{2**(dl+1)}'
+        self.draw.shaderParams['{DOF_SAMPLES}'] = f'{(2**(dl+1))**2}'
+        self.reloadShaders()
+
 
     def reloadStage(self):
         self.STAGECONFIG = importlib.reload(self.STAGECONFIG)
@@ -327,7 +345,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.matShaders[vo.texNum].update(kwargs['useShaders'])
         if Phys.eucDist(args[1], vo.coords) > 0.001:
             self.draw.translate(np.array(args[1]) - vo.coords,
-                                vo.cStart*3, vo.cEnd*3, vo.texNum)
+                                vo.cStart, vo.cEnd, vo.texNum)
             vo.coords = args[1]
         if type(self.vertObjects[-1]) is VertModel:
             if self.vertObjects[-1].prevMtl is not None:
@@ -353,6 +371,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def reloadShaders(self):
         self.draw.reloadShaders(stage=self.stage)
+        self.rotateLight(self.directionalLights[0]["dir"][1])
         print('Reloaded draw shaders')
 
 
@@ -440,6 +459,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def respawnTest(self, sc=None):
         if sc is None: sc = self.selchar
 
+        a = self.players[sc]
+        if a['jump'] > 0: return
+
         if self.restPlayer is None and sc != self.lastRestPlayer:
             self.restPlayer = sc
             self.lastRestPlayer = sc
@@ -447,9 +469,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.setupRestKF(sc)
 
-        a = self.players[sc]
         if 'restAnim' in a: return
-        if a['jump'] > 0: return
 
         self.si.put({'Play':(PATH+'../Sound/Recover.flac', self.volmFX * 0.8,
                              False)})
@@ -460,7 +480,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         r = self.restRings
         self.ringPos = np.array(a['b1'].offset[:3])
         self.draw.translate(a['b1'].offset[:3],
-                            r.cStart*3, r.cEnd*3, r.texNum)
+                            r.cStart, r.cEnd, r.texNum)
         a['legIKoffset'] = 0
         a['tempYPos'] = float(a['b1'].offset[1])
 
@@ -534,7 +554,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if 'deathTime' in a:
                     del a['deathTime']
                 self.draw.translate(-self.ringPos,
-                                    r.cStart*3, r.cEnd*3, r.texNum)
+                                    r.cStart, r.cEnd, r.texNum)
                 a['movingOld'] = True
 
     def setYoffsetTest(self, p):
@@ -567,7 +587,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.tonemap = tm[tm.index(self.tonemap) - 1]
 
     def tgMB(self): self.doMB = not self.doMB
-    def tgAO(self): self.doSSAO = not self.doSSAO
+    def tgAO(self):
+        self.doSSAO = not self.doSSAO
+        self.draw.ssao(self.doSSAO)
+    def tgScrSh(self):
+        self.doScrSh = not self.doScrSh
+        s = '#define SCR_SHADOW'
+        self.draw.shaderParams[s] = s * self.doScrSh
+        self.reloadShaders()
     def foc1(self):
         self.exposure *= 1.1
         print(self.exposure)
@@ -598,7 +625,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             return
 
         p["jump"] = self.frameNum
-        p["vertVel"] = 6.0
+        p["pv"].v[1] = 6.0 * 1.1
+        p['pv'].forces[0,1] = -9.81
 
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
         self.si.put({"Play":(PATH + jfn, self.volmFX / 3,
@@ -647,7 +675,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except:
             regenTargs = True
 
-            with open(PATH+'lib/EyeTracking.txt') as fuv:
+            with open(PATH+'../Models/EyeTracking.txt') as fuv:
                 uvInfo = fuv.readlines()
                 uvInfo = json.loads(''.join(uvInfo[3:]))
                 self.eyeUV = {int(n):uvInfo[n] for n in uvInfo}
@@ -899,7 +927,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         e["start"] = time.time()
         self.matShaders[e["obj"].texNum]['args'].update(emPow=4)
 
-        self.draw.translate(e["pos"], e["obj"].cStart*3, e["obj"].cEnd*3,
+        self.draw.translate(e["pos"], e["obj"].cStart, e["obj"].cEnd,
                             e["obj"].texNum)
 
         self.expNum = (self.expNum + 1) % len(self.exploders)
@@ -937,7 +965,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         t1.create = lambda: 1
 
     def addPlayer(self, o):
-        pv = Phys.RigidBody(64, [0.,0,0], usegravity=0, noforces=False)
+        pv = Phys.RigidBody(64, [0.,0,0], forces=[(0,0,0)], noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
         pv.addCollider(Phys.CircleCollider(0.5, (0,0.51,0), rb=pv))
         pv.colliders[0].prop = "player"
@@ -956,7 +984,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "ctexn":None, "rig":None, "obj":o,
              "pv":pv, "num":len(self.players), "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
-             "jump":-1, "vertVel":0, "fCam": False,
+             "jump":-1, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
              'animOffset':np.zeros(3), 'animTrans':-100,
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
@@ -967,6 +995,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.NPLAYERS += 1
         self.players.append(a)
         self.w.addRB(pv)
+        pv.disable()
 
         a["cheight"] = self.rpi[a["num"]][2] + 0.06 * (self.stage == 2)
 
@@ -998,7 +1027,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.NPLAYERS = 0
 
-        st = time.time()
         print("Loading textures")
 
         self.w = Phys.World()
@@ -1057,7 +1085,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            scale=1.33, shadow="")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.25,0.5,0.5,0.75)
+        self.extractByUV(t1, t2, 0,0.25,0,0.25)
         self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
 
         self.addPlayer(self.vertObjects[-1])
@@ -1069,7 +1097,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                            scale=0.33, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.25,0.5,0.25,0.5)
+        self.extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
         self.matShaders[t2.texNum].update(args={'specular':0.8,
                             'NMmipBias':0.1, 'translucent':1,
                             'roughness':0.12, 'f0':0.6,
@@ -1097,9 +1125,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                filename=mpath+"Test3/Test3J.obj",
                                animated=True, useShaders={'args':{'specular':1}},
                                scale=0.8 / 1.08, shadow="R")
+
+            t1 = self.vertObjects[-1]
+            t2 = self.vertObjects[-3]
+            self.extractByUV(t1, t2, 352/1024,(352+128)/1024,513/1024,(513+256)/1024)
+            self.matShaders[t2.texNum]['nocast'] = 1
+
             self.addPlayer(self.vertObjects[-1])
             self.matShaders[self.vertObjects[-1].nextMtl.texNum].update(
-                shader='sub', args={'emPow':0.6})
+                shader='sub', args={'emPow':0.6}, noline=True)
 
             self.addVertObject(VertModel, [0,0,0],
                                filename=mpath+"Zelda/Ztest4.obj",
@@ -1156,6 +1190,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets):
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Blank.png",
+                               instanced=True,
                                useShaders={'shader':"emissive",'args':{'emPow':2}})
             self.spheres.append(("blank", self.vertObjects[-1]))
 
@@ -1163,7 +1198,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                             usegravity=0, elasticity=0.8))
             self.srbs[-1].addCollider(Phys.BulletCollider(0.25, False,
                                                           rb=self.srbs[-1]))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.sphereTrails = []
@@ -1178,6 +1213,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 2):
             self.addVertObject(VertSphere, p, n=16, scale=0.5,
                                texture=PATH+"../Assets/Red.png",
+                               instanced=True,
                                useShaders={'shader':"emissive",'args':{'emPow':2.5}})
             self.spheres.append(("red", self.vertObjects[-1]))
 
@@ -1186,7 +1222,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.srbs[-1].addCollider(Phys.BulletCollider(0.5, False,
                                                           rb=self.srbs[-1],
                                                           damage=4))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
 
@@ -1207,6 +1243,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.addVertObject(VertRing, [0,0,0], n=16,
                 radius=(0.5,1.2), z=0.3, uMult=5,
                 texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
+                instanced=True,
                 shadow="", useShaders={'shader':'add', 'args':{'emPow':0.6},
                                        'noline':True})
             obj = self.vertObjects[-1]
@@ -1243,6 +1280,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 3):
             self.addVertObject(VertSphere, p, n=12, scale=0.25,
                                texture=PATH+"../Assets/Orange.png",
+                               instanced=True,
                                useShaders={'shader':'add','args':{'emPow':0.4}})
             self.spheres.append(("orange", self.vertObjects[-1]))
 
@@ -1252,7 +1290,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                           rb=self.srbs[-1],
                                                           damage=6,
                                                           explode=True))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.pickups = []
@@ -1268,6 +1306,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for i in range(self.numBullets // 5):
             self.addVertObject(VertSphere, p, n=12, scale=0.3,
                                texture=PATH+"../Assets/Black.png",
+                               instanced=True,
                                useShaders={"emissive":0.0})
             self.spheres.append(("black", self.vertObjects[-1]))
 
@@ -1278,7 +1317,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                                           rb=self.srbs[-1],
                                                           damage=3, hl=0,
                                                           blackHole=True))
-            self.srbs[-1].disabled = True
+            self.srbs[-1].disable()
             self.srbs[-1].colliders[0].onHit = lambda x: self.explode(x)
 
             self.w.addRB(self.srbs[-1])
@@ -1322,6 +1361,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p = np.array([0., 0, 0])
             self.addVertObject(VertSphere, p, n=24, scale=0.25,
                                texture=PATH+"../Assets/Orange1.png",
+                               instanced=True,
                                useShaders={'shader':"add", 'args':{'emPow':2.}})
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
@@ -1352,8 +1392,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":24*sr/2048 * fact})
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
-                                "size":sr, "scale":200*sr/2048})
+                                "size":sr, "scale":160*sr/2048})
 
+        print('Textures in', time.time() - self.loadStart)
         self.makeObjects(1)
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.flac",
@@ -1362,23 +1403,21 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         }}})
 
 
-        print("Done in", time.time() - st, "s")
+        print("Make in", time.time() - self.loadStart)
 
     def postProcess(self):
-        self.draw.applyDoF()
+        if self.dofLvl:
+            self.draw.applyDoF()
 
         try: self.draw.applyLens(self.draw.lensTn)
         except AttributeError: pass
-
-        if self.doSSAO:
-            self.draw.ssao()
 
         if self.frameNum > 1:
             if self.doMB:
                 self.draw.motionBlur(self.oldVPos, self.oldVMat)
 
-        db = self.draw.getDB()
-        target = max(0.6, min(6, db[self.draw.H//2, self.draw.W//2]))
+        db = self.draw.getDBpoint()
+        target = max(0.6, min(6, db))
         df = self.dofFoc
         if (target < self.dofFoc) or (self.frameNum & 1 == 0):
             self.dofFoc = sqrt(sqrt(df * df * df * target))
@@ -1392,7 +1431,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.draw.blur(self.exposure * 0.707)
 
         self.oldVMat = np.array(self.vMat)
-        self.oldVPos = np.array(self.pos)
+        self.oldVPos = np.array(self.tempPos)
 
         for i in range(len(self.blackHoles)):
             b = self.blackHoles[i]
@@ -1444,7 +1483,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["Energy"] += self.COSTS[color]
             return False
 
-        self.srbs[cb].disabled = False
+        self.srbs[cb].enable()
         s = self.bulletSpeed
         if color == "black": s *= 0.66
         d = np.array([cos(a["cr"]), vh, sin(a["cr"])])
@@ -1464,6 +1503,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def onStart(self):
         self.gameStarted = False
+        self.tempPos = np.array(self.pos)
 
         if self.stage == 4:
             self.si.put({'Play':(PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
@@ -1587,7 +1627,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         else:
             sobj = [(x <= self.players[-1]["obj"].texNum) and \
                     not self.renderMask[x] and \
-                    not ("sub" in self.matShaders[x]) \
+                    not ('nocast' in self.matShaders[x]) and \
+                    not (self.matShaders[x]['shader'] == 'sub') or \
+                    'shadowDynamic' in self.matShaders[x] \
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
@@ -1814,7 +1856,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if i["t"] == t: return
         if t is None: t = self.frameNum
 
-        cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
+        cs, ce, tn = i["obj"].cStart, i["obj"].cEnd, i["obj"].texNum
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
 
@@ -1841,39 +1883,26 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def resetPickup(self):
         i = self.pickups[0]
-        cs, ce, tn = i["obj"].cStart*3, i["obj"].cEnd*3, i["obj"].texNum
+        cs, ce, tn = i["obj"].cStart, i["obj"].cEnd, i["obj"].texNum
         self.draw.translate(-i["pos"], cs, ce, tn)
         i["pos"] = None
         i['t'] = -self.frameNum
 
     def qq(self): self.doQuit = True
 
-    def frameProfile(self, i):
-        try: _ = self.ftime
-        except:
-            self.ftime = {}
-            self.ftx = {}
-        if i not in self.ftime:
-            self.ftime[i] = 0
-            self.ftx[len(self.ftime)-1] = i
-        self.ftime[i] += time.time() - self.frameStart
-    def printProfile(self):
-        for i in range(len(self.ftx)):
-            x = self.ftx[i]
-            if x == '.': continue
-            offset = 0 if i == 0 else self.ftime[self.ftx[i-1]]
-            print(round((self.ftime[x] - offset) / self.frameNum, 5), x)
-
-        print('Total', round((self.ftime[x] - self.ftime['.']) / self.frameNum, 5))
 
     def frameUpdate(self):
-        try:
+        self.frameStart = time.perf_counter()
+        self.frameProfile('.')
+
+        if hasattr(self.STAGECONFIG, 'frameUpdate'):
             self.STAGECONFIG.frameUpdate(self)
-        except AttributeError:
-            pass
+
+        self.frameProfile('Stage')
 
         self.si.put({'SetPos':{'pos':self.pos,
                                'vvh':self.vVhorz()}})
+        self.tempPos[:] = self.pos
 
         if self.VRMode: self.frameUpdateVR()
 
@@ -1885,8 +1914,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.frameNum == 1:
             self.rotateLight()
 
-        self.frameStart = time.perf_counter()
-        self.frameProfile('.')
 
         CURRTIME = time.time()
 
@@ -2001,7 +2028,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     a["deathTime"] = time.time()
                     for xn in a["ctexn"]:
                         self.matShaders[xn] = {'temp': self.matShaders[xn]}
-                a["pv"].pos[:] = -10.
+
+                a['pv'].disable(disableKinematics=False)
                 a["Energy"] = 0
                 tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
                 for xn in a["ctexn"]:
@@ -2013,7 +2041,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     g.step()
             elif tn not in actPlayers:
                 a["pv"].pos[:] = -10.
+                a['pv'].disable()
             else:
+                a['pv'].enable()
                 a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0]) \
                               - a['animOffset'] + np.array([0,a['legIKoffset'],0])
                 a["Energy"] += 0.05 * self.frameTime
@@ -2023,6 +2053,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         impulses = self.w.stepWorld(self.frameTime,
                                     checkColl=(self.frameNum & vf == 0))
+
+        self.frameProfile('StepWorld')
 
         for i in range(min(len(impulses), 4)):
             im = impulses[i]
@@ -2035,7 +2067,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if fxobj.timeStart > 0:
                 break
 
-            objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+            objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
 
             norm = np.cross(idir, (1,1,1))
             norm /= Phys.eucLen(norm)
@@ -2051,7 +2083,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         for fxobj in self.impulseFX:
             if fxobj.timeStart > 0:
-                objArgs = (fxobj.cStart*3, fxobj.cEnd*3, fxobj.texNum)
+                objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
 
                 ctime = CURRTIME - fxobj.timeStart
                 life = 0.3
@@ -2069,8 +2101,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         for a in self.players:
-            if self.getHealth(a['id']) <= 0:
-                continue
             if a['id'] not in self.actPlayers:
                 continue
             if a['jump'] > 0:
@@ -2098,7 +2128,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                       (self.srbs[i].pos < self.BORDER[0])).any():
                     self.srbs[i].pos[:] = 0.
                     self.srbs[i].v[:] = 0.
-                    self.srbs[i].disabled = True
+                    self.srbs[i].disable()
 
 
         batch = {}
@@ -2109,12 +2139,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 print("NaN, disable")
                 self.srbs[i].pos[:] = 0.
                 self.srbs[i].v[:] = 0.
-                self.srbs[i].disabled = True
+                self.srbs[i].disable()
             diff = self.srbs[i].pos - lpi[self.lpCount[i]]
             if sum(diff*diff) > 0:
                 if s.texNum not in batch:
                     batch[s.texNum] = []
-                batch[s.texNum].append((diff, s.cStart*3, s.cEnd*3))
+                batch[s.texNum].append((diff, s.cStart, s.cEnd))
 
             if self.spheres[i][0] == 'blank':
                 # 015 is one side of rect, 234 is other side
@@ -2130,14 +2160,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     lpi[self.lpCount[i]] = self.srbs[i].pos
 
                 diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
-                batch[s.texNum].append((diff, s.cStart*3, s.cStart*3+2))
-                batch[s.texNum].append((diff2, s.cStart*3+2, s.cStart*3+5))
-                batch[s.texNum].append((diff, s.cStart*3+5, s.cStart*3+6))
+                batch[s.texNum].append((diff, s.cStart, s.cStart+2))
+                batch[s.texNum].append((diff2, s.cStart+2, s.cStart+5))
+                batch[s.texNum].append((diff, s.cStart+5, s.cStart+6))
 
             self.lpCount[i] += 1
             self.lpCount[i] %= self.lp.shape[1]
             lpi[self.lpCount[i]] = np.array(self.srbs[i].pos)
 
+        self.frameProfile('Batch')
 
         self.draw.translateBatch(batch)
 
@@ -2154,7 +2185,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
                 frameScale = self.exscale ** (time.time() - e["start"])
 
-                cs, ce, tn = e["obj"].cStart*3, e["obj"].cEnd*3, e["obj"].texNum
+                cs, ce, tn = e["obj"].cStart, e["obj"].cEnd, e["obj"].texNum
                 self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
                 e["scale"] *= frameScale / e["scale"]
                 self.matShaders[tn].update(args={'emPow': 2 / e["scale"]})
@@ -2250,29 +2281,37 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:
             if a["id"] not in actPlayers: continue
+
+            a['pv'].noforces = (a['jump'] < 0)
+
             if a["jump"] > 0:
-                dx = a["vertVel"] * self.frameTime - 9.81 * self.frameTime**2 / 2
-                a["b1"].offset[1] += dx * 1.2
-                a["vertVel"] -= self.frameTime * 9.81
                 ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
                 if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    # stuck on side of terrain
                     vx,vy = a['pv'].v[::2]
                     if vx*vx+vy*vy > 0.0001:
                         a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
-                        a['pv'].v[::2] *= 0
 
+                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
+                if (ih + a["cheight"]) > a["b1"].offset[1]:
+                    # landed on terrain
                     a["jump"] = -a["jump"]
                     self.setYoffset(a)
 
                     self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
-                                         abs(a['vertVel']) / 8 * self.volmFX / 3,
+                                         abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
                                          (a['b1'].offset[:3], 6, 1))})
 
-                    if abs(a["vertVel"]) > 8:
-                        a["pv"].colliders[0].hc += abs(abs(a["vertVel"]) - 6)
+                    if abs(a["pv"].v[1]) > 8:
+                        a["pv"].colliders[0].hc += abs(abs(a["pv"].v[1]) - 6)
                         a["isHit"] = self.frameNum
 
-            a['pv'].v *= 0.9
+                    a['pv'].forces[0,1] = 0
+                    a['pv'].v[:] = 0
+
+
+            a['pv'].v[::2] *= 1 - 0.04 * Phys.eucLen(a['pv'].v) * self.frameTime
+
             if Phys.eucLen(a['pv'].v) < 0.01:
                 a['pv'].v *= 0
 
@@ -2296,9 +2335,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     d = sqrt(bx*bx + by*by) / hvel
                     bx /= d; by /= d
 
-                bx *= self.frameTime; by *= self.frameTime
                 if a['moving'] < 0:
                     bx *= 0.9; by *= 0.9
+
+                jbx = bx; jby = by
+                bx *= self.frameTime; by *= self.frameTime
 
                 if CURRTIME - a['animTrans'] < 0.2:
                     fact = (CURRTIME - a['animTrans']) / 0.2
@@ -2318,13 +2359,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 borderOk = (b1 < fx < b2) and (b1 < fy < b2)
 
                 if (slopeOk or stepOk) and borderOk:
-                    a["b1"].offset[0] += bx
-                    a["b1"].offset[2] += by
                     if a["jump"] <= 0:
+                        a["b1"].offset[0] += bx
+                        a["b1"].offset[2] += by
                         if (navheight - ih) > maxStep:
+                            # fell off terrain
                             a['jump'] = self.frameNum
-                            a['vertVel'] = 0.0
+                            a['pv'].forces[0,1] = -9.81
+                            a['pv'].v[1] = 0.0
+
                     if a["jump"] <= 0:
+                        a['pv'].v[::2] = (jbx, jby)
+
                         self.setYoffset(a)
 
                         if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
@@ -2358,6 +2404,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 else:
                     playerStuck = True
 
+
                 if not self.isClient:
                     if a['id'] in self.aiNums:
                         self.agents[a['id']].isStuck = playerStuck
@@ -2383,6 +2430,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                                       isFlat=True)
 
             elif a["movingOld"]:
+                if a['jump'] <= 0:
+                    a['pv'].v[:] = 0
                 a['animTrans'] = CURRTIME
                 a['tempPose'] = a['rig'].exportPoseFlat()
 
@@ -2508,8 +2557,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     # For debug
                     ts = self.testSphere
                     diff = a['b1'].offset[:3] + test - ts.coords
-                    self.draw.translate(diff, ts.cStart*3,
-                                        ts.cEnd*3, ts.texNum)
+                    self.draw.translate(diff, ts.cStart,
+                                        ts.cEnd, ts.texNum)
                     ts.coords += diff
 
                 if 'vrC' in a:
@@ -2637,7 +2686,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for i in p["ctexn"]:
                         self.draw.highlight([1.,0,0], i)
 
-        self.frameProfile('Postprocess')
+        self.frameProfile('Postprocess', end=True)
 
 ##        if self.stage == 4:
 ##            test = 0.6 + 0.3 * sin(time.time() / 13) + 0.1 * sin(time.time() / 5)
@@ -2663,7 +2712,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.rgb[:8,5*30-2:5*31+2] = [[0,0,0]]
         self.rgb[:8,5*30:5*31] = [[0,255,0]]
 
+        displayFPS(self)
         self.showAINav()
+
+        if self.frameNum % 30 == 0:
+            self.printProfile(recur=True)
 
     def showAINav(self):
         if self.stage not in (1, 3): return
@@ -2704,7 +2757,6 @@ def run():
             app.start()
             print("Running")
             app.runBackend()
-            app.printProfile()
             if hasattr(app, 'statTime'):
                 games = 1
                 tim = time.time() - app.statTime

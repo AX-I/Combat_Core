@@ -1,7 +1,7 @@
 // Screen Space Reflection
 // Refraction test
 
-#version 330
+#version 420
 
 #define REFL_STEP 2
 #define REFL_LENGTH {REFL_LENGTH}
@@ -13,21 +13,15 @@
 #define maxattn 0.1f
 #define ABSORB 0.3f
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 out vec4 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float width;
 uniform float height;
-uniform float vscale;
 
 in vec3 v_norm;
 in vec3 v_pos;
-
-uniform mat3 rawVM;
 
 in float depth;
 in vec2 v_UV;
@@ -69,8 +63,7 @@ void main() {
 	vec3 vp = vpos;
 	float sScale = vscale * hF / 2;
 
-	float tz = LDir.x + LInt.x;
-	if (tz != 1.0/depth) tz = 1.0/depth;
+	float tz = 1.0/depth;
 	vec3 pos = v_pos / depth;
 	vec3 norm = normalize(v_norm / depth);
 

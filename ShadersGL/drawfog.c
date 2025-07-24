@@ -1,6 +1,6 @@
 // Raymarch fog with 2-lobe HG phase function
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0
@@ -9,21 +9,14 @@
 #define G 0.5f
 #define GBACK -0.2f
 
-uniform mat3 vmat;
-uniform vec3 vpos;
-uniform float vscale;
-uniform float aspect;
+#include UBO_VMP
 
 in vec3 v_pos;
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-uniform vec3 LInt;
-uniform vec3 LDir;
+#include UBO_PRI_LIGHT
 
 uniform float width;
 uniform float height;
@@ -35,7 +28,7 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 uniform sampler2D db;
 
-uniform float R[64];
+uniform float R[64]; // [0,1]
 
 out vec4 f_color;
 
@@ -98,9 +91,9 @@ void main() {
       maxZ = min(maxZ, fogDist * ambDistFac);
     }
 
-	vec3 Vd = vmat[0];
-	vec3 Vx = vmat[1];
-	vec3 Vy = vmat[2];
+	vec3 Vd = rawVM[0];
+	vec3 Vx = rawVM[1];
+	vec3 Vy = rawVM[2];
 
 	uint rng_state = uint(cy * hF + cx);
 	rng_state += uint(59 * (cy * hF + cx) + 83 * cx);
@@ -111,11 +104,11 @@ void main() {
 	rng_state = rand_xorshift(rng_state);
 	uint rid3 = rand_xorshift(rng_state) & uint(63);
 
-	vec3 rayDir = normalize(Vd + (-Vx * (30*R[rid2] + cx - wF/2) + Vy * (30*R[rid3] + cy - hF/2)) / (vscale * hF/2));
+	vec3 rayDir = normalize(Vd + (-Vx * (30*(R[rid2]-0.5f) + cx - wF/2) + Vy * (30*(R[rid3]-0.5f) + cy - hF/2)) / (vscale * hF/2));
 
-  stepDist *= 1 + stepFac * R[rid1] * (1 - 1/stepFac);
+  stepDist *= 1 + stepFac * (R[rid1]-0.5f) * (1 - 1/stepFac);
   stepDist *= 1.5;
-	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.5f + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
+	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
 
 	vec3 light = vec3(0);
 	float rn = 0;

@@ -1,32 +1,21 @@
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0
 
 
-
-uniform mat3 vmat;
-uniform vec3 vpos;
-uniform float vscale;
-uniform float aspect;
+#include UBO_VMP
 
 in vec3 v_pos;
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
-uniform vec3 LInt;
-uniform vec3 LDir;
+#include UBO_PRI_LIGHT
 
 uniform float width;
 uniform float height;
@@ -59,9 +48,9 @@ void main() {
   float maxZ = v_norm.x + v_UV.x + aspect;
   if (maxZ != d) maxZ = d;
 
-	vec3 Vd = vmat[0];
-	vec3 Vx = vmat[1];
-	vec3 Vy = vmat[2];
+	vec3 Vd = rawVM[0];
+	vec3 Vx = rawVM[1];
+	vec3 Vy = rawVM[2];
 
 	
 
@@ -84,10 +73,10 @@ void main() {
   float si1 = 1-sr1;
   float si2 = 1-sr2;
 
-  shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-  shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-  shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-  shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+  shadow += texture(SM, sxy).r < sz ? si1*si2 : 0.0;
+  shadow += texture(SM, s10).r < sz ? sr1*si2 : 0.0;
+  shadow += texture(SM, s01).r < sz ? si1*sr2 : 0.0;
+  shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0.0;
 
   sxyz = SV2 * (vpos - SPos2);
 	sz = (sxyz.z/2 - NEAR)/FAR + 0.5;
@@ -104,10 +93,10 @@ void main() {
 	  si1 = 1-sr1;
 	  si2 = 1-sr2;
 
-	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0;
-	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
-	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
-	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
+	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0.0;
+	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0.0;
+	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0.0;
+	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0.0;
   }
   shadow = clamp(shadow, 0, 1);
 

@@ -41,15 +41,7 @@ if PLATFORM == "win32":
     import win32gui
     from PIL.ImageWin import Dib, HWND
 
-if PLATFORM == "darwin":
-    _ARIAL = "Arial.ttf"
-    _ARIALBD = "Arial Bold.ttf"
-elif PLATFORM == "linux":
-    _ARIAL = "FreeSans.ttf"
-    _ARIALBD = "FreeSansBold.ttf"
-elif PLATFORM == "win32":
-    _ARIAL = "arial.ttf"
-    _ARIALBD = "arialbd.ttf"
+from Utils import _ARIAL, _ARIALBD
 
 if PLATFORM == "linux":
     from Xlib import X, display
@@ -171,7 +163,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         self.recVideo = False
 
         if PLATFORM == "win32":
-            self.DC = win32gui.GetDC(0)
+            self.DC = win32gui.GetDC(self.d.winfo_id())
 
         self.UItexts = {}
 
@@ -298,6 +290,14 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
             except: pass
             self.frameKeys[a] = 1
 
+    def customKeyPress(self, e):
+        k = e.keysym
+        if e.state & 0x4:
+            k = f'Control-{k}'
+        if len(k) > 1:
+            k = f'<{k}>'
+        self.customAction(k, None)
+
     def checkPipe(self, cont=True):
         try: action = self.P.get(True, 0.02)
         except Empty: self.empty += 1
@@ -315,6 +315,9 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
                 elif action[0] == "key":
                     self.d.bind(action[1],
                                 lambda x: self.customAction(action[1], x))
+                elif action[0] == 'keyBatch':
+                    for k in action[1]:
+                        self.d.bind(k, self.customKeyPress)
                 elif action[0] == "screenshot":
                     self.screenshot()
             except Exception as e:
@@ -513,7 +516,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
     def _render(self, fr):
         self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
 
-        if PLATFORM == 'win32' and self.fs:
+        if PLATFORM == 'win32':
             dib = Dib(self.cframe)
             dib.expose(self.DC)
             return
@@ -604,7 +607,7 @@ def runGUI(P, *args):
 def logError(e, message):
     if __name__ == "__main__": raise e
     else:
-        with open(PATH+"Error.txt", "a") as f:
+        with open(PATH+"Error.txt", "w") as f:
             f.write("\n" + traceback.format_exc())
 
 if __name__ == "__main__":

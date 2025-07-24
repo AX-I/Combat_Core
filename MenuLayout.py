@@ -288,6 +288,8 @@ def mainHandleMouse(self, frame, click=False):
     #### Handle mouse for main menu
     ####
     """
+    if frame is None:
+        frame = self.frameBuf
 
     CTIME = time.time()-self.st
 

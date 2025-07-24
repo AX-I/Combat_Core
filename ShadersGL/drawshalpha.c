@@ -1,4 +1,4 @@
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0
@@ -7,28 +7,15 @@
 
 in vec3 v_pos;
 //in vec3 v_color;
-uniform vec3 LDir;
-uniform vec3 LInt;
+#include UBO_PRI_LIGHT
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
-uniform vec3 DInt[8];
-uniform vec3 DDir[8];
-uniform int lenD;
-
-uniform vec3 PInt[16];
-uniform vec3 PPos[16];
-uniform int lenP;
+#include UBO_LIGHTS
 
 uniform vec3 highColor;
 uniform vec3 highMult;
@@ -51,7 +38,7 @@ uniform float NMmipBias;
 
 in vec3 vertLight;
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 uniform float specular;
 #define roughness 0.6f
@@ -71,23 +58,19 @@ void main() {
 	vec2 sf = sxyz.xy * sScale/2 + 0.5;
 	sf = clamp(sf, 0.0, 1.0) * wS;
 
-	vec2 sxy = floor(sf) / wS;
-	vec2 s10 = floor(sf + vec2(1,0)) / wS;
-	vec2 s01 = floor(sf + vec2(0,1)) / wS;
-	vec2 s11 = floor(sf + vec2(1,1)) / wS;
-	float sr1 = sf.x - sxy.x*wS;
-	float sr2 = sf.y - sxy.y*wS;
-	float si1 = 1-sr1;
-	float si2 = 1-sr2;
+  float sr1, sr2;
+  vec4 stx;
 
 	float shadow = 0;
   float shadow0 = 0;
   float shadowDepth = 0;
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
-    shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-    shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-    shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-    shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+
+    sr1 = fract(sf.x);
+    sr2 = fract(sf.y);
+    sf += 0.5;
+    stx = 1-step(sz, textureGather(SM, sf/wS).wzxy);
+    shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2));
   }
   shadow0 = shadow;
 
@@ -97,20 +80,13 @@ void main() {
 	if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
 	  sf = sf * wS2;
 
-	  sxy = floor(sf) / wS2;
-	  s10 = floor(sf + vec2(1,0)) / wS2;
-	  s01 = floor(sf + vec2(0,1)) / wS2;
-	  s11 = floor(sf + vec2(1,1)) / wS2;
-	  sr1 = sf.x - sxy.x*wS2;
-	  sr2 = sf.y - sxy.y*wS2;
-	  si1 = 1-sr1;
-	  si2 = 1-sr2;
+    sr1 = fract(sf.x);
+    sr2 = fract(sf.y);
+    sf += 0.5;
+    stx = 1-step(sz, textureGather(SM2, sf/wS2).wzxy);
+    shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2));
 
-	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0;
-	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
-	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
-	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
-    shadowDepth = max(0, sxyz.z - ((texture(SM2, sxy).r - 0.5)*FAR + NEAR + SBIAS) * 2);
+    shadowDepth = max(0, sxyz.z - ((texture(SM2, sf/wS2).r - 0.5)*FAR + NEAR + SBIAS) * 2);
     }
 
     shadow = clamp(shadow, 0, 1);

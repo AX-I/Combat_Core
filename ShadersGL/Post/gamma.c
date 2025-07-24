@@ -3,10 +3,12 @@
 #version 330
 
 #define CHROM
+#define VIGNETTE
 
 uniform sampler2D tex1;
 out vec3 f_color;
 
+uniform float IRES;
 uniform float width;
 uniform float height;
 uniform float exposure;
@@ -47,7 +49,7 @@ void main() {
 	vec2 wh = 1 / vec2(width, height);
   vec2 center = vec2(width, height)/2;
 
-	vec2 tc = gl_FragCoord.xy;
+	vec2 tc = gl_FragCoord.xy * IRES;
 
 	// For VR mode
 	//tc.y = height - tc.y;
@@ -66,9 +68,10 @@ void main() {
   vec3 j = max(vec3(0.f), 8 * exposure * color - blackPoint);
   // now is in [0,1]
 
-  float vignette = dot((tc - center) * wh, (tc - center) * wh);
-
-  j *= 1 - vignette*vignette * 2.5;
+  #ifdef VIGNETTE
+    float vignette = dot((tc - center) * wh, (tc - center) * wh);
+    j *= 1 - vignette*vignette * 2.5;
+  #endif
 
   if (tonemap == 0) {
     // Basic gamma

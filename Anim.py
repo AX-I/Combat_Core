@@ -52,11 +52,11 @@ def flattenPose(p):
 
 def cubicInterp(t: float, *args):
     """Takes target x and four (x, y) coords"""
-    y = np.array([[a[1] for a in args]], 'float32').T
-    M = np.array([[a[0]**i for i in range(3,-1,-1)] for a in args], 'float32')
-    curve = np.linalg.inv(M) @ y
-    sol = np.array([t**i for i in range(3,-1,-1)], 'float32') @ curve
-    return sol[0]
+    y = np.array([a[1] for a in args], 'float32')
+    M = np.array([[a[0]**3,a[0]*a[0],a[0],1] for a in args], 'float32')
+    curve = np.linalg.solve(M, y)
+    sol = np.array([t**3,t*t,t,1], 'float32') @ curve
+    return sol
 
 def cubicInterpLoop(kf, k, p, timer='poset'):
     """kf: keyframes (time, pose, offset), k: current keyframe, p: player"""

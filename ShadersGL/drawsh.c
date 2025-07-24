@@ -1,45 +1,55 @@
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0
 
 #define SBIAS -0.04
-
 #define NBIAS 0.1
+
+// # of PCF taps
+#define SHS 16
+// square root
+#define SHSR 4
+#define SHSOFT1 0.8
+#define SHSOFT2 0.96
+uniform float R[64]; // [0,1]
+
+#define SCR_SHADOW
+#define SCR_SOFT
+
+#define RAYCAST_LENGTH 128
+#define RAYCAST_STEP 4
+#define RAYCAST_TARGET_DIST 99.0
+#define RAYCAST_SURFACE_DEPTH 0.f
+#define RAYCAST_DBIAS 0.2f
+#define RAYCAST_FADE_DIST 2.f
+#define LIGHT_SIZE 0.3
+
+#define RAYCAST_FAR_D_MULT 0.05f
+uniform float width;
+uniform float height;
+
+uniform sampler2D ssao;
 
 in vec3 v_pos;
 //in vec3 v_color;
-uniform vec3 LDir;
-uniform vec3 LInt;
+#include UBO_PRI_LIGHT
 
 // Shadowmap 1
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
 // Shadowmap 2
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
 // Baked shadowmap sharing shadowmap 1 params
 uniform sampler2D SM_im;
-uniform int wS_im;
 
 uniform int ignoreShadow;
 
 // Lights
-uniform vec3 DInt[8];
-uniform vec3 DDir[8];
-uniform int lenD;
-
-uniform vec3 PInt[16];
-uniform vec3 PPos[16];
-uniform int lenP;
+#include UBO_LIGHTS
 
 
 uniform vec3 highColor;
@@ -48,10 +58,15 @@ uniform vec3 highMult;
 out vec4 f_color;
 
 in vec3 v_norm;
+flat in vec3 v_gs_norm;
 
 in float depth;
 in vec2 v_UV;
 uniform sampler2D tex1;
+uniform sampler2D db;
+
+
+uniform float translucent;
 
 // Normal map
 uniform int useNM;
@@ -60,13 +75,12 @@ uniform float NMmipBias;
 
 in vec3 vertLight;
 
-uniform vec3 vpos;
+#include UBO_VMP
 
 uniform float specular;
 uniform float roughness;
 uniform vec3 specRimEnvOff;
 
-uniform vec3 VV;
 uniform int useNoise;
 uniform float noiseDist;
 uniform vec3 noisePos;
@@ -75,10 +89,18 @@ mat2 rot(float t) {
   return mat2(cos(t),-sin(t),sin(t),cos(t));
 }
 
+
+uint rand_xorshift(uint rng_state) {
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
 void main() {
 	float tz = 1.0/depth;
 
-	vec3 norm = normalize(v_norm * tz);
+	vec3 norm = normalize(v_norm);
 
 	vec3 sxyz = SV * (v_pos*tz - SPos);
   float normbias = min(1., 1 - dot(LDir, norm)) * NBIAS;
@@ -86,28 +108,39 @@ void main() {
 	vec2 sf = sxyz.xy * sScale/2 + 0.5;
 	sf = clamp(sf, 0.0, 1.0) * wS;
 
-	vec2 sxy = floor(sf) / wS;
-	vec2 s10 = floor(sf + vec2(1,0)) / wS;
-	vec2 s01 = floor(sf + vec2(0,1)) / wS;
-	vec2 s11 = floor(sf + vec2(1,1)) / wS;
-	float sr1 = sf.x - sxy.x*wS;
-	float sr2 = sf.y - sxy.y*wS;
-	float si1 = 1-sr1;
-	float si2 = 1-sr2;
+	vec2 sxy;
+	float sr1, sr2;
 
 	float shadow = 0;
+
+  vec2 tc = gl_FragCoord.xy;
+
+  uint rng_state = uint(3.1416 * (tc.x + width*tc.y));
+  rng_state = rand_xorshift(rng_state);
+  uint rid1 = rng_state & uint(63);
+  uint rid2 = rand_xorshift(rng_state) & uint(63);
+  vec2 sf0 = sf - 0.5;
+  vec4 stx;
+
+  int farShadow = 1;
   if ((sf.x > 0) && (sf.y > 0) && (sf.x < wS) && (sf.y < wS)) {
-    shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-    shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-    shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-    shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+   farShadow = 0;
+   for (int j=0; j<SHS; j++) {
+    sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT1 * rot(3.14/2* R[rid1]);
+
+    sr1 = fract(sf.x);
+    sr2 = fract(sf.y);
+    sf += 0.5;
+    stx = 1-step(sz, textureGather(SM, sf/wS).wzxy);
+    shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2)) / SHS;
+   }
   }
 
   // Baked shadowmap
   if (wS_im > 0) {
     sf = sxyz.xy * sScale/2 + 0.5;
     sf = clamp(sf, 0.0, 1.0);
-    shadow += 1.0 - texture(SM_im, sf).r;
+    shadow = max(shadow, 1.0 - texture(SM_im, sf).r);
   }
 
 
@@ -115,27 +148,114 @@ void main() {
 	sz = (sxyz.z/2 - SBIAS - NEAR)/FAR + 0.5;
 	sf = sxyz.xy * sScale2/2 + 0.5;
 	if ((sf.x > 0) && (sf.y > 0) && (sf.x < 1) && (sf.y < 1)) {
-	  sf = sf * wS2;
+	  sf *= wS2;
+    sf0 = sf - 0.5;
 
-	  sxy = floor(sf) / wS2;
-	  s10 = floor(sf + vec2(1,0)) / wS2;
-	  s01 = floor(sf + vec2(0,1)) / wS2;
-	  s11 = floor(sf + vec2(1,1)) / wS2;
-	  sr1 = sf.x - sxy.x*wS2;
-	  sr2 = sf.y - sxy.y*wS2;
-	  si1 = 1-sr1;
-	  si2 = 1-sr2;
+    for (int j=0; j<SHS; j++) {
+      sf = sf0 + (vec2(j/SHSR, j%SHSR) - (SHSR-1)/2) * SHSOFT2 * rot(3.14/2* R[rid1]);
 
-	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0;
-	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
-	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
-	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
+      sr1 = fract(sf.x);
+      sr2 = fract(sf.y);
+      sf += 0.5;
+      stx = 1-step(sz, textureGather(SM2, sf/wS2).wzxy);
+      shadow += dot(stx, vec4((1-sr1)*(1-sr2), sr1*(1-sr2), (1-sr1)*sr2, sr1*sr2)) / SHS;
     }
+  }
+  
+    vec2 wh = 1 / vec2(width, height);
+    float wF = width;
+    float hF = height;
+    float sVScale = vscale * hF / 2;
+    
+    vec3 SVd = rawVM[0];
+    vec3 SVx = rawVM[1];
+    vec3 SVy = rawVM[2];
+    vec3 a = v_pos*tz - vpos;
+
+
+    int idP = 0;
+  #ifdef SCR_SHADOW
+    float maxP = 0;
+    for (int i = 0; i < lenP; i++) {
+      vec3 pl = v_pos*tz - PPos[i];
+      float curP = dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * dot(PInt[i], vec3(0.2126f, 0.7152f, 0.0722f));
+      if (curP > maxP) {
+        maxP = curP; idP = i;
+      }
+    }
+
+    vec2 rxy = tc;
+
+    vec3 PxDir = (farShadow > 0) ? LDir : a - (PPos[idP]-vpos);
+    #ifdef SCR_SOFT
+      vec3 LDirTG1 = normalize(cross(PxDir, vec3(1,0,0)));
+      vec3 LDirTG2 = normalize(cross(PxDir, LDirTG1));
+      vec3 LDirSample = normalize(PxDir + 0.2 * LDirTG1 * (R[rid1]-0.5) + 0.2 * LDirTG2 * (R[rid2]-0.5));
+    #else
+      vec3 LDirSample = normalize(PxDir);
+    #endif
+    vec3 target = a - LDirSample*RAYCAST_TARGET_DIST;
+    float rpz = dot(target, SVd);
+    if (rpz < 0) { // direction is reversed
+      target = a + (-dot(SVd, a) / dot(SVd, LDirSample) * 0.99) * LDirSample;
+      rpz = dot(target, SVd);
+    }
+    vec2 rp = vec2(dot(target, SVx) * -sVScale / rpz + wF/2,
+                   dot(target, SVy) * sVScale / rpz + hF/2);
+
+    int hit = 0;
+    vec3 hitPos;
+
+    float dt = max(abs(rp.x - rxy.x), abs(rp.y - rxy.y));
+    int vx = RAYCAST_STEP;
+    float slopex = (rp.x - rxy.x) / dt * vx;
+    float slopey = (rp.y - rxy.y) / dt * vx;
+    float slopez = (1.f/rpz - depth) / dt * vx;
+
+    float sy = tc.y;
+    float sx = tc.x;
+    sz = 1.f/tz;
+    float sd = RAYCAST_SURFACE_DEPTH;
+    int rn = 0;
+
+    int dither = int(RAYCAST_STEP * 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1)));
+    sx += slopex * dither / vx;
+    sy += slopey * dither / vx;
+    sz += slopez * dither / vx;
+
+    for (rn = 0; (hit == 0) && (rn < RAYCAST_LENGTH) &&
+                 (sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF) && (sz > 0);
+         rn += vx) {
+        float currdist = texture(db, vec2(int(sx)+0.5f, int(sy)+0.5f) * wh).r;
+        if ((currdist < 1.f/sz) &&
+            (currdist > 1.f/sz - sd)) {
+
+            hit = (rn > 2) ? 1 : 0;
+            
+            hitPos = currdist * (SVd - vec3((sx-wF/2)/sVScale) * SVx + vec3((sy-hF/2)/sVScale) * SVy);
+        }
+        sx += slopex;
+        sy += slopey;
+        sz += slopez;
+        sd = abs(1.f/sz - 1.f/(sz - slopez)) + RAYCAST_DBIAS * (1-farShadow) + (RAYCAST_FAR_D_MULT * 1.f/sz) * farShadow;
+    }
+
+    vec3 v_gs_norm = normalize(-cross(dFdx(v_pos*tz), dFdy(v_pos*tz)));
+
+    float shfact = ((dot(LDirSample, v_gs_norm) <= 0.04) && (dot(LDirSample, norm) > 0)) ? farShadow : 1;
+    shfact *= (length(hitPos+vpos-PPos[idP]) < LIGHT_SIZE) ? 0 : 1;
+    float pxShadow = hit * max(0.0, (1/RAYCAST_FADE_DIST)*(RAYCAST_FADE_DIST - (1-farShadow)*length(hitPos-a))) * shfact;
+  #else
+    float pxShadow = 0;
+  #endif
+
+  if (farShadow > 0) shadow += pxShadow;
 
 	shadow = clamp(shadow, 0, 1);
 
 	if (ignoreShadow == 1) shadow = 0;
 
+  float ao = 1 - texture(ssao, tc/vec2(width, height)).r;
 
   if (useNM > 0) {
     vec2 dUV1 = dFdx(v_UV*tz);
@@ -158,14 +278,15 @@ void main() {
     norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
   }
 
-    vec3 light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;
+    vec3 light;
+    if (translucent > 0) {light = abs(dot(norm, LDir)) * (1-shadow) * LInt;}
+    else {light = max(0., dot(norm, LDir)) * (1-shadow) * LInt;}
 
     for (int i = 1; i < lenD; i++) {
-		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
+		light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i] * ao;
 	}
 
   vec3 spec = vec3(0);
-  vec3 a = v_pos*tz - vpos;
   float theta;
 
   float rough = (roughness == 0) ? 0.6 : roughness;
@@ -177,7 +298,7 @@ void main() {
     float nd = dot(a, norm);
     vec3 refl = normalize(a - 2 * nd * norm);
     theta = max(0.f, 0.1 + 0.9 * dot(normalize(a), refl));
-    spec += specular * (theta * theta * specRimEnv);
+    spec += specular * (theta * theta * specRimEnv) * ao;
 
 	// Sun specular
 	a = normalize(a);
@@ -190,19 +311,20 @@ void main() {
 
 	spec += fac * specular * fr * pow(theta, specPow) * (1-shadow) * LInt;
 
-
+  float pxFact;
   for (int i = 0; i < lenP; i++) {
     vec3 pl = v_pos * tz - PPos[i];
+    pxFact = (i == idP ? 1-pxShadow : ao);
     if (dot(norm, pl) > 0.0) {
-	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
+	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i] * pxFact;
 
       vec3 h = normalize(normalize(pl) + a);
       theta = max(0.f, dot(h,norm));
-      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl));
+      spec += fac * specular * fr * pow(theta, specPow) * PInt[i] / (1.0 + length(pl)*length(pl)) * pxFact;
     }
   }
 
-    light += vertLight;
+    light += vertLight * ao;
 
     light += highColor;
 

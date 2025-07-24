@@ -2,9 +2,6 @@
 
 out vec4 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float emPow;
 
 in vec3 v_norm;
@@ -22,10 +19,7 @@ mat2 rot(float t) {
 }
 
 void main() {
-  vec3 norm = v_norm / depth;
-  vec3 light = (LInt + LDir + norm) * 0.001;
-
-  vec3 rgb = tColor + vec3(0) * light;
+  vec3 rgb = tColor + (v_norm) * 0.00001;
 
   float opacity = (1 - emPow);
 

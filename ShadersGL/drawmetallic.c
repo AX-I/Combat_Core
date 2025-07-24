@@ -1,36 +1,23 @@
-#version 330
+#version 420
 
 #define NEAR 0.1
 #define FAR 200.0
 
 #define SBIAS -0.04
 
+#include UBO_VMP
+
 in vec3 v_pos;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
+#include UBO_PRI_LIGHT
 
-uniform vec3 SPos;
-uniform mat3 SV;
-uniform float sScale;
 uniform sampler2D SM;
-uniform int wS;
+#include UBO_SHM
 
-
-uniform vec3 SPos2;
-uniform mat3 SV2;
-uniform float sScale2;
 uniform sampler2D SM2;
-uniform int wS2;
+#include UBO_SH2
 
-
-uniform vec3 DInt[8];
-uniform vec3 DDir[8];
-uniform int lenD;
-
-uniform vec3 PInt[16];
-uniform vec3 PPos[16];
-uniform int lenP;
+#include UBO_LIGHTS
 
 out vec4 f_color;
 
@@ -41,8 +28,6 @@ in vec2 v_UV;
 uniform sampler2D tex1;
 
 in vec3 vertLight;
-
-uniform vec3 vpos;
 
 uniform float roughness;
 uniform int isMetal;
@@ -65,10 +50,10 @@ void main() {
 	float si2 = 1-sr2;
 
 	float shadow = 0;
-	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0;
-	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0;
-	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0;
-	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0;
+	shadow += texture(SM, sxy).r < sz ? si1*si2 : 0.0;
+	shadow += texture(SM, s10).r < sz ? sr1*si2 : 0.0;
+	shadow += texture(SM, s01).r < sz ? si1*sr2 : 0.0;
+	shadow += texture(SM, s11).r < sz ? sr1*sr2 : 0.0;
 
 
 
@@ -88,10 +73,10 @@ void main() {
 	  si1 = 1-sr1;
 	  si2 = 1-sr2;
 
-	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0;
-	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0;
-	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0;
-	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0;
+	  shadow += texture(SM2, sxy).r < sz ? si1*si2 : 0.0;
+	  shadow += texture(SM2, s10).r < sz ? sr1*si2 : 0.0;
+	  shadow += texture(SM2, s01).r < sz ? si1*sr2 : 0.0;
+	  shadow += texture(SM2, s11).r < sz ? sr1*sr2 : 0.0;
     }
 
 	shadow = clamp(shadow, 0, 1);

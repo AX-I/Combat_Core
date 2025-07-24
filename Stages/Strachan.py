@@ -70,7 +70,7 @@ def setupStage(self):
         elif 'Wtest' in f or 'Material' in f or 'GraySt' in f or 'Turq' in f:
             mat['noise'] = 1
         if 'Wtest' in f:
-            self.vtextures[self.vtNames[f]] = (self.vtextures[self.vtNames[f]]*1.2).astype('uint16')
+            pass
             #mat.update({'spec': 0.02, 'roughness': 0.002})
         if "Silver" in f:
             mat.update(shader='metallic', args={'roughness':0.4})
@@ -237,7 +237,7 @@ def movePillars(self, i):
                              (np.array((12,-2,10)), 80, 8, True))})
 
         if time.time() - self.trackTime > 84:
-            self.si.put({'Play':(SFX+'Sac_a.flac', self.volm, False)})
+            self.si.put({'Play':(SFX+'Sac_a.ogg', self.volm, False)})
             self.pillarTrackTime = time.time()
 
 
@@ -250,7 +250,7 @@ def movePillars(self, i):
         return
     btn['pos'] += tr[1]
     b = btn['obj']
-    self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+    self.draw.translate(tr, b.cStart, b.cEnd, b.texNum)
 
 def showPlatforms(self):
     if self.showPlatforms > 0:
@@ -322,6 +322,7 @@ def frameUpdate(self):
     if self.frameNum < 2:
         self.addNrmMap(PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
                        'wood_coffers')
+        self.bindKey('o', lambda: movePillars(self, 0))
         return
 
 
@@ -385,7 +386,7 @@ def frameUpdate(self):
                 btn['fullyPressed'] = False
             b = btn['obj']
             btn['pos'] += mov
-            self.draw.translate(tr, b.cStart*3, b.cEnd*3, b.texNum)
+            self.draw.translate(tr, b.cStart, b.cEnd, b.texNum)
         if btn['pos'] >= 0:
             btn['fullyLifted'] = True
 
@@ -408,6 +409,7 @@ def frameUpdate(self):
     # dimensions of table
     pSize = np.array((2.8, 0, 1))
 
+    batch = {}
     for i in range(len(self.pillars)):
         p = self.pillars[i]
 
@@ -419,8 +421,10 @@ def frameUpdate(self):
                     int(tmin[2]):int(tmax[2])] += tr*i
 
         for tn in self.pillarTexn:
-            self.draw.translate(tr*i, p.cStart*3, p.cEnd*3, tn)
+            if tn not in batch: batch[tn] = []
+            batch[tn].append((tr*i, p.cStart, p.cEnd))
             p = p.nextMtl
+    self.draw.translateBatch(batch)
 
     tempObjs = np.array(self.castObjs)
     tempObjs = tempObjs * (1 - np.array(self.testRM()))

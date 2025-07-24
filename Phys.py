@@ -32,6 +32,8 @@ def eucDist(a, b):
     return math.sqrt(c)
 def eucLen(a):
     return math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])
+def eucLen2(a):
+    return a[0]*a[0] + a[1]*a[1] + a[2]*a[2]
 
 def planeDist(a, n, p):
     return abs((a - p) @ n)
@@ -98,11 +100,13 @@ class CircleCollider(Collider):
 
     def collisionImpulse(self, obj):
         if obj.t == "Circle":
-            if eucDist(obj.pos, self.pos) == 0:
+            collDist = eucDist(obj.pos, self.pos)
+            if collDist == 0:
                 self.pos[1] += 0.01
+                collDist += 0.01
 
-            cdir = (obj.pos - self.pos) / eucDist(obj.pos, self.pos)
-            offset = self.r + obj.r - eucDist(obj.pos, self.pos)
+            cdir = (obj.pos - self.pos) / collDist
+            offset = self.r + obj.r - collDist
 
             if self.rb is None:
                 obj.rb.v = obj.rb.v - 2 * (obj.rb.v @ cdir) * cdir
@@ -159,7 +163,7 @@ class BulletCollider(CircleCollider):
                 self.disabled = True
                 self.rb.disabled = True
                 self.rb.pos[:] = 0.
-                self.rb.forces = []
+                self.rb.n_forces = 0
                 self.hc = 0
                 return False
             else:
@@ -175,7 +179,7 @@ class BulletCollider(CircleCollider):
             self.disabled = True
             self.rb.disabled = True
             self.rb.pos[:] = 0.
-            self.rb.forces = []
+            self.rb.n_forces = 0
             return False
 
         try:
@@ -184,7 +188,7 @@ class BulletCollider(CircleCollider):
                 self.disabled = True
                 self.rb.disabled = True
                 self.rb.pos[:] = 0.
-                self.rb.forces = []
+                self.rb.n_forces = 0
                 return False
         except AttributeError: pass
         return True
@@ -325,9 +329,8 @@ def boundingBox(obj):
                                  [*obj.dim.tolist(), max(obj.h) - min(obj,h)])
 
 class RigidBody:
-    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=None,
+    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=[],
                  drag=0, usegravity=True, elasticity=1, noforces=False):
-        """forces -> python list of vectors"""
         self.colliders = []
         self.wIndex = False
         self.M = float(mass)
@@ -343,10 +346,12 @@ class RigidBody:
         else:               self.rotv = np.array(rotvel, dtype="float")
         
         self.el = elasticity
-            
-        self.forces = [[0, (-G * int(usegravity)), 0]]
-        if forces != None:
-            self.forces.extend(forces)
+
+        MAX_N_FORCES = 8
+        self.forces = np.zeros((MAX_N_FORCES, 3), 'float')
+        self.n_forces = len(forces)
+        if forces:
+            self.forces[:self.n_forces] = forces
 
     def addCollider(self, collObj):
         collObj.rb = self
@@ -354,15 +359,27 @@ class RigidBody:
 
     def update(self, dt, attractors=[]):
         if self.disabled: return
-        self.forces = []
+        n_forces = self.n_forces
+        adt = 0
         if not self.noforces:
             for a in attractors:
                 i = attractors[a]
                 diff = (i["pos"] - self.pos)
-                self.forces.append(diff * i["m"] * self.M / np.sum(diff*diff))
-        self.v += np.sum(np.array(self.forces), axis=0) / self.M * dt
-        
-        self.pos += self.v * dt
+                self.forces[n_forces] = diff * (i["m"] / eucLen2(diff))
+                n_forces += 1
+            adt = np.sum(self.forces[:n_forces], axis=0) * dt
+            self.v += adt
+
+        self.pos += self.v * dt + adt*dt/2
+
+    def disable(self, disableKinematics=True):
+        self.disabled = disableKinematics
+        for c in self.colliders:
+            c.disabled = True
+    def enable(self):
+        self.disabled = False
+        for c in self.colliders:
+            c.disabled = False
 
 def collision(ma, mb, va, vb, ea, eb):
     """1-dimensional -> (vaf, vbf)"""

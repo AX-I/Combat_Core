@@ -20,6 +20,7 @@
 
 import multiprocessing as mp
 from queue import Empty, Full
+thisprocess = mp.current_process().name
 
 from math import sin, cos, pi, ceil, atan2
 import numpy as np
@@ -34,48 +35,49 @@ from VertObjects import VertSphere, VertModel, VertTerrain, VertTerrain0, VertPl
 
 from ParticleSystem import ContinuousParticleSystem
 import sys, os
-from PIL import Image, PngImagePlugin
+from PIL import Image
 import json
 
 import ctypes
 
+os.system('color')
+
+DO_PROFILE = False
+
+if DO_PROFILE and (thisprocess == 'MainProcess'):
+    print('\033[46m Profiling! \033[0m')
+    from profilehooks import profile
+else:
+    def profile(**kwargs):
+        return lambda f: f
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-def getTexture(fn):
+def getTexture(fn, cgamma=True, texMul=1):
     ti = Image.open(fn).convert("RGB")
     if ti.size[0] != ti.size[1]:
-        raise ValueError("Texture is not square!")
+        print("Texture is not square")
+        n = max(ti.size)
+        ti = ti.resize((n,n))
     if (ti.size[0] & (ti.size[0] - 1)) != 0:
-        #print("Texture is not a power of 2, resizing up.")
+        print("Texture is not a power of 2, resizing up.")
         n = 2**ceil(log2(ti.size[0]))
         ti = ti.resize((n,n))
-    ta = np.array(ti).astype("float")
-    ta *= 64 * 4
-    np.clip(ta, None, 256*256-1, ta)
-    return np.array(ta.astype("uint16").reshape((-1,3)))
+    ta = np.array(ti.rotate(-90)).astype('float32')
+    if cgamma:  ta *= ta; ta /= 8.
+    else:       ta *= 64
+    ta *= texMul
 
-def getTexture1(fn):
-    """keep 2d"""
-    ti = Image.open(fn).convert("RGB")
-    if ti.size[0] != ti.size[1]:
-        raise ValueError("Texture is not square!")
-    if (ti.size[0] & (ti.size[0] - 1)) != 0:
-        #print("Texture is not a power of 2, resizing up.")
-        n = 2**ceil(log2(ti.size[0]))
-        ti = ti.resize((n,n))
-    ta = np.array(ti).astype("float")
-    ta *= 64 * 4
-    np.clip(ta, None, 256*256-1, ta)
-    return np.array(ta.astype("uint16"))
+    return np.array(ta/65535, order='C', dtype='float16')
+
 
 class ThreeDBackend:
     def __init__(self, width, height,
                  scale=600, fovx=None,
                  downSample=1, record=None):
 
-        pipe = rec = mp.Queue(2)
+        pipe = rec = mp.Queue(1)
 
         self.evtQ = mp.Queue(64)
         self.infQ = mp.Queue(16)
@@ -104,6 +106,8 @@ class ThreeDBackend:
         self.vertv = []
         self.vtextures = []
 
+        self.instanceData = {}
+
         self.renderMask = None
 
         self.vertBones = []
@@ -120,12 +124,6 @@ class ThreeDBackend:
 
         self.uInfo = None
         self.recVideo = False
-
-        self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
-        self.nFrames = 0
-        self.tacc = False
-        self.dofPos = np.array([0.,0,0])
-        self.dsNum = -1000
 
         self.particleSystems = []
 
@@ -166,6 +164,7 @@ class ThreeDBackend:
             os.mkdir(PATH + "Screenshots")
 
         self.record = record
+        self.batchKB = None
 
         bargs = (self.recP, self.evtQ, self.infQ,
                  self.W, self.H, self.mouseSensitivity,
@@ -173,6 +172,13 @@ class ThreeDBackend:
         self.frontend = mp.Process(target=VS.runGUI, args=bargs, name="UI")
 
         self.frontend.start()
+
+
+    def loadTexture(self, tex: str, cgamma: bool, texMul: float):
+        if self.texLoadManager:
+            return self.texLoadManager.loadTex(len(self.vtextures),
+                                               tex, cgamma, texMul)
+        return getTexture(tex, cgamma, texMul)
 
     def enableDOF(self, dofR=24, rad=0.2, di=4):
         pass
@@ -199,9 +205,16 @@ class ThreeDBackend:
         self.W2 = w//2
         self.H2 = h//2
         self.setFOV(self.fovX, self.scale)
-        self.buffer = np.zeros((self.H, self.W, 3), dtype="float")
 
+    @profile(stdout=open('profile/start.txt', 'w'), filename='profile/start.pstats')
     def start(self):
+        self.loadStart = time.time()
+
+        if mp.cpu_count() >= 4:
+            self.texLoadManager = TexLoadManager(getTexture, 2)
+        else:
+            self.texLoadManager = None
+
         self.createObjects()
 
         self.vertPoints = []
@@ -209,20 +222,18 @@ class ThreeDBackend:
         self.vertU = []
         self.vertV = []
         for _ in range(len(self.vertpoints)):
-            self.vertPoints.append(np.array(self.vertpoints[0]))
-            self.vertNorms.append(np.array(self.vertnorms[0]))
-            self.vertU.append(np.array(self.vertu[0]))
-            self.vertV.append(np.array(self.vertv[0]))
+            self.vertPoints.append(np.concatenate(self.vertpoints[0]))
+            self.vertNorms.append(np.concatenate(self.vertnorms[0]))
+            self.vertU.append(np.concatenate(self.vertu[0]))
+            self.vertV.append(np.concatenate(self.vertv[0]))
             del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
 
-        maxuv = max([i.shape[0] for i in self.vertU])
-        Luv = len(self.vertU)
-        pmax = max([ps.N for ps in self.particleSystems]) if len(self.particleSystems) > 0 else 1
-
 
         import OpsConv
-        GL = OpsConv.getSettings(False)["Render"] == "GL"
+        settings = OpsConv.getSettings(False)
+
+        GL = settings["Render"] == "GL"
         self.GL = GL
 
         if GL:
@@ -230,38 +241,26 @@ class ThreeDBackend:
         else:
             import Ops_CL as Ops
 
-        self.draw = Ops.CLDraw(self.skyTex.shape[0],
-                               Luv, self.W, self.H, pmax)
+        self.draw = Ops.CLDraw(self.W, self.H, ires=settings['IRES'], use_fsr=1)
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
 
-        self.skyTex = np.array(self.skyTex)
-        self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
-
-        self.draw.setSkyTex(self.skyTex[:,:,0],
-                            self.skyTex[:,:,1],
-                            self.skyTex[:,:,2],
-                            self.skyTex.shape[0])
-
-        self.skyTex = np.array(self.skyTex.transpose((1,0,2)))
+        if self.texLoadManager is not None:
+            self.texLoadManager.collectTex(self.vtextures)
+            self.texLoadManager.cleanup()
 
         for i in range(len(self.vtextures)):
+            inst = None
+            if i in self.instanceData:
+                inst = self.instanceData[i]
+
             tex = self.vtextures[i]
-            if "mip" in self.matShaders[i] and not GL:
-                t = createMips(tex)
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    t[:,0], t[:,1], t[:,2],
-                    mip=tex.shape[0])
-            else:
-                self.draw.addTextureGroup(
-                    self.vertPoints[i].reshape((-1,3)),
-                    np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
-                    self.vertNorms[i].reshape((-1,3)),
-                    tex[:,:,0], tex[:,:,1], tex[:,:,2],
-                    self.matShaders[i])
+            self.draw.addTextureGroup(
+                self.vertPoints[i].reshape((-1,3)),
+                np.stack((self.vertU[i], self.vertV[i]), axis=2).reshape((-1,3,2)),
+                self.vertNorms[i].reshape((-1,3)),
+                tex, shader=self.matShaders[i],
+                instances=inst)
             self.vtextures[i] = np.array([1])
 
         for f in self.matShaders:
@@ -288,9 +287,13 @@ class ThreeDBackend:
         d = self.directionalLights[0]
         self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
 
+        self.startBatchKB()
         self.customizeFrontend()
+        self.endBatchKB()
 
         self.vMat = np.stack((self.viewVec(),self.vVhorz(),self.vVvert()))
+
+        print('GL loaded in', time.time() - self.loadStart)
 
     def updateRig(self, rig, ct, name, vobj, offset=0):
         bt = rig.b0.getTransform()
@@ -342,14 +345,15 @@ class ThreeDBackend:
 
         self.draw.addNrmMap(nrm, name, **kwargs)
 
-    def render(self):
+    def startRender(self):
 
         self.vc = self.viewCoords()
         if not self.VRMode:
             self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
 
-        self.draw.setPos(self.vc)
-        self.draw.setVM(self.vMat)
+        if self.frameNum > 0:
+            self.draw.setPos(self.vc)
+            self.draw.setVM(self.vMat)
 
         self.draw.clearZBuffer()
 
@@ -376,6 +380,7 @@ class ThreeDBackend:
                              shader)
 
 
+    def finishRender(self):
         self.postProcess()
 
         result = self.draw.getFrame()
@@ -504,6 +509,24 @@ class ThreeDBackend:
             dy * cos(self.β),
             dx * sin(self.α) + dy * sin(self.β) * cos(self.α)])
 
+    @profile(stdout=open('profile/render.txt', 'w'), filename='profile/render.pstats')
+    def renderMethod(self):
+        self.startRender()
+
+        while not self.evtQ.empty():
+            self.processEvent()
+
+        self.vv = self.viewVec()
+
+        self.frameUpdate()
+
+        r = self.finishRender()
+        data = ("render", np.array(r, dtype="object"))
+        try:
+            self.P.put_nowait(data)
+        except Full:
+            self.full += 1
+
     def runBackend(self):
         self.doQuit = False
         self.pendingShader = True
@@ -523,27 +546,14 @@ class ThreeDBackend:
         self.totTime = 0
 
         self.onStart()
+        self.vv = self.viewVec()
 
         while (not self.doQuit):
-            self.vv = self.viewVec()
+            self.renderMethod()
 
-            self.speed[:] = self.svert * self.vv
-            self.speed += self.shorz * -self.vVhorz()
-            self.pos += self.camSpeed * self.speed
-
-            self.frameUpdate()
-
-            self.vv = self.viewVec()
-
-            r = self.render()
-            data = ("render", np.array(r, dtype="object"))
-            try:
-                self.P.put_nowait(data)
-            except Full:
-                self.full += 1
-
-            while not self.evtQ.empty():
-                self.processEvent()
+            if DO_PROFILE and (self.frameNum > 100):
+                self.doQuit = True
+                self.proceed = False
 
             self.frameNum += 1
             dt = time.perf_counter() - self.startTime
@@ -617,8 +627,18 @@ class ThreeDBackend:
 
     def changeTitle(self, t):
         self.P.put(("title", str(t)))
+
+    def startBatchKB(self):
+        self.batchKB = []
+    def endBatchKB(self):
+        self.P.put(('keyBatch', self.batchKB))
+        self.batchKB = None
+
     def bindKey(self, k, f):
-        self.P.put(("key", k))
+        if self.batchKB is None:
+            self.P.put(("key", k))
+        else:
+            self.batchKB.append(k)
         self.handles[k] = f
 
     def frameUpdate(self):
@@ -632,6 +652,54 @@ class ThreeDBackend:
 
     def fps(self):
         print("fps:", self.frameNum / self.totTime)
+
+    def frameProfile(self, i, end=False):
+        try: _ = self.ftime
+        except:
+            self.ftime = {}
+            self.ftx = {}; self.ftmax = {}
+            self.prevT = 0
+            self.totMax = 0
+        if i not in self.ftime:
+            self.ftime[i] = 0
+            self.ftmax[i] = 0
+            self.ftx[len(self.ftime)-1] = i
+
+        t = time.perf_counter()
+        self.ftime[i] += t - self.frameStart
+        if self.frameNum > 10:
+            self.ftmax[i] = max(self.ftmax[i], t - self.prevT)
+            if end:
+                self.totMax = max(self.totMax, t - self.frameStart)
+        self.prevT = t
+
+    def printProfile(self, recur=False):
+        if self.frameNum == 0: return
+
+        if recur:
+            try: _ = self.firstRecur
+            except:
+                self.firstRecur = True
+                print('\n' * len(self.ftx))
+            print('\033[A' * (len(self.ftx) + 1), end='')
+
+        print('Avg     Max')
+        for i in range(len(self.ftx)):
+            x = self.ftx[i]
+            if x == '.': continue
+            offset = 0 if i == 0 else self.ftime[self.ftx[i-1]]
+            t = (self.ftime[x] - offset) / self.frameNum
+            mt = self.ftmax[x]
+
+            print(f'{fmtTime(t)}  {fmtTime(mt)} {x}')
+
+        tt = (self.ftime[x] - self.ftime['.']) / self.frameNum
+        print(f'\033[96m{tt:.4f}  {self.totMax:.4f} Total \033[0m')
+
+        if not recur: return
+        for i in self.ftime:
+            self.ftmax[i] = 0
+            self.totMax = 0
 
 if __name__ == "__main__":
     pass

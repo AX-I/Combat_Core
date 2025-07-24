@@ -18,6 +18,9 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
+AUTOSTART = None # {'stage':4, 'char':0, 'ai':[1,2]}
+
+
 from tkinter import Frame, Tk, N, E, S, W
 from tkinter import (
     TclError, Toplevel, Label, Text, Button, Listbox, Entry, Checkbutton,
@@ -48,16 +51,23 @@ from math import sin
 
 from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
-USE_CL = True
+USE_CL = False
+USE_GL = True
 
 if USE_CL:
     import ImgUtilsCL as ImgUtils
+elif USE_GL:
+    import ImgUtilsGL as ImgUtils
 else:
     import ImgUtils
 
-from ImgUtilsCL import CLObject
-import pyopencl as cl
-mf = cl.mem_flags
+if USE_CL:
+    from ImgUtilsCL import CLObject
+    import pyopencl as cl
+    mf = cl.mem_flags
+elif USE_GL:
+    from ImgUtilsGL import GLObject as CLObject
+    import moderngl as mgl
 
 import OpsConv
 BLOCK_SIZE = 128
@@ -121,11 +131,10 @@ See https://axi.x10.mx/Combat for details.
 
 if getattr(sys, "frozen", False):
     PATH = os.path.dirname(sys.executable) + "/"
+    SERVER = "https://axi.x10.mx/Combat/Serv.php"
 else:
     PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
-
-#SERVER = "https://axi.x10.mx/Combat/Serv.php"
-SERVER = "127.0.0.1:4680"
+    SERVER = "127.0.0.1:4680"
 
 
 if PLATFORM == "darwin":
@@ -185,6 +194,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                     "New Stage", "Forest", 'Strachan']
         self.localIP = None
 
+        self._imShape = None
+
 
 
     def openImageCover(self, fn, blur=0):
@@ -192,7 +203,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         i = Image.open(fn).convert('RGBA')
         fac = max(self.W / i.size[0], self.H / i.size[1])
         if blur: i = i.filter(ImageFilter.BoxBlur(blur/fac))
-        i = i.resize((int(i.size[0] * fac), int(i.size[1] * fac)), Image.BILINEAR)
+        self._imShape = (int(i.size[0] * fac), int(i.size[1] * fac))
         return i
 
     def startMenu(self):
@@ -203,19 +214,29 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.finalRender = self.d.create_image((self.W/2, self.H/2))
 
         if PLATFORM == "win32":
-            self.DC = win32gui.GetDC(0)
+            self.DC = win32gui.GetDC(self.d.winfo_id())
 
-        self.ctx = OpsConv.getContext_CL()
-
-        d = self.ctx.devices[0]
-        print("Using", d.name)
-        self.cq = cl.CommandQueue(self.ctx)
 
         resScale = self.H / 600
-        shader = open('Shaders/menu.cl').read()
-        shader = shader.replace('#define cropHeight 3.f',
-                                '#define cropHeight {}f'.format(3*resScale))
-        self.prog = cl.Program(self.ctx, shader).build()
+
+        if USE_CL:
+            self.ctx = OpsConv.getContext_CL()
+
+            d = self.ctx.devices[0]
+            print("Using", d.name)
+            self.cq = cl.CommandQueue(self.ctx)
+
+            shader = open('Shaders/menu.cl').read()
+            shader = shader.replace('#define cropHeight 3.f',
+                                    '#define cropHeight {}f'.format(3*resScale))
+            self.prog = cl.Program(self.ctx, shader).build()
+
+        if USE_GL:
+            self.ctx = OpsConv.getContext_GL()
+            print("Using", self.ctx.info['GL_RENDERER'])
+
+            self.cq = None
+
 
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
@@ -242,6 +263,20 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         print('Ready in', time.time() - self.profTime)
 
         self.menuLoop()
+
+        if not AUTOSTART: return
+
+        self.mkRouter(False)
+        self.update()
+        self.goStart()
+        self.update()
+        print('Stage select in', time.time() - self.profTime)
+        self.goStart(AUTOSTART['stage'])
+        for i in AUTOSTART['ai']:
+            self.tgAI()
+            self.selChar(i)
+        self.update()
+        self.selChar(AUTOSTART['char'])
 
     def menuInit(self):
         self.W = np.int32(self.W)
@@ -347,6 +382,17 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         f = np.zeros((self.H, self.W, 3), dtype='uint16')
         if USE_CL:
             self.frameBuf = cl.Buffer(self.ctx, mf.READ_WRITE, size=f.nbytes)
+        elif USE_GL:
+            self.FB = self.ctx.texture((self.W, self.H), 3, dtype='f2')
+            self.frameBuf = self.ctx.framebuffer(self.FB)
+
+            self.FBO = self.ctx.texture((self.W, self.H), 3, dtype='f1')
+            self.postBuf = self.ctx.framebuffer(self.FBO)
+            self.setupPost()
+
+            self.ctx.disable(mgl.DEPTH_TEST)
+            self.ctx.enable(mgl.BLEND)
+            f = self.postBuf
         else:
             self.frameBuf = f
         self.frameHost = f
@@ -390,8 +436,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def makeCL(self, name: str, x: np.array) -> CLObject:
         """Converts np array into CLObject"""
-        if not USE_CL: return x
-        return CLObject(self.ctx, self.cq, name, x)
+        shape = self._imShape
+        self._imShape = None
+        if (USE_CL + USE_GL) == 0: return x
+        return CLObject(self.ctx, self.cq, name, x, shape)
 
 
     def blendCursor(self, frame: np.array) -> None:
@@ -431,6 +479,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
             cl.enqueue_copy(self.cq, self.frameHost, frame)
             frame = self.frameHost
+        elif USE_GL:
+            self.gamma(frame)
+
+            shp = (self.H, self.W, 3)
+            frame = np.frombuffer(self.frameHost.read(), 'uint8').reshape(shp)
         else:
             frame = np.sqrt(frame) * 16
 
@@ -444,7 +497,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #print('Push', et)
 
         if self.MENUSCREEN != '':
-            self.after(4, self.menuLoop)
+            self.after(3, self.menuLoop)
 
             self.frameNum += 1
 

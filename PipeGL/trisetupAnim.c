@@ -1,14 +1,10 @@
 // Eye tracking
 
-#version 330
+#version 420
 
 #define NEAR 0.1
 
-uniform mat3 vmat;
-uniform vec3 vpos;
-uniform float vscale;
-
-uniform float aspect;
+#include UBO_VMP
 
 uniform mat4 RR[32];
 uniform vec3 bOrigin[32];
@@ -26,10 +22,7 @@ uniform vec2 uv_hi;
 uniform vec2 uv_offset;
 
 
-uniform vec3 SLInt[128];
-uniform vec3 SLPos[128];
-uniform vec3 SLDir[128];
-uniform int lenSL;
+#include UBO_LIGHTS
 out vec3 vertLight;
 
 
@@ -40,6 +33,7 @@ uniform int off;
 uniform int stage;
 
 out float depth;
+
 
 void main() {
 

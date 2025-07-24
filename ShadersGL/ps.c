@@ -1,13 +1,12 @@
 // Particles
 
-#version 330
+#version 420
 #define s2 1.414
 
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
-uniform float vscale;
-uniform float aspect;
+#include UBO_VMP
 uniform float size;
 
 out vec2 v_UV;

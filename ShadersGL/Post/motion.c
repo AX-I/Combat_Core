@@ -1,9 +1,12 @@
 #version 330
 
 #define SAMPLES 12.f
+#define SSKIP 4
 
 uniform sampler2D tex1;
 uniform sampler2D texd;
+
+uniform sampler2D blue;
 
 uniform float EXPOSURE;
 
@@ -48,11 +51,12 @@ void main() {
 	float oldX = (dot(worldPos, oldVX) / oldZ) * -sScale + wF/2;
 	float oldY = (dot(worldPos, oldVY) / oldZ) * sScale + hF/2;
 
-	vec3 outRGB = texture(tex1, tc*wh).rgb;
+	vec3 outRGB = texture(tex1, tc*wh).rgb * 0.0001;
 	float dy = oldY - cy;
 	float dx = oldX - cx;
-  float accum = 1;
-	for (float i=1; i <= SAMPLES; i++) {
+  float accum = 1.f * 0.0001;
+  float offset = texture(blue, vec2(((int(cx) & 15) + 0.5f)/16.f, ((int(cy) & 15) + 0.5f)/16.f)).r;
+	for (float i=offset*SSKIP; i <= SAMPLES; i+=SSKIP) {
 		float sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 1.f, hF-1.f);
 		float sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 1.f, wF-1.f);
 

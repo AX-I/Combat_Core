@@ -27,6 +27,12 @@ import sys, os
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
+ctx = moderngl.create_standalone_context()
+a = [ctx.info["GL_VENDOR"]]
+b = [[ctx.info["GL_RENDERER"]]]
+GL_INFO = (a, b)
+
+
 def genInfo(write=True):
     if getSettings(False)["Render"] == "GL":
         return genInfo_GL(write)
@@ -56,10 +62,7 @@ If only one device is available try updating its drivers.\n
     return (a, b)
 
 def genInfo_GL(write=True):
-    ctx = moderngl.create_standalone_context()
-    a = [ctx.info["GL_VENDOR"]]
-    b = [[ctx.info["GL_RENDERER"]]]
-    return (a, b)
+    return GL_INFO
 
 
 def getContext():
@@ -94,16 +97,28 @@ def getContext_CL():
     return ctx
 
 def getContext_GL():
-    ctx = moderngl.create_standalone_context()
+    if sys.platform == 'darwin':
+        import pyglet
+        pyglet.options["shadow_window"] = False
+        pyglet.options["debug_gl"] = False
+        cfg = pyglet.gl.Config(
+                major_version=3, minor_version=3,
+                forward_compatible=True,
+                depth_size=24, double_buffer=True)
+        w = pyglet.window.Window(width=8, height=8, caption='GL Window',
+                                 visible=False, config=cfg)
+        ctx = moderngl.create_context()
+    else:
+        ctx = moderngl.create_standalone_context()
     return ctx
 
 
 def getSettings(write=True):
     settings = {"Render":"GL",
                 "CL":"0:0", "W":640, "H":400, "FOV":70, "SH":768,
-                "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1,
-                "Uname":0, "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
-                "AutoRes":0, "Mouse":20}
+                "FS":1, "FV":1, "BL":1, "SSR":0, "RTVL":1, 'DOF':1,
+                "Uname":"0", "Volume":0.2, "VolumeFX":0.3, "Record":0, "VR":0,
+                "AutoRes":0, "Mouse":20, "IRES":0.75}
     c = 0; newFile = False
     try:
         with open(PATH + "Settings.txt") as sf:
@@ -111,8 +126,7 @@ def getSettings(write=True):
                 if not "=" in line: continue
                 k, v = line.replace("\n", "").split("=")
                 if k in settings:
-                    try: settings[k] = int(v)
-                    except: settings[k] = v
+                    settings[k] = type(settings[k])(v)
                     c += 1
     except FileNotFoundError: newFile = True
     if c < len(settings): newFile = True

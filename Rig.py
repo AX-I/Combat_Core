@@ -115,6 +115,8 @@ class Bone:
         else: self.origin = np.array(origin, dtype="float")
         self.offset = np.array((*offset, 1), dtype="float")
 
+        self.transMat = np.zeros((4,4))
+
         self.rotate(rot)
 
     def exportRig(self, r=0):
@@ -175,19 +177,14 @@ class Bone:
         if rr is None: rr = self.angles
         else: self.angles = rr
         self.angles = np.array(self.angles, 'float32')
-        rotX = np.array([[1, 0, 0],
-                         [0, cos(rr[0]), -sin(rr[0])],
-                         [0, sin(rr[0]), cos(rr[0])]])
-        rotY = np.array([[cos(rr[1]), 0, sin(rr[1])],
-                         [0, 1, 0],
-                         [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = np.array([[cos(rr[2]), -sin(rr[2]), 0],
-                         [sin(rr[2]), cos(rr[2]), 0],
-                         [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
+        c0 = cos(rr[0]); s0 = sin(rr[0])
+        c1 = cos(rr[1]); s1 = sin(rr[1])
+        c2 = cos(rr[2]); s2 = sin(rr[2])
+        self.rotMat = [[c1*c2, -s2, s1*c2],
+                       [c0*c1*s2+s0*s1, c0*c2, c0*s1*s2-s0*c1],
+                       [s0*c1*s2-c0*s1, s0*c2, s0*s1*s2+c0*c1]]
         self.updateTM()
 
     def updateTM(self):
-        self.transMat = np.zeros((4,4))
         self.transMat[:3,:3] = self.rotMat
         self.transMat[3] = self.offset

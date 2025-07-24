@@ -2,9 +2,6 @@
 
 out vec3 f_color;
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 uniform float emPow;
 
 uniform float fadeDist;
@@ -30,7 +27,7 @@ void main() {
 
   vec2 tuv = 0.5+0.5*vec2(dot(norm, right), dot(norm, up));
 
-  light += (LInt + LDir + v_UV.x) * 0.00001;
+  light += (v_UV.x) * 0.00001;
 
   float value = texture(tex1, v_UV / depth).r;
   value = max(0., 1.-64.*abs(value-0.125*fract(-(iTime-length(v_pos*tz))/6.))) * (value*8);

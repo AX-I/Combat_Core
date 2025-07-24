@@ -1,8 +1,5 @@
 #version 330
 
-uniform vec3 LDir;
-uniform vec3 LInt;
-
 out vec3 f_color;
 
 in vec3 v_norm;
@@ -16,9 +13,7 @@ uniform int isEqui;
 uniform float rotY;
 
 void main() {
-	vec3 norm = v_norm / depth;
-
-    vec3 light = 1 + (LInt + LDir + norm) * 0.001;
+    vec3 light = 1 + (v_norm) * 0.00001;
 
     vec2 uv = v_UV / depth;
 

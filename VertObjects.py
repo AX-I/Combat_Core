@@ -18,7 +18,7 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-from math import sin, cos, pi, log2, ceil
+from math import sin, cos, pi
 import numpy
 import numpy as np
 import time
@@ -31,11 +31,13 @@ def rgbToString(rgb):
 
 class VertObject:    
     def __init__(self, *args, texture=None, texMode="default", gamma=True,
-                 maxWedgeDims=1, useShaders={}, **kwargs):
+                 maxWedgeDims=1, useShaders={}, instanced=False, **kwargs):
         self.maxWedgeDims = maxWedgeDims
         self.numWedges = 0
         self.estWedges = 0
         self.enabled = True
+
+        self.instanced = instanced
 
         self.castShadow = False
         self.receiveShadow = False
@@ -68,7 +70,7 @@ class VertObject:
         
         self.viewer = args[0]
         self.coords = numpy.array(args[1], dtype="float")
-        self.scale = numpy.array([1, 1, 1])
+        self.scale = 1
         self.angles = [0.,0.,0.]
         self.rotMat = numpy.array([[1, 0, 0],
                                    [0, 1, 0],
@@ -126,31 +128,20 @@ class VertObject:
         if texture in self.viewer.vtNames:
             self.texNum = self.viewer.vtNames[texture]
         else:
-            ti = Image.open(texture).convert("RGBA")
-            if ti.size[0] != ti.size[1]:
-                print("Texture is not square")
-                n = max(ti.size)
-                ti = ti.resize((n,n))
-            if (ti.size[0] & (ti.size[0] - 1)) != 0:
-                print("Texture is not a power of 2, resizing up.")
-                n = 2**ceil(log2(ti.size[0]))
-                ti = ti.resize((n,n))
-            ta = numpy.array(ti.rotate(-90)).astype('float32')
-            if self.cgamma:
-                ta *= ta
-                ta /= 8. # Gamma correction
-            else:
-                ta *= 64
-            ta *= self.texMul
-            self.viewer.vtextures.append(ta.astype("uint16"))
-            self.viewer.vtNames[texture] = len(self.viewer.vtextures) - 1
+            self.viewer.vtNames[texture] = len(self.viewer.vtextures)
             self.texNum = self.viewer.vtNames[texture]
+
+            ta = self.viewer.loadTexture(texture, self.cgamma, self.texMul)
+            self.viewer.vtextures.append(ta)
             
             self.viewer.vertpoints.append([])
             self.viewer.vertnorms.append([])
             self.viewer.vertu.append([])
             self.viewer.vertv.append([])
             self.viewer.vertBones.append([])
+
+            if self.instanced:
+                self.viewer.instanceData[self.texNum] = []
             
             s = {'shader':'sh', 'args':{}}
             if self.mip is not None: s["mip"] = self.mip
@@ -169,7 +160,7 @@ class VertObject:
         if "enabled" in kwargs:
             self.enabled = kwargs["enabled"]
         if "scale" in kwargs:
-            self.scale = numpy.array(kwargs["scale"])
+            self.scale = kwargs["scale"]
         if "rot" in kwargs:
             rr = kwargs["rot"]
             rotX = numpy.array([[1, 0, 0],
@@ -193,10 +184,24 @@ class VertObject:
             self.invertNorms = True
 
     def created(self):
+        if self.instanced:
+            tn = self.texNum
+
+            self.cStart = len(self.viewer.instanceData[tn])
+            self.cEnd = self.cStart + 1
+
+            self.viewer.instanceData[tn].append(
+                {'pos':self.coords, 'rot':self.rotMat, 'scale':self.scale}
+            )
+            if self.viewer.vertpoints[tn]:
+                # first instance is already created
+                return
+
         self.create()
         self.numWedges = len(self.wedgePoints)
-        self.cStart = len(self.viewer.vertpoints[self.texNum])
-        self.cEnd = self.cStart + self.numWedges
+        if not self.instanced:
+            self.cStart = sum(len(p) for p in self.viewer.vertpoints[self.texNum]) * 3
+            self.cEnd = self.cStart + self.numWedges * 3
         self.wedgePoints = numpy.array(self.wedgePoints)
         if self.overrideNorms is None:
             self.vertNorms = np.array(self.vertNorms).reshape((-1, 3))
@@ -224,13 +229,16 @@ class VertObject:
         elif self.texMode == "clamp":
             np.clip(self.u, 0, 1, out=self.u)
             np.clip(self.v, 0, 1, out=self.v)
-        self.transform(origin=self.origin, early=True)
+
+        if not self.instanced:
+            self.transform(origin=self.origin)
+        self.submitToViewer(origin=self.origin, early=True)
+
         if self.static:
             del self.u, self.v
             del self.wedgePoints, self.vertNorms
     
-    def transform(self, origin=False, early=False):
-        tn = self.texNum
+    def transform(self, origin=False):
         if origin is False:
             newpoints = (self.wedgePoints * self.scale) @ self.rotMat + self.coords            
             newnorms = self.vertNorms @ self.rotMat
@@ -238,12 +246,17 @@ class VertObject:
             origin = numpy.expand_dims(origin, 0)
             newpoints = ((self.wedgePoints-origin) * self.scale) @ self.rotMat + origin + self.coords
             newnorms = self.vertNorms @ self.rotMat
-        
+        self.wedgePoints = newpoints
+        self.vertNorms = newnorms
+
+    def submitToViewer(self, origin=False, early=False):
+        tn = self.texNum
+
         if early:
-            self.viewer.vertpoints[tn].extend(newpoints)
-            self.viewer.vertnorms[tn].extend(newnorms)
-            self.viewer.vertu[tn].extend(self.u)
-            self.viewer.vertv[tn].extend(self.v)
+            self.viewer.vertpoints[tn].append(self.wedgePoints)
+            self.viewer.vertnorms[tn].append(self.vertNorms)
+            self.viewer.vertu[tn].append(self.u)
+            self.viewer.vertv[tn].append(self.v)
             if self.animated:
                 if len(self.viewer.vertBones[tn]) > 0:
                     self.viewer.vertBones[tn] = np.concatenate(
@@ -488,6 +501,8 @@ class VertModel(VertObject):
         if "subDiv" in ex:
             self.subDiv = ex["subDiv"]
 
+        texMul = ex['texMul'] if ('texMul' in ex) else 1
+
         if 'cache' in ex:
             self.cache = ex['cache']
         else:
@@ -547,6 +562,10 @@ class VertModel(VertObject):
                         elif t[0] == "refl":
                             if cmtl == mtlNum:
                                 refl = t[1]
+                        elif t[0] == 'tex_mul':
+                            if cmtl == mtlNum:
+                                texMul = float(t[1])
+
             if not mc:
                 if cmtl > mtlNum:
                     self.nextMtl = VertModel(*args, filename=filename, size=size,
@@ -570,6 +589,7 @@ class VertModel(VertObject):
             if "useShaders" in ex: ex["useShaders"]["add"] = add
             else: ex["useShaders"] = {"add":add}
             if "mip" in ex: del ex["mip"]
+        ex['texMul'] = texMul
         
         super().__init__(*args, texture=self.mtlTex,
                          **ex)
@@ -580,10 +600,8 @@ class VertModel(VertObject):
         self.filename = filename
         self.size = size
         self.estWedges = 0
-        with open(filename) as f:
-            for line in f:
-                if line[0] == "f":
-                    self.estWedges += len(line.split()) - 3
+        with open(filename, 'rb') as f:
+            self.estWedges += f.read().count(b'\nf ')
 
         self.mc = mc
         self.blender = blender
@@ -1004,3 +1022,40 @@ class VertPlane(VertObject):
                                    ((i+1)/n0, j/n1), (i/n0, (j+1)/n1)])
                 self.appendWedge(coords, norm, uv)
                 self.appendWedge(coords2, norm, uv2)
+
+    def getVertices(self):
+        n0,n1 = self.n
+        m1 = self.h1/n0
+        m2 = self.h2/n1
+        verts = []
+        for i in range(n0+1):
+            for j in range(n1+1):
+                verts.append(m1*i + m2*j)
+        return np.array(verts) + self.coords
+
+    def getIndices(self):
+        n0,n1 = self.n
+
+        o = []
+        for i in range(n0):
+            for j in range(n1):
+                o.extend((i*(n1+1)+j, i*(n1+1)+j+1, (i+1)*(n1+1)+j))
+                o.extend(((i+1)*(n1+1)+j+1, (i+1)*(n1+1)+j, i*(n1+1)+j+1))
+        return np.array(o)
+
+    def getEdges(self):
+        n0,n1 = self.n
+
+        v = np.arange((n0+1)*(n1+1)).reshape((n0+1,n1+1))
+
+        # horizontal edges
+        e1 = np.repeat(v,2,1)
+        e1 = e1[:,1:-1]
+        e1 = e1.reshape((-1,2))
+
+        # vertical edges
+        e2 = np.repeat(v,2,0)
+        e2 = e2[1:-1].T
+        e2 = e2.reshape((-1,2))
+
+        return np.concatenate((e1,e2))
