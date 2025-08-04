@@ -230,6 +230,7 @@ class CLDraw:
             self.POST_N = 1 - self.POST_N
         self.POSTFBO[self.POST_N].use()
         self.LAST_PF = self.POSTFBO[self.POST_N]
+        self.LAST_PB = self.POSTBUF[self.POST_N]
 
     def getPOSTBUF(self, opposite=False):
         if self.started_post:
