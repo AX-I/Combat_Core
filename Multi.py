@@ -18,6 +18,11 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
+import os
+# https://github.com/numpy/numpy/issues/19145
+# https://stackoverflow.com/questions/74661959
+os.environ['OMP_NUM_THREADS'] = '1'
+
 from tkinter import *
 from math import sin, cos, sqrt, pi, atan2, asin, acos
 import numpy
@@ -31,7 +36,7 @@ random.seed(int((time.time() * 1000) % 1000))
 
 from Compute import *
 import multiprocessing as mp
-import os, sys
+import sys
 PLATFORM = sys.platform
 
 import importlib
