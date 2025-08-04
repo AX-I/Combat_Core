@@ -40,6 +40,7 @@ if PLATFORM == "win32":
     import pywintypes
     import win32gui
     from PIL.ImageWin import Dib, HWND
+    from ctypes import windll, byref, c_int, sizeof
 
 from Utils import _ARIAL, _ARIALBD
 
@@ -79,6 +80,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         
         self.root = root
         self.root.title("AXI Combat")
+        self.setDarkMode()
         if PLATFORM != "linux":
             self.root.iconbitmap(PATH+"lib/Combat.ico")
         self.downSample = downSample
@@ -123,6 +125,18 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
             self.cdib = Dib(self.cframe)
 
         self.startMenu()
+
+    def setDarkMode(self):
+        if PLATFORM != 'win32': return
+        # pywinstyles
+        val = c_int(1)
+        windll.dwmapi.DwmSetWindowAttribute(
+            windll.user32.GetParent(self.root.winfo_id()),
+            20, byref(val), sizeof(val)
+        )
+        # Sun-Valley-ttk-theme
+        self.root.wm_attributes("-alpha", 0.99)
+        self.root.wm_attributes("-alpha", 1)
 
     def setWH(self, w, h):
         self.W = np.int32(w)
@@ -261,7 +275,9 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
                 self.d.grid(padx=0, pady=0)
                 self.root.geometry("{}x{}+0+0".format(self.W, self.H))
                 self.root.title("AXI Combat")
-        
+
+        self.setDarkMode()
+
         if PLATFORM != "win32": return
         if not self.activeFS: return
         
