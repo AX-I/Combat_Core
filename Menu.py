@@ -203,7 +203,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
     def openImageCover(self, fn, blur=0):
         """opens filename and scales it to cover (self.W, self.H)"""
         i = Image.open(fn).convert('RGBA')
-        fac = max(self.W / i.size[0], self.H / i.size[1])
+        fac = max(self.W / i.size[0], self.H / i.size[1])*1.01
         if blur: i = i.filter(ImageFilter.BoxBlur(blur/fac))
         self._imShape = (int(i.size[0] * fac), int(i.size[1] * fac))
         return i
@@ -776,6 +776,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.MENUSCREEN = ''
         self.d.delete(self.finalRender)
+        self.d.config(background="#000")
         self.runGame(*self.gameConfig, i, self.aiNums)
 
     def goStart(self, stage=None):
@@ -1041,7 +1042,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.rtvB["text"] = s[self.rtvA.get()]
     def showVol(self, e=None):
         self.volB["text"] = str(self.volA.get())
-        try: self.evtQ.put_nowait({"Vol":self.volA.get()})
+        try: self.evtQ.put_nowait({"Vol":np.repeat(self.volA.get(), 2)})
         except: pass
     def showVol2(self, e=None):
         self.volD["text"] = str(self.volC.get())
