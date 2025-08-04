@@ -149,10 +149,12 @@ class NPCanvas:
         source.vao.render(mgl.TRIANGLES)
 
 
-    def setupPost(self):
+    def setupPost(self, dibfmt=False):
         trisetup2d = open('PipeGL/trisetup2d.c').read()
         gamma = open('ShadersGL/Post/gamma.c').read()
         gamma = gamma.replace('#define CHROM', '').replace('#define VIGNETTE', '')
+        if dibfmt:
+            gamma = gamma.replace('//{DIB} ', '')
         self.post_prog = self.ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
 
         self.post_vbo = self.ctx.buffer(TRI[:,:,:3].astype('float32').tobytes())

@@ -5,6 +5,8 @@
 #define CHROM
 #define VIGNETTE
 
+//{DIB} #define DIB
+
 uniform sampler2D tex1;
 out vec3 f_color;
 
@@ -52,7 +54,9 @@ void main() {
 	vec2 tc = gl_FragCoord.xy * IRES;
 
 	// For VR mode
-	//tc.y = height - tc.y;
+  #ifdef DIB
+    tc.y = height - tc.y;
+  #endif
 	//tc.x = (tc.x - width/2) * 0.95 + width/2;
 
   vec3 color;
@@ -114,5 +118,9 @@ void main() {
   }
   float dither = 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1));
 
-  f_color = j + dither / 256.f;
+  #ifdef DIB
+    f_color = (j + dither / 256.f).bgr;
+  #else
+    f_color = j + dither / 256.f;
+  #endif
 }

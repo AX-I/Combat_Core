@@ -61,6 +61,7 @@ if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 from ImgUtils import NPTextDraw
+from profilehooks import profile
 
 
 class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
@@ -116,6 +117,10 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         self.recVideo = False
         
         self.frameKeys = {}
+
+        self.cframe = Image.new('RGB', (self.W,self.H))
+        if PLATFORM == 'win32':
+            self.cdib = Dib(self.cframe)
 
         self.startMenu()
 
@@ -210,7 +215,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
             self.d.delete(self.meter)
             self.startRender()
         else:
-            self.waitLoop = self.after(20, self.waitLoad)
+            self.waitLoop = self.after(10, self.waitLoad)
 
     def createCoreWidgets(self):
         self.columnconfigure(1, weight=1, uniform="c")
@@ -298,6 +303,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
             k = f'<{k}>'
         self.customAction(k, None)
 
+    #@profile(stdout=open('profile/checkpipe.txt', 'w'), filename='profile/checkpipe.pstats')
     def checkPipe(self, cont=True):
         try: action = self.P.get(True, 0.02)
         except Empty: self.empty += 1
@@ -513,8 +519,13 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
 
         self._render(fr)
 
-    def _render(self, fr):
-        self.cframe = Image.fromarray(fr.astype("uint8"), "RGB")
+    def _render(self, fr, dibfmt=False):
+        if dibfmt:
+            self.cdib.frombytes(fr)
+            self.cdib.expose(self.DC)
+            return
+
+        self.cframe.frombytes(fr)
 
         if PLATFORM == 'win32':
             dib = Dib(self.cframe)

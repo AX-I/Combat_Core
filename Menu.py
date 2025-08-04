@@ -69,6 +69,8 @@ elif USE_GL:
     from ImgUtilsGL import GLObject as CLObject
     import moderngl as mgl
 
+USE_DIBFMT = USE_GL and (PLATFORM == 'win32')
+
 import OpsConv
 BLOCK_SIZE = 128
 
@@ -388,7 +390,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
             self.FBO = self.ctx.texture((self.W, self.H), 3, dtype='f1')
             self.postBuf = self.ctx.framebuffer(self.FBO)
-            self.setupPost()
+            self.setupPost(dibfmt=USE_DIBFMT)
 
             self.ctx.disable(mgl.DEPTH_TEST)
             self.ctx.enable(mgl.BLEND)
@@ -491,7 +493,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         #print('Blend', et)
         xt = time.perf_counter()
 
-        self._render(frame)
+        self._render(frame, dibfmt=USE_DIBFMT)
 
         et = time.perf_counter() - xt
         #print('Push', et)
