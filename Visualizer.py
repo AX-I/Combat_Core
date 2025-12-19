@@ -560,7 +560,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         
         if char not in self.UItexts:
             self.cFont = ImageFont.truetype(_ARIALBD, size)
-            s = self.textSize.textsize(char, font=self.cFont)
+            s = self.textSize.textbbox((0,0), char, font=self.cFont)[2:]
             a = Image.new("L", (size*2, size*2), color=(0,))
             d = ImageDraw.Draw(a)
             d.text((size-s[0]/2,size-s[1]/2), char, fill=(255,), font=self.cFont)

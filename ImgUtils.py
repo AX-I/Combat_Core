@@ -42,7 +42,7 @@ class NPCanvas:
         """
         pad = 8 + blur * 12
 
-        s = self.textSize.textsize(dText, font=dFont)
+        s = self.textSize.textbbox((0,0), dText, font=dFont)[2:]
         a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
                       color=(*bFill,0))
         for ix in range(blur):
