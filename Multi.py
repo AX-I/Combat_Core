@@ -1611,16 +1611,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.noisePos = np.zeros((3,), 'float32')
 
         mpath = PATH + '../Models/'
-        self.addNrmMap(mpath + 'L3/Atlas1Nrm.png', 'Link')
-        self.addNrmMap(mpath + 'L3/L3H_nrm.png', 'L3H')
-        self.addNrmMap(mpath + 'Zelda2/Atlas1Nrm.png', 'Zelda')
-        self.addNrmMap(mpath + 'Zelda2/Z2H_nrm.png', 'Z2H')
-        self.addNrmMap(mpath + 'Body/HairNorm.png', 'Hair', mip=True, mipLvl=4)
-        self.addNrmMap(mpath + 'Body/Face3xNrm.png', 'Face', mip=True)
-        self.addNrmMap(mpath + 'Body/T_Skin_F_C_Body_NRM.png', 'Body', mip=True)
-##        self.addNrmMap(mpath + 'Body/FrontTrimN1.png', 'Bracelet', mip=True)
-        self.addNrmMap(mpath + 'Body/Fabric_Lace_017_normal.png', 'ClothTrim', mip=True)
-        self.addNrmMap(mpath + 'Body/Fabric040_1K_NormalGL.png', 'Clothes', mip=True, mipLvl=4)
+        with open(mpath + 'NrmMaps.json') as fi:
+            nmaps = json.load(fi)
+        for ntex in nmaps:
+            name, opts = nmaps[ntex]
+            self.addNrmMap(mpath + ntex, name, **opts)
 
     def shadowChar(self):
         sc = self.shadowCams[1]
