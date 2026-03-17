@@ -24,6 +24,7 @@ import numpy as np
 import time
 from Utils import anglesToCoords, openZfile
 from PIL import Image
+import functools
 import zlib
 
 def rgbToString(rgb):
@@ -475,12 +476,14 @@ class VertSphere(VertObject):
             self.appendWedge(wc, -wc, uv)
 
 
+@functools.cache
 def getMtllib(filename):
     with openZfile(filename) as f:
         for line in f:
             if line.startswith('mtllib'):
                 return line.split()[1]
 
+@functools.cache
 def getEstWedges(filename):
     with openZfile(filename, 'rb') as f:
         return f.read().count(b'\nf ')

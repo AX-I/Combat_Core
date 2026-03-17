@@ -144,14 +144,19 @@ class TexLoadManager:
 
 
 from zipfile import ZipFile
+import functools
 import io, os
+
+@functools.cache
+def getZraw(fi):
+    z = ZipFile(fi)
+    return z.read(z.namelist()[0])
 
 def openZfile(fi, mode='r'):
     if not os.path.exists(fi + '.zip'):
         return open(fi, mode)
 
-    z = ZipFile(fi + '.zip')
-    raw = z.read(z.namelist()[0])
+    raw = getZraw(fi + '.zip')
 
     if mode == 'r':
         s = raw.decode('utf-8')
