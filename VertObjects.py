@@ -36,7 +36,7 @@ class VertObject:
         self.maxWedgeDims = maxWedgeDims
         self.numWedges = 0
         self.estWedges = 0
-        self.enabled = True
+        self.enabled = kwargs.get("enabled", True)
 
         self.instanced = instanced
 
@@ -46,16 +46,12 @@ class VertObject:
         self.texMode = texMode
         self.cgamma = gamma
 
-        self.texMul = 1
-        if "texMul" in kwargs:
-            self.texMul = kwargs["texMul"]
+        self.texMul = kwargs.get("texMul", 1)
 
-        self.uvspread = 0
-        if 'uvspread' in kwargs:
-            self.uvspread = kwargs['uvspread']
-        
-        self.mip = None
-        self.reflection = False
+        self.uvspread = kwargs.get('uvspread', 0)
+
+        self.mip = kwargs.get("mip", None)
+        self.reflection = kwargs.get("reflect", False)
 
         self.useAlpha = None
         
@@ -63,30 +59,21 @@ class VertObject:
         self.vertNorms = []
         self.u = []
         self.v = []
-        self.origin = False
-        self.static = False
+        self.origin = kwargs.get("origin", False)
+        self.static = "static" in kwargs
 
         self.animated = False
         self.bones = None
         
         self.viewer = args[0]
         self.coords = numpy.array(args[1], dtype="float")
-        self.scale = 1
+        self.scale = kwargs.get("scale", 1)
         self.angles = [0.,0.,0.]
         self.rotMat = numpy.array([[1, 0, 0],
                                    [0, 1, 0],
                                    [0, 0, 1]])
-
-        self.emissive = None
-        if "emissive" in kwargs:
-            ef = kwargs["emissive"]
         
-        self.boneOffset = 0
-        if "boneOffset" in kwargs:
-            self.boneOffset = kwargs["boneOffset"]
-        
-        if "mip" in kwargs:
-            self.mip = kwargs["mip"]
+        self.boneOffset = kwargs.get("boneOffset", 0)
 
         if "Background" in texture:
             kwargs['shadow'] = ''
@@ -94,8 +81,6 @@ class VertObject:
         if "shadow" in kwargs:
             self.castShadow = "C" in kwargs["shadow"]
             self.receiveShadow = "R" in kwargs["shadow"]
-        if "reflect" in kwargs:
-            self.reflection = kwargs["reflect"]
 
         self.overrideNorms = None
         if "overrideNorms" in kwargs:
@@ -158,10 +143,6 @@ class VertObject:
             
         self.texNum = self.viewer.vtNames[texture]
         
-        if "enabled" in kwargs:
-            self.enabled = kwargs["enabled"]
-        if "scale" in kwargs:
-            self.scale = kwargs["scale"]
         if "rot" in kwargs:
             rr = kwargs["rot"]
             rotX = numpy.array([[1, 0, 0],
@@ -175,14 +156,8 @@ class VertObject:
                                 [0, 0, 1]])
             self.rotMat = rotX @ rotZ @ rotY
             self.angles = list(rr)
-        if "origin" in kwargs:
-            self.origin = kwargs["origin"]
 
-        if "static" in kwargs:
-            self.static = True
-        self.invertNorms = False
-        if "invertNorms" in kwargs:
-            self.invertNorms = True
+        self.invertNorms = "invertNorms" in kwargs
 
     def created(self):
         if self.instanced:
@@ -490,7 +465,7 @@ def getEstWedges(filename):
 
 modelList = {}
 class VertModel(VertObject):
-    def __init__(self, *args, filename=None, size=1, mtlNum=0,
+    def __init__(self, *args, filename=None, mtlNum=0,
                  animated=False, mc=False, blender=False, **ex):
         """Loads .obj files, optionally zipped into .zip,
         special cases for Mineways and Blender exports"""
@@ -512,16 +487,11 @@ class VertModel(VertObject):
             c = True
             del ex["texture"]
 
-        self.subDiv = False
-        if "subDiv" in ex:
-            self.subDiv = ex["subDiv"]
+        self.subDiv = ex.get("subDiv", False)
 
-        texMul = ex['texMul'] if ('texMul' in ex) else 1
+        texMul = ex.get('texMul', 1)
 
-        if 'cache' in ex:
-            self.cache = ex['cache']
-        else:
-            self.cache = True
+        self.cache = ex.get('cache', True)
 
         if not c:
             self.mtl = self.path + getMtllib(filename)
@@ -534,49 +504,45 @@ class VertModel(VertObject):
                 for line in f:
                     if (line == "\n") or (line[0] == "#"):
                         continue
-                    else:
-                        t = line.split()
-                        if len(t) == 0: continue
-                        if t[0] == "newmtl":
-                            if not blender:
+
+                    t = line.split()
+                    if len(t) == 0: continue
+                    if t[0] == "newmtl":
+                        if not blender:
+                            cmtl += 1
+                            if cmtl == mtlNum:
+                                self.mtlName = t[1]
+                        else:
+                            cMtlName = t[1]
+                    elif t[0] == "map_Kd":
+                        if not blender and cmtl == mtlNum:
+                            self.mtlTex = self.path + t[1]
+                            c = True
+                        if blender:
+                            self.texMap[cMtlName] = "tex_" + t[1]
+                            if t[1] not in texnames:
+                                texnames.append(t[1])
                                 cmtl += 1
                                 if cmtl == mtlNum:
-                                    self.mtlName = t[1]
-                            else:
-                                cMtlName = t[1]
-                        elif t[0] == "map_Kd":
-                            if not blender and cmtl == mtlNum:
-                                self.mtlTex = self.path + t[1]
-                                c = True
-                            if blender:
-                                self.texMap[cMtlName] = "tex_" + t[1]
-                                if t[1] not in texnames:
-                                    texnames.append(t[1])
-                                    cmtl += 1
-                                    if cmtl == mtlNum:
-                                        self.mtlName = "tex_" + t[1]
-                                        self.mtlTex = self.path + t[1]
-                                        c = True
+                                    self.mtlName = "tex_" + t[1]
+                                    self.mtlTex = self.path + t[1]
+                                    c = True
 
-                        elif t[0] == "map_d":
-                            if cmtl == mtlNum:
-                                alpha = self.path + t[1]
+                    if cmtl == mtlNum:
+                        if t[0] == "map_d":
+                            alpha = self.path + t[1]
                         elif t[0] == "mip":
-                            if cmtl == mtlNum:
-                                mip = True
+                            mip = True
                         elif t[0] == "add":
-                            if cmtl == mtlNum:
-                                add = float(t[1])
+                            add = float(t[1])
                         elif t[0] == "refl":
-                            if cmtl == mtlNum:
-                                refl = t[1]
+                            refl = t[1]
                         elif t[0] == 'tex_mul':
-                            if cmtl == mtlNum:
-                                texMul = float(t[1])
+                            texMul = float(t[1])
 
             if not mc:
                 if cmtl > mtlNum:
-                    self.nextMtl = VertModel(*args, filename=filename, size=size,
+                    self.nextMtl = VertModel(*args, filename=filename,
                                              animated=animated,
                                              mtlNum=mtlNum+1, blender=blender,
                                              **ex)
@@ -606,7 +572,6 @@ class VertModel(VertObject):
         
         self.numWedges = 0
         self.filename = filename
-        self.size = size
 
         self.estWedges = getEstWedges(filename)
 
@@ -633,8 +598,6 @@ class VertModel(VertObject):
             if self.readCache():
                 return
         
-        size = self.size
-
         self.points = []
         self.vts = []
         self.vns = []
@@ -645,8 +608,6 @@ class VertModel(VertObject):
         if self.subDiv: aw = self.appendWedgeSafe
         else: aw = self.appendWedge
         if self.mc: activeMat = True
-        
-##        sl = []
         
         with openZfile(filename) as f:
             line = f.readline()
@@ -674,18 +635,6 @@ class VertModel(VertObject):
                             aw(c, n, numpy.array(tx))
                             if self.animated:
                                 self.bones.append([int(s.split("/")[3]) for s in t[1:]])
-##                        elif len(t) == 5:
-##                            c = [self.points[int(s.split("/")[0]) - 1] for s in t[1:4]]
-##                            tx = [self.vts[int(s.split("/")[1]) - 1] for s in t[1:4]]
-##                            n = [self.vns[int(s.split("/")[2]) - 1] for s in t[1:4]]
-##                            aw(numpy.array(c), -numpy.array(n), numpy.array(tx))
-##                            c2 = [self.points[int(s.split("/")[0]) - 1] for s in [t[1],t[3],t[4]]]
-##                            tx2 = [self.vts[int(s.split("/")[1]) - 1] for s in [t[1],t[3],t[4]]]
-##                            n2 = [self.vns[int(s.split("/")[2]) - 1] for s in [t[1],t[3],t[4]]]
-##                            aw(numpy.array(c2), -numpy.array(n2), numpy.array(tx2))
-
-##                            if "Lights" in self.texName:
-##                                sl.append({"i":[2,2,2], "pos":np.average(c,axis=0),"vec":-np.array(n[0])})
                     elif t[0] == "vt":
                         # uv is actually vu
                         self.vts.append((float(t[2]), float(t[1])))
@@ -699,18 +648,6 @@ class VertModel(VertObject):
                         else:
                             activeMat = False
                     line = f.readline()
-        
-##        if "Lights" in self.texName:
-##            self.viewer.atriumLights = sl
-##            a = []
-##            for b in sl:
-##                try: b["pos"] = np.round(b["pos"], 2).tolist()
-##                except: pass
-##                try: b["vec"] = np.round(b["vec"], 2).tolist()
-##                except: pass
-##                a.append(b)
-##            import json
-##            with open("LightsCB.txt", "w") as x: x.write(json.dumps(a))
 
         if filename not in modelList:
             modelList[filename] = {}
