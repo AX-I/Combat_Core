@@ -1617,6 +1617,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             name, opts = nmaps[ntex]
             self.addNrmMap(mpath + ntex, name, **opts)
 
+        print(f'Normal maps in {time.time() - self.loadStart:.2f}')
+
     def shadowChar(self):
         sc = self.shadowCams[1]
         sc["dir"] = self.directionalLights[0]["dir"]

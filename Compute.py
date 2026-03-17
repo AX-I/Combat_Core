@@ -293,7 +293,7 @@ class ThreeDBackend:
 
         self.vMat = np.stack((self.viewVec(),self.vVhorz(),self.vVvert()))
 
-        print('GL loaded in', time.time() - self.loadStart)
+        print(f'GL loaded in {time.time() - self.loadStart:.2f}')
 
     def updateRig(self, rig, ct, name, vobj, offset=0):
         bt = rig.b0.getTransform()

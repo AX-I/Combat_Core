@@ -294,8 +294,8 @@ def frameUpdate(self):
     if self.frameNum == 1:
         tpath = PATH + '../Models/Temple/'
         self.addNrmMap(tpath + 'SandstoneBricks_nrm.jpg', 'sand_blocks', mip=True)
-        self.addNrmMap(tpath + 'sandstone_cracks_nor_gl_1k.png', 'sand_floor')
+        self.addNrmMap(tpath + 'sandstone_cracks_nor_gl_1k.jpg', 'sand_floor')
         self.addNrmMap(PATH + '../Models/TaigaNew/3DRock004_Normal.jpg', '3DRock')
         self.addNrmMap(tpath + '096.png', '096')
-        self.addNrmMap(tpath + 'Grass004_1K_NormalGL.png', 'Grass', mip=True, mipLvl=4)
+        self.addNrmMap(tpath + 'Grass004_1K_NormalGL-l80c.webp', 'Grass', mip=True, mipLvl=4)
         self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4

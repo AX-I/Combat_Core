@@ -321,11 +321,11 @@ def frameUpdate(self):
 
         tpath = PATH + '../Models/TaigaNew/'
         self.addNrmMap(tpath + '3DRock004_Normal.jpg', 'rock')
-        self.addNrmMap(tpath + 'Snow005_Normal.jpg', 'snow')
+        self.addNrmMap(tpath + 'Snow005_Normal-q98oc.jpg', 'snow')
         self.addNrmMap(tpath + 'Ice004_Normal.jpg', 'ice')
-        self.addNrmMap(tpath + 'Bark012_Normal.png', 'bark')
-        self.addNrmMap(tpath + 'LargeRocks_normal.png', 'largeRock')
-        self.addNrmMap(tpath + 'Mountain_normal.png', 'mountain')
+        self.addNrmMap(tpath + 'Bark012_Normal.webp', 'bark')
+        self.addNrmMap(tpath + 'LargeRocks_normal.jpg', 'largeRock')
+        self.addNrmMap(tpath + 'Mountain_normal.jpg', 'mountain')
         self.addNrmMap(tpath + 'Norm_expanded.png', 'pineImposter')
 
         s = Image.open(PATH+'../Assets/Snowflake.png').convert('L').rotate(-90)
