@@ -141,3 +141,20 @@ class TexLoadManager:
     def cleanup(self):
         for p in self.proc: self.qi.put(None)
         for p in self.proc: p.join()
+
+
+from zipfile import ZipFile
+import io, os
+
+def openZfile(fi, mode='r'):
+    if not os.path.exists(fi + '.zip'):
+        return open(fi, mode)
+
+    z = ZipFile(fi + '.zip')
+    raw = z.read(z.namelist()[0])
+
+    if mode == 'r':
+        s = raw.decode('utf-8')
+        return io.StringIO(s, newline=None)
+    elif mode == 'rb':
+        return io.BytesIO(raw)

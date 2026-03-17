@@ -22,7 +22,7 @@ from math import sin, cos, pi
 import numpy
 import numpy as np
 import time
-from Utils import anglesToCoords
+from Utils import anglesToCoords, openZfile
 from PIL import Image
 import zlib
 
@@ -476,20 +476,21 @@ class VertSphere(VertObject):
 
 
 def getMtllib(filename):
-    with open(filename) as f:
+    with openZfile(filename) as f:
         for line in f:
             if line.startswith('mtllib'):
                 return line.split()[1]
 
 def getEstWedges(filename):
-    with open(filename, 'rb') as f:
+    with openZfile(filename, 'rb') as f:
         return f.read().count(b'\nf ')
 
 modelList = {}
 class VertModel(VertObject):
     def __init__(self, *args, filename=None, size=1, mtlNum=0,
                  animated=False, mc=False, blender=False, **ex):
-        """Loads .obj files, special cases for Mineways and Blender exports"""
+        """Loads .obj files, optionally zipped into .zip,
+        special cases for Mineways and Blender exports"""
 
         if "/" in filename:
             self.path = "/".join(filename.split("/")[:-1]) + "/"
@@ -644,7 +645,7 @@ class VertModel(VertObject):
         
 ##        sl = []
         
-        with open(filename) as f:
+        with openZfile(filename) as f:
             line = f.readline()
             while not (line == ""):
                 if line[0] == "#":
