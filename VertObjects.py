@@ -603,6 +603,22 @@ class VertModel(VertObject):
         self.vns = []
         if self.animated:
             self.bones = []
+
+        self.buildObj(filename)
+
+        if filename not in modelList:
+            modelList[filename] = {}
+        if self.mtlTex not in modelList[filename]:
+            tm = {"wp":self.wedgePoints, "vn":self.vertNorms,
+                  "u":self.u, "v":self.v, "nw": self.numWedges, "b":self.bones}
+            modelList[filename][self.mtlTex] = tm
+
+            if self.cache:
+                self.writeCache()
+
+        del self.vns, self.vts
+
+    def buildObj(self, filename):
         activeMat = False
         
         if self.subDiv: aw = self.appendWedgeSafe
@@ -648,18 +664,6 @@ class VertModel(VertObject):
                         else:
                             activeMat = False
                     line = f.readline()
-
-        if filename not in modelList:
-            modelList[filename] = {}
-        if self.mtlTex not in modelList[filename]:
-            tm = {"wp":self.wedgePoints, "vn":self.vertNorms,
-                  "u":self.u, "v":self.v, "nw": self.numWedges, "b":self.bones}
-            modelList[filename][self.mtlTex] = tm
-
-            if self.cache:
-                self.writeCache()
-
-        del self.vns, self.vts
 
     def writeCache(self):
         wp = np.array(self.wedgePoints, 'float32')
