@@ -463,6 +463,7 @@ def getEstWedges(filename):
     with openZfile(filename, 'rb') as f:
         return f.read().count(b'\nf ')
 
+mtlBookmarks = {}
 vdataCache = {}
 modelList = {}
 class VertModel(VertObject):
@@ -626,12 +627,24 @@ class VertModel(VertObject):
         else: aw = self.appendWedge
         if self.mc: activeMat = True
 
+        mtlBook = []
         vCached = False
         if filename in vdataCache:
             self.points, self.vts, self.vns = vdataCache[filename]
+            mtlBook = mtlBookmarks[filename]
             vCached = True
 
+        startPos = None
+        for b in mtlBook:
+            if (b[0] == self.mtlName) or \
+               (self.blender and self.texMap[b[0]] == self.mtlName):
+                startPos = b[1]
+                break
+
         with openZfile(filename) as f:
+            if startPos:
+                f.seek(startPos)
+                activeMat = True
             for line in f:
                 if (line == "\n") or (line[0] == "#"):
                     continue
@@ -667,9 +680,12 @@ class VertModel(VertObject):
                         activeMat = True
                     else:
                         activeMat = False
+                    if not vCached:
+                        mtlBook.append((t[1], f.tell()))
 
         if not vCached:
             vdataCache[filename] = (self.points, self.vts, self.vns)
+            mtlBookmarks[filename] = mtlBook
 
 
     def writeCache(self):
