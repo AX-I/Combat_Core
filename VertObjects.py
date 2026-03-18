@@ -22,8 +22,9 @@ from math import sin, cos, pi
 import numpy
 import numpy as np
 import time
-from Utils import anglesToCoords
+from Utils import anglesToCoords, openZfile
 from PIL import Image
+import functools
 import zlib
 
 def rgbToString(rgb):
@@ -474,11 +475,25 @@ class VertSphere(VertObject):
             wc = numpy.array([self.pts[-1][k-1], self.pts[-1][k], self.np])
             self.appendWedge(wc, -wc, uv)
 
+
+@functools.cache
+def getMtllib(filename):
+    with openZfile(filename) as f:
+        for line in f:
+            if line.startswith('mtllib'):
+                return line.split()[1]
+
+@functools.cache
+def getEstWedges(filename):
+    with openZfile(filename, 'rb') as f:
+        return f.read().count(b'\nf ')
+
 modelList = {}
 class VertModel(VertObject):
     def __init__(self, *args, filename=None, size=1, mtlNum=0,
                  animated=False, mc=False, blender=False, **ex):
-        """Loads .obj files, special cases for Mineways and Blender exports"""
+        """Loads .obj files, optionally zipped into .zip,
+        special cases for Mineways and Blender exports"""
 
         if "/" in filename:
             self.path = "/".join(filename.split("/")[:-1]) + "/"
@@ -509,15 +524,8 @@ class VertModel(VertObject):
             self.cache = True
 
         if not c:
-            with open(filename) as f:
-                for line in f:
-                    if (line == "\n") or (line[0] == "#"):
-                        continue
-                    else:
-                        t = line.split()
-                        if t[0] == "mtllib":
-                            self.mtl = self.path + t[1]
-                            break
+            self.mtl = self.path + getMtllib(filename)
+
             cmtl = -1
             texnames = []
             self.texMap = {}
@@ -599,9 +607,8 @@ class VertModel(VertObject):
         self.numWedges = 0
         self.filename = filename
         self.size = size
-        self.estWedges = 0
-        with open(filename, 'rb') as f:
-            self.estWedges += f.read().count(b'\nf ')
+
+        self.estWedges = getEstWedges(filename)
 
         self.mc = mc
         self.blender = blender
@@ -641,7 +648,7 @@ class VertModel(VertObject):
         
 ##        sl = []
         
-        with open(filename) as f:
+        with openZfile(filename) as f:
             line = f.readline()
             while not (line == ""):
                 if line[0] == "#":
