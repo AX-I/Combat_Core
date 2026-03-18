@@ -26,6 +26,7 @@ from Utils import anglesToCoords, openZfile
 from PIL import Image
 import functools
 import zlib
+import os
 
 def rgbToString(rgb):
     return "#{0:02x}{1:02x}{2:02x}".format(*rgb)
@@ -634,16 +635,11 @@ class VertModel(VertObject):
             mtlBook = mtlBookmarks[filename]
             vCached = True
 
-        startPos = None
-        for b in mtlBook:
-            if (b[0] == self.mtlName) or \
-               (self.blender and self.texMap[b[0]] == self.mtlName):
-                startPos = b[1]
-                break
+        self.bookmark = -1
 
         with openZfile(filename) as f:
-            if startPos:
-                f.seek(startPos)
+            if mtlBook:
+                self.goToNextBookmark(f, mtlBook)
                 activeMat = True
             for line in f:
                 if (line == "\n") or (line[0] == "#"):
@@ -680,6 +676,10 @@ class VertModel(VertObject):
                         activeMat = True
                     else:
                         activeMat = False
+                        if self.bookmark >= 0:
+                            self.goToNextBookmark(f, mtlBook)
+                            activeMat = True
+
                     if not vCached:
                         mtlBook.append((t[1], f.tell()))
 
@@ -687,6 +687,17 @@ class VertModel(VertObject):
             vdataCache[filename] = (self.points, self.vts, self.vns)
             mtlBookmarks[filename] = mtlBook
 
+    def goToNextBookmark(self, f, mtlBook: list):
+        for i in range(self.bookmark + 1, len(mtlBook)):
+            b = mtlBook[i]
+            if (b[0] == self.mtlName) or \
+               (self.blender and self.texMap[b[0]] == self.mtlName):
+                f.seek(b[1])
+                self.bookmark = i
+                return
+
+        f.seek(0, os.SEEK_END)
+        self.bookmark = -1
 
     def writeCache(self):
         wp = np.array(self.wedgePoints, 'float32')
