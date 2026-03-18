@@ -626,44 +626,38 @@ class VertModel(VertObject):
         if self.mc: activeMat = True
         
         with openZfile(filename) as f:
-            line = f.readline()
-            while not (line == ""):
-                if line[0] == "#":
-                    line = f.readline()
-                elif (line == "\n"):
-                    line = f.readline()
-                else:
-                    t = line.split()
-                    if t[0] == "v":
-                        a = [float(s) for s in t[1:4]]
-                        a[2] = -a[2]
-                        self.points.append(a)
-                    elif t[0] == "f":
-                        if activeMat:
-                        #if len(t) == 4:
-                            c = [self.points[int(s.split("/")[0]) - 1] for s in t[1:]]
-                            try:
-                                tx = [self.vts[int(s.split("/")[1]) - 1] for s in t[1:]]
-                            except ValueError:
-                                tx = [(0,0),(0,0),(0,0)]
-                                self.hasTex = False
-                            n = [self.vns[int(s.split("/")[2]) - 1] for s in t[1:]]
-                            aw(c, n, numpy.array(tx))
-                            if self.animated:
-                                self.bones.append([int(s.split("/")[3]) for s in t[1:]])
-                    elif t[0] == "vt":
-                        # uv is actually vu
-                        self.vts.append((float(t[2]), float(t[1])))
-                    elif t[0] == "vn":
-                        self.vns.append((-float(t[1]), -float(t[2]), float(t[3])))
-                    elif t[0] == "usemtl":
-                        if t[1] == self.mtlName:
-                            activeMat = True
-                        elif self.blender and self.texMap[t[1]] == self.mtlName:
-                            activeMat = True
-                        else:
-                            activeMat = False
-                    line = f.readline()
+            for line in f:
+                if (line == "\n") or (line[0] == "#"):
+                    continue
+
+                t = line.split()
+                if t[0] == "v":
+                    self.points.append((float(t[1]), float(t[2]), -float(t[3])))
+                elif t[0] == "f":
+                    if activeMat:
+                        c = [self.points[int(s.split("/")[0]) - 1] for s in t[1:]]
+                        try:
+                            tx = [self.vts[int(s.split("/")[1]) - 1] for s in t[1:]]
+                        except ValueError:
+                            tx = [(0,0),(0,0),(0,0)]
+                            self.hasTex = False
+                        n = [self.vns[int(s.split("/")[2]) - 1] for s in t[1:]]
+                        aw(c, n, numpy.array(tx))
+                        if self.animated:
+                            self.bones.append([int(s.split("/")[3]) for s in t[1:]])
+                elif t[0] == "vt":
+                    # uv is actually vu
+                    self.vts.append((float(t[2]), float(t[1])))
+                elif t[0] == "vn":
+                    self.vns.append((-float(t[1]), -float(t[2]), float(t[3])))
+                elif t[0] == "usemtl":
+                    if t[1] == self.mtlName:
+                        activeMat = True
+                    elif self.blender and self.texMap[t[1]] == self.mtlName:
+                        activeMat = True
+                    else:
+                        activeMat = False
+
 
     def writeCache(self):
         wp = np.array(self.wedgePoints, 'float32')
