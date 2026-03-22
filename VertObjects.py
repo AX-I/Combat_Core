@@ -641,7 +641,9 @@ class VertModel(VertObject):
             if mtlBook:
                 self.goToNextBookmark(f, mtlBook)
                 activeMat = True
-            for line in f:
+
+            # https://github.com/python/cpython/issues/81217
+            for line in iter(f.readline, ''):
                 if (line == "\n") or (line[0] == "#"):
                     continue
 
