@@ -127,7 +127,7 @@ def setupStage(self):
     for f in self.vtNames:
         if "Gold" in f:
             self.matShaders[self.vtNames[f]].update(
-                shader='metallic', args={'roughness':0.5})
+                shader='metallic', args={'roughness':0.5}, normal='ButtonNrm')
 
     self.pillars = []
     for i in range(6):
@@ -322,6 +322,8 @@ def frameUpdate(self):
     if self.frameNum < 2:
         self.addNrmMap(PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
                        'wood_coffers')
+        self.addNrmMap(PATH + '../Models/Strachan/ButtonNrm.png',
+                       'ButtonNrm')
         self.bindKey('o', lambda: movePillars(self, 0))
         return
 

@@ -27,6 +27,11 @@ in float depth;
 in vec2 v_UV;
 uniform sampler2D tex1;
 
+// Normal map
+uniform int useNM;
+uniform sampler2D NM;
+uniform float NMmipBias;
+
 in vec3 vertLight;
 
 uniform float roughness;
@@ -82,7 +87,27 @@ void main() {
 	shadow = clamp(shadow, 0, 1);
 
 
-    vec3 norm = normalize(v_norm * tz);
+  vec3 norm = normalize(v_norm);
+  if (useNM > 0) {
+    vec2 dUV1 = dFdx(v_UV*tz);
+    vec2 dUV2 = dFdy(v_UV*tz);
+    vec3 dPos1 = dFdx(v_pos*tz);
+    vec3 dPos2 = dFdy(v_pos*tz);
+
+    float det = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
+    float rdet = 1.0 / det;
+
+    vec3 tangent = normalize((dPos1 * dUV2.y - dPos2 * dUV1.y) * rdet);
+    vec3 bitangent = normalize((dPos2 * dUV1.x - dPos1 * dUV2.x) * rdet);
+
+    float nmBias = -0.8f;
+    if (NMmipBias != 0) nmBias = NMmipBias;
+
+    vec3 tgvec = texture(NM, v_UV*tz, nmBias).rgb * 2.0 - 1.0;
+    tgvec = normalize(tgvec);
+
+    norm = (det != 0.) ? normalize(tgvec.z * norm + -tgvec.y * tangent + -tgvec.x * bitangent) : norm;
+  }
 
     vec3 light = vec3(0); // max(0., dot(norm, LDir)) * (1-shadow) * LInt;
 
