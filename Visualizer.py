@@ -123,6 +123,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         self.cframe = Image.new('RGB', (self.W,self.H))
         if PLATFORM == 'win32':
             self.cdib = Dib(self.cframe)
+        self.useDib = -1
 
         self.startMenu()
 
@@ -409,6 +410,11 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
     def moveL1(self, e): self.sendKey("l")
 
     def screenshot(self, e=None):
+        if self.useDib == self.frameNum - 1:
+            fr = np.frombuffer(self.cdib.tobytes(), 'uint8')
+            fr = fr.reshape((self.H, self.W, 3))
+            fr = fr[::-1,:,::-1]
+            self.cframe.frombytes(fr.tobytes())
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
         self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".jpg", quality=91)
 
@@ -539,6 +545,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
         if dibfmt:
             self.cdib.frombytes(fr)
             self.cdib.expose(self.DC)
+            self.useDib = self.frameNum
             return
 
         self.cframe.frombytes(fr)
