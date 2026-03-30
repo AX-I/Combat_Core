@@ -216,6 +216,13 @@ class VertObject:
             del self.wedgePoints, self.vertNorms
     
     def transform(self, origin=False):
+        if self.numWedges == 0:
+            print('Empty object', self.texName)
+            self.wedgePoints = np.zeros((1,3,3))
+            self.vertNorms = np.zeros((1,3,3))
+            self.u = np.zeros((1,3))
+            self.v = np.zeros((1,3))
+
         if origin is False:
             newpoints = (self.wedgePoints * self.scale) @ self.rotMat + self.coords            
             newnorms = self.vertNorms @ self.rotMat
