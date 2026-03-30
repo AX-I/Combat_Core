@@ -1402,7 +1402,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
                                 "size":sr, "scale":160*sr/2048})
 
-        print('Textures in', time.time() - self.loadStart)
+        print(f'Textures in {time.time() - self.loadStart:.2f}')
         self.makeObjects(1)
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.flac",
@@ -1411,7 +1411,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         }}})
 
 
-        print("Make in", time.time() - self.loadStart)
+        print(f'Make in {time.time() - self.loadStart:.2f}')
 
     def postProcess(self):
         if self.dofLvl:

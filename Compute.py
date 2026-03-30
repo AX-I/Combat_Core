@@ -314,7 +314,11 @@ class ThreeDBackend:
         print("Loading objects...")
         self.actWedges = 0
         for o in self.vertObjects:
-            o.created()
+            try:
+                o.created()
+            except:
+                print(o.texName, o.numWedges)
+                raise
             self.actWedges += o.numWedges
             try:
                 self.evtQ.put_nowait(int(100 * self.actWedges / self.estWedges))
