@@ -27,18 +27,19 @@ def setupStage(self):
     self.terrain = self.vertObjects[-1]
 
 
-    nCloth = 31
+    nCloth = 19
     self.nCloth = nCloth
     self.addVertObject(VertPlane, [20,8,20],
                        n=nCloth, h2=[2,0,1.5], h1=[0.2,-3,0.1],
                        texture=PATH+'../Assets/Preview_Forest.jpg',
                        shadow="R",
-                       useShaders={'calcNorm': 1, 'args':{'translucent':1,'NMmipBias':0.1},
+                       useShaders={'calcNorm': 0,
+                                   'args':{'translucent':1,'NMmipBias':0.1},
                                    'normal':'Clothes', 'shadowDynamic':1})
     self.cloth = self.vertObjects[-1]
     pinned = np.array([0, nCloth, (nCloth+1)*nCloth])
     self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
-                                          self.cloth.getEdges(), 64000,
+                                          self.cloth.getEdges(), 24000,
                                           np.ones((nCloth+1)**2),
                                           pinned, 1/20,
                                           damp=0.002)
@@ -97,6 +98,7 @@ def updateCloth(self):
     U = self.clothSim.Ucur
 
     dat[:,:3] = U[self.clothI]
+    dat[:,3:6] = self.cloth.smoothNorms(U)[self.clothI]
 
     self.draw.VBO[tn].write(dat, offset=cStart*size)
 

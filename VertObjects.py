@@ -767,8 +767,8 @@ class VertModel(VertObject):
             self.nextMtl.getTexNums(r)
         return r
 
-def normalize(a):
-    return a / np.linalg.norm(a)
+def normalize(a, **kwargs):
+    return a / np.linalg.norm(a, **kwargs)
 
 
 class VertTerrain0:
@@ -1033,6 +1033,35 @@ class VertPlane(VertObject):
                 o.extend((i*(n1+1)+j, i*(n1+1)+j+1, (i+1)*(n1+1)+j))
                 o.extend(((i+1)*(n1+1)+j+1, (i+1)*(n1+1)+j, i*(n1+1)+j+1))
         return np.array(o)
+
+    def smoothNorms(self, U):
+        n0,n1 = self.n
+        umat = U.reshape((n0+1, n1+1, 3))
+
+        vtop = umat[:-1];   vbot = umat[1:]
+        vlef = umat[:,:-1]; vrig = umat[:,1:]
+
+        nv = vtop - vbot
+        nh = vlef - vrig
+
+        NRM = np.zeros_like(umat)
+
+        nbr = np.cross(nv[:,:-1], nh[:-1], axis=2)
+        NRM[:-1,:-1] += normalize(nbr, axis=2, keepdims=True)
+
+        ntr = np.cross(nv[:,:-1], nh[1:], axis=2)
+        NRM[1:,:-1] += normalize(ntr, axis=2, keepdims=True)
+
+        ntl = np.cross(nv[:,1:], nh[1:], axis=2)
+        NRM[1:,1:] += normalize(ntl, axis=2, keepdims=True)
+
+        nbl = np.cross(nv[:,1:], nh[:-1], axis=2)
+        NRM[:-1,1:] += normalize(nbl, axis=2, keepdims=True)
+
+        NRM = NRM.reshape((-1, 3))
+        NRM /= np.linalg.norm(NRM, axis=1, keepdims=True)
+
+        return NRM
 
     def getEdges(self):
         n0,n1 = self.n

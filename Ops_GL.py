@@ -981,7 +981,7 @@ class CLDraw:
             ts = trisetupAnim
         elif '2d' in mtl:
             ts = trisetup2d
-        elif 'calcNorm' in mtl:
+        elif mtl.get('calcNorm', 0):
             ts = trisetupNorm
         elif self.VBO[i].extra:
             ts = SHADER_DEF('INST', trisetup)
@@ -1008,7 +1008,7 @@ class CLDraw:
 
             progKwargs = {}
 
-            if 'calcNorm' in mtl:
+            if mtl.get('calcNorm', 0):
                 progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
                 prog = prog.replace('vec3 norm = normalize(v_norm',
                                     'vec3 norm = normalize(v_gs_norm')
