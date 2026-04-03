@@ -244,18 +244,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.si.put(action)
 
     def customizeFrontend(self):
-        self.bindKey("r", self.rotateLight)
         if SWITCHABLE:
             self.bindKey("f", self.tgControl)
             self.bindKey("F", self.tgControl1)
-        self.bindKey("e", self.mvCam)
+
         self.bindKey("x", lambda: self.fireAnim("blank"))
         self.bindKey("z", lambda: self.fireAnim("orange"))
         self.bindKey("c", lambda: self.fireAnim("red"))
         self.bindKey("v", lambda: self.fireAnim("black"))
-        self.bindKey("<space>", self.jump)
-        self.bindKey("<Up>", self.z1)
-        self.bindKey("<Down>", self.z2)
 
         self.enableDOF(dofR=16, rad=0.04)
 
@@ -270,49 +266,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("4", lambda: self.gesture(self.selchar, 3))
         self.bindKey("5", lambda: self.gesture(self.selchar, 4))
 
-        self.bindKey("g", self.foc1)
-        self.bindKey("G", self.foc2)
-        self.bindKey("h", self.tgAO)
-        self.bindKey("H", self.tgScrSh)
-
-        self.bindKey("n", self.tgDebug)
-        self.bindKey("y", self.tgMB)
-        self.bindKey('t', self.tgTM1)
-        self.bindKey('T', self.tgTM2)
-        self.bindKey('<F5>', self.tgCamAvg)
-        self.bindKey('<F6>', self.tgCam1P)
-        self.bindKey('<F7>', self.tgCamFree)
-
-        self.bindKey('p', self.printStuff)
         if self.stage == 4:
             self.bindKey('o', self.lightTest)
-        self.bindKey('i', self.respawnTest)
 
-        self.bindKey('b', self.testAniso)
         self.aniso = 4
 
         self.iceEffect = False
-        self.bindKey('m', self.tgIce)
 
-        self.bindKey('j', self.tgBlack1)
-        self.bindKey('J', self.tgBlack2)
-
-        self.bindKey('k', self.tgSpec)
-
-        self.bindKey('0', self.pause)
-        self.bindKey('9', self.tgFxaa)
         self.useFxaa = 1
 
-        self.bindKey('<Control-r>', self.reloadStage)
-        self.bindKey('<Control-R>', self.reloadStageHard)
-        self.bindKey('<Control-t>', self.reloadShaders)
-
-        self.bindKey('u', self.dofLess)
-        self.bindKey('U', self.dofMore)
         self.apFac = 0.4
-        self.bindKey('7', self.dofLevel)
 
-        self.bindKey('8', self.tgBloom)
+        with open(PATH+'Keybinds.txt') as fk:
+            for line in fk:
+                if not (row := line.strip()): continue
+                k, func = row.split(' ')
+                self.bindKey(k, getattr(self, func))
 
     def tgBloom(self): self.doBloom = not self.doBloom
     def dofLess(self): self.apFac /= 1.1
