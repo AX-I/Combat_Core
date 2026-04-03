@@ -24,7 +24,7 @@ from math import sin, cos, pi
 import numpy
 import numpy as np
 from PIL import Image
-from Utils import anglesToCoords
+from Utils import rotMat
 import json
 import zlib
 
@@ -46,7 +46,7 @@ class TexSkyBox:
         self.v = []
         self.viewer = v
         
-        if tex.split(".")[-1] == "ahdr":
+        if tex.endswith(".ahdr"):
             i = imreadHDR(tex)
             ti = Image.fromarray(np.zeros_like(i, dtype="uint8"))
         else:
@@ -63,7 +63,7 @@ class TexSkyBox:
         self.numWedges = 6 * m**2 * 2
         self.N = N + 1
 
-        if tex.split(".")[-1] == "ahdr":
+        if tex.endswith(".ahdr"):
             ti = i #cv2.resize(i, (m, m*6))
             avg = np.average(ti)
             ti *= 1/avg * 256 * hdrScale
@@ -91,16 +91,7 @@ class TexSkyBox:
         self.viewer.matShaders[self.texNum] = {'shader':"sky", 'args':{}}
 
         rr = rot
-        rotX = numpy.array([[1, 0, 0],
-                            [0, cos(rr[0]), -sin(rr[0])],
-                            [0, sin(rr[0]), cos(rr[0])]])
-        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                            [0, 1, 0],
-                            [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                            [sin(rr[2]), cos(rr[2]), 0],
-                            [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
+        self.rotMat = rotMat(rr)
 
 
     def created(self):

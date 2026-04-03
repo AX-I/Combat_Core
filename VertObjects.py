@@ -22,7 +22,7 @@ from math import sin, cos, pi
 import numpy
 import numpy as np
 import time
-from Utils import anglesToCoords, openZfile
+from Utils import rotMat, anglesToCoords, openZfile
 from PIL import Image
 import functools
 import zlib
@@ -145,18 +145,7 @@ class VertObject:
         self.texNum = self.viewer.vtNames[texture]
         
         if "rot" in kwargs:
-            rr = kwargs["rot"]
-            rotX = numpy.array([[1, 0, 0],
-                                [0, cos(rr[0]), -sin(rr[0])],
-                                [0, sin(rr[0]), cos(rr[0])]])
-            rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                                [0, 1, 0],
-                                [-sin(rr[1]), 0, cos(rr[1])]])
-            rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                                [sin(rr[2]), cos(rr[2]), 0],
-                                [0, 0, 1]])
-            self.rotMat = rotX @ rotZ @ rotY
-            self.angles = list(rr)
+            self.rotate(kwargs["rot"])
 
         self.invertNorms = "invertNorms" in kwargs
 
@@ -294,16 +283,7 @@ class VertObject:
         return fc, fn, fuv
 
     def rotate(self, rr):
-        rotX = numpy.array([[1, 0, 0],
-                            [0, cos(rr[0]), -sin(rr[0])],
-                            [0, sin(rr[0]), cos(rr[0])]])
-        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                            [0, 1, 0],
-                            [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                            [sin(rr[2]), cos(rr[2]), 0],
-                            [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
+        self.rotMat = rotMat(rr)
         self.angles = list(rr)
 
 class VertWater0:
@@ -803,17 +783,7 @@ class VertTerrain0:
             vertMax = vertMax * vertScale
             self.heights = self.heights**vertPow / vertMax**(vertPow-1)
 
-        rr = rot
-        rotX = numpy.array([[1, 0, 0],
-                            [0, cos(rr[0]), -sin(rr[0])],
-                            [0, sin(rr[0]), cos(rr[0])]])
-        rotY = numpy.array([[cos(rr[1]), 0, sin(rr[1])],
-                            [0, 1, 0],
-                            [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = numpy.array([[cos(rr[2]), -sin(rr[2]), 0],
-                            [sin(rr[2]), cos(rr[2]), 0],
-                            [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
+        self.rotMat = rotMat(rot)
 
     def getHeight(self, x, z):
         """World coords x,z -> world coord y"""
@@ -1006,9 +976,9 @@ class VertPlane(VertObject):
         for i in range(n0):
             for j in range(n1):
                 c = m1*i + m2*j
-                coords = numpy.array([c, c + m2, c + m1])
+                coords = [c, c + m2, c + m1]
                 uv = numpy.array([(i/n0, j/n1), (i/n0, (j+1)/n1), ((i+1)/n0, j/n1)])
-                coords2 = numpy.array([c + m1 + m2, c + m1, c + m2])
+                coords2 = [c + m1 + m2, c + m1, c + m2]
                 uv2 = numpy.array([((i+1)/n0, (j+1)/n1),
                                    ((i+1)/n0, j/n1), (i/n0, (j+1)/n1)])
                 self.appendWedge(coords, norm, uv)

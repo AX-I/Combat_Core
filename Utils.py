@@ -75,6 +75,19 @@ def viewMat(a, b):
                   [-sin(a)*cos(b2),  sin(b2),  -cos(a)*cos(b2)]])
     return v
 
+def rotMat(rr):
+    rotX = np.array([[1, 0, 0],
+                     [0, cos(rr[0]), -sin(rr[0])],
+                     [0, sin(rr[0]), cos(rr[0])]])
+    rotY = np.array([[cos(rr[1]), 0, sin(rr[1])],
+                     [0, 1, 0],
+                     [-sin(rr[1]), 0, cos(rr[1])]])
+    rotZ = np.array([[cos(rr[2]), -sin(rr[2]), 0],
+                     [sin(rr[2]), cos(rr[2]), 0],
+                     [0, 0, 1]])
+    return rotX @ rotZ @ rotY
+
+
 def createMip(a):
     b = a[:-1:2] + a[1::2]
     c = b[:,:-1:2] + b[:,1::2]
