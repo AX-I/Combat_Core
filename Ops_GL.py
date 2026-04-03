@@ -1186,8 +1186,6 @@ class CLDraw:
 
 
         if self.doSSAO:
-            ctx.disable(moderngl.DEPTH_TEST)
-
             self.ssaoFBO.use()
             self.ssaoProg['vscale'].write(np.float32(self.sScale))
             self.DBT.use(location=1)
@@ -1198,9 +1196,6 @@ class CLDraw:
             self.ssaoFBO2.use()
             self.ssaoBUF.use(location=0)
             self.ssaoBlurVao.render(moderngl.TRIANGLES)
-
-
-            ctx.enable(moderngl.DEPTH_TEST)
 
         self.fbo.use()
         self.fbo.depth_mask = True
@@ -1213,6 +1208,8 @@ class CLDraw:
         # Opaque
         for i in range(len(self.VBO)):
             if mask[i]: continue
+            if shaders[i]['shader'] in TRANSPARENT_SHADERS: continue
+
             vao = self.VAO[i]
 
             if 'cull' in shaders[i]:
@@ -1220,31 +1217,30 @@ class CLDraw:
             else:
                 ctx.disable(moderngl.CULL_FACE)
 
-            if not shaders[i]['shader'] in TRANSPARENT_SHADERS:
-                self.TEX[i].use(location=0)
+            self.TEX[i].use(location=0)
 
-                if 'alpha' in shaders[i]:
-                    sa = shaders[i]['alpha']
-                    self.TA[sa].use(location=2)
-                elif 'noise' in shaders[i]:
-                    self.noiseTex.use(location=2)
-                    self.DRAW[i]['RAND'] = 2
-                    self.DRAW[i]['useNoise'] = 1
-                    self.DRAW[i]['noiseDist'] = self.noiseDist
-                    self.DRAW[i]['noisePos'].write(self.noisePos.astype('float32'))
-                if 'normal' in shaders[i]:
-                    try:
-                        self.NM[shaders[i]['normal']].use(location=7)
-                    except KeyError:
-                        print('Normal map {} not found'.format(shaders[i]['normal']))
-                if 'ignoreShadow' in shaders[i]:
-                    self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
+            if 'alpha' in shaders[i]:
+                sa = shaders[i]['alpha']
+                self.TA[sa].use(location=2)
+            elif 'noise' in shaders[i]:
+                self.noiseTex.use(location=2)
+                self.DRAW[i]['RAND'] = 2
+                self.DRAW[i]['useNoise'] = 1
+                self.DRAW[i]['noiseDist'] = self.noiseDist
+                self.DRAW[i]['noisePos'].write(self.noisePos.astype('float32'))
+            if 'normal' in shaders[i]:
+                try:
+                    self.NM[shaders[i]['normal']].use(location=7)
+                except KeyError:
+                    print('Normal map {} not found'.format(shaders[i]['normal']))
+            if 'ignoreShadow' in shaders[i]:
+                self.DRAW[i]['ignoreShadow'] = shaders[i]['ignoreShadow']
 
-                if vao.extra:
-                    vao.render(moderngl.TRIANGLES,
-                               instances=vao.extra['num_inst'])
-                else:
-                    vao.render(moderngl.TRIANGLES)
+            if vao.extra:
+                vao.render(moderngl.TRIANGLES,
+                           instances=vao.extra['num_inst'])
+            else:
+                vao.render(moderngl.TRIANGLES)
 
         ctx.depth_func = '<'
         self.fbo.depth_mask = False
@@ -1318,8 +1314,6 @@ class CLDraw:
             if shader == 'add' or shader == 'sub':
                 if 'noline' not in shaders[i]:
                     vao.render(moderngl.LINES, instances=n_inst)
-
-        self.fbo.depth_mask = True
 
 
     def clearZBuffer(self):
@@ -1424,20 +1418,20 @@ class CLDraw:
         ctx.disable(moderngl.BLEND)
 
         for n in range(min(len(whichCast), len(self.SVA))):
-            if whichCast[n]:
-                if 'alpha' in shaders[n]:
-                    ta = shaders[n]['alpha']
-                    self.drawSA['TA'] = 2
-                    self.TA[ta].use(location=2)
+            if not whichCast[n]: continue
+            if 'alpha' in shaders[n]:
+                ta = shaders[n]['alpha']
+                self.drawSA['TA'] = 2
+                self.TA[ta].use(location=2)
 
-                sva = self.SVA[n]
-                if self.VBO[n].extra:
-                    sva.program['isInstanced'] = 1
-                    sva.render(moderngl.TRIANGLES, instances=self.VBO[n].extra['num_inst'])
-                else:
-                    try: sva.program['isInstanced'] = 0
-                    except: pass
-                    sva.render(moderngl.TRIANGLES)
+            sva = self.SVA[n]
+            if self.VBO[n].extra:
+                sva.program['isInstanced'] = 1
+                sva.render(moderngl.TRIANGLES, instances=self.VBO[n].extra['num_inst'])
+            else:
+                try: sva.program['isInstanced'] = 0
+                except: pass
+                sva.render(moderngl.TRIANGLES)
 
         sm['tex'].use(location=4+i)
         if 'sm_baked' in sm:
