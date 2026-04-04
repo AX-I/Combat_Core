@@ -1643,23 +1643,38 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 sobj[self.poles[0].texNum] = True
         return sobj
 
+    def serializePlayerState(self, a):
+        dat = {
+            "r1": np.round(a["b1"].offset[:3] - a['animOffset'], 3).tolist(),
+            "m1": int(a["moving"]),
+            "c1": a["cr"], 'c2': a['cv'],
+            'throwAnim': a['throwAnim'],
+            'fireColor': a['fireColor'],
+            "gg": a["gestNum"], "gi": a["gestId"],
+            "jp": a["jump"],
+            #"hf": a["isHit"]
+        }
+        if self.isClient:
+            dat.update({
+                "fire": self.frameFired,
+                "fire2": self.frameFiredOld,
+                "vh": float(self.vv[1]),
+                'fCam': self.fCam
+            })
+        else:
+            dat.update({
+                "hc": [c.hc for c in a["pv"].colliders],
+                "ee": a["Energy"],
+                'vh': a['vh']
+            })
+
+        return dat
+
     def sendState(self):
         dat = {}
         for i in self.actPlayers:
             a = self.players[i]
-            dat[a["num"]] = {
-                "r1": np.round(a["b1"].offset[:3] - a['animOffset'], 3).tolist(),
-                "m1": int(a["moving"]),
-                "c1": a["cr"], 'c2': a['cv'],
-                'throwAnim': a['throwAnim'],
-                'fireColor': a['fireColor'],
-                "hc": [c.hc for c in a["pv"].colliders],
-                "ee": a["Energy"],
-                "gg": a["gestNum"], "gi": a["gestId"],
-                "jp": a["jump"],
-                #"hf": a["isHit"]
-                'vh': a['vh']
-                }
+            dat[a["num"]] = self.serializePlayerState(a)
             if 'vr' in a:
                 dat[a['num']]['vr'] = float(a['cheight'])
             if 'vrC' in a:
@@ -1694,24 +1709,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
-        except: raise
 
     def sendPlayer(self):
         dat = {}
         a = self.players[self.selchar]
-        dat[a["num"]] = {
-            "r1": np.round(a["b1"].offset[:3] - a['animOffset'], 3).tolist(),
-            "m1": a["moving"],
-            "c1": a["cr"], 'c2': a['cv'],
-            "fire": self.frameFired,
-            "fire2": self.frameFiredOld,
-            'throwAnim': a['throwAnim'],
-            'fireColor': a['fireColor'],
-            "vh": float(self.vv[1]),
-            "gg": a["gestNum"], "gi": a["gestId"],
-            "jp": a["jump"],
-            'fCam': self.fCam
-            }
+        dat[a["num"]] = self.serializePlayerState(a)
         if self.VRMode:
             dat[a['num']]['vr'] = float(a['cheight'])
             if 'vrC' in a:
@@ -1723,133 +1725,136 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
         except queue.Full: pass
-        except: raise
 
     def recvState(self):
         while not self.qo.empty():
             try:
                 a = self.qo.get_nowait()
-                if len(a[1]) == 0: continue
-                try: b = json.loads(a[1])
-                except:
-                    print(a[1])
-                    raise
-                k = b["players"]
-                if self.isClient:
-                    try:
-                        self.activePlayers = b["act"]
-                    except KeyError:
-                        print("Username conflict!")
-                        return
+            except queue.Empty: continue
 
-                    if "Host" in self.lastTimes:
-                        if self.lastTimes["Host"] == int(b["time"]):
-                            continue
-                    self.lastTimes["Host"] = int(b["time"])
-
-                else:
-                    if a[0] in self.lastTimes:
-                        if self.lastTimes[a[0]] == int(b["time"]):
-                            continue
-
-                    self.activePlayers[a[0]] = list(k.keys())[0]
-                    self.lastTimes[a[0]] = int(b["time"])
-
-                for pn in k:
-                    pM = int(pn)
-                    sc = self.players[pM]
-                    a = k[pn]
-                    if "hc" in a:
-                        for i in range(len(a["hc"])):
-                            sc["pv"].colliders[i].hc = a["hc"][i]
-                    if pM == self.selchar: continue
-                    sc["b1"].offset[:3] = a["r1"][:3]
-                    sc["moving"] = a["m1"]
-                    sc["cr"] = a["c1"]
-                    sc['cv'] = a['c2']
-                    if 'vh' in a: sc['vh'] = a['vh']
-                    if 'fCam' in a: sc['fCam'] = a['fCam']
-                    if "ee" in a: sc["Energy"] = a["ee"]
-                    if "fire" in a:
-                        if a["fire"]:
-                            self.fire(a["fire"], pM, a["vh"])
-                    if "fire2" in a:
-                        if a["fire2"]:
-                            self.fire(a["fire2"], pM, a["vh"])
-
-                    if 'throwAnim' in a: # IMPLIES 'fireColor' in a
-                        #print(pn, a['throwAnim'])
-                        if a['throwAnim'] and not sc['throwAnim']:
-                            sc['throwAnim'] = a['throwAnim']
-                            sc['fireColor'] = a['fireColor']
-                            sc['animFired'] = False
-                            sc['fireVH'] = a['vh']
-                            sc['poseThrow'] = self.throwKF[0][0]
-
-                    if a["gg"] is not None:
-                        if self.players[pM]["gestNum"] != a["gg"]:
-                            if self.players[pM]["gestId"] != a["gi"]:
-                                self.gesture(pM, a["gg"], a["gi"])
-
-                    if a["jp"] > 0:
-                        if self.players[pM]["jump"] < 0:
-                            if a["jp"] != -self.players[pM]["jump"]:
-                                self.jump(pM)
-
-                    if 'vr' in a:
-                        self.players[pM]['vr'] = a['vr']
-                        self.players[pM]['cheight'] = a['vr']
-                        if 'vrC' in a:
-                            self.players[pM]['vrC'] = a['vrC']
-
-                    #if "hf" in a:
-                    #    self.players[int(pn)]["isHit"] = a["hf"]
-                if "sp" in b:
-                    for x in range(len(b["sp"])):
-                        self.srbs[x].pos = np.array(b["sp"][x]["pos"])
-                        self.srbs[x].v = np.array(b["sp"][x]["vel"])
-                        self.srbs[x].disabled = b["sp"][x]["dis"]
-                if "exp" in b:
-                    for x in range(len(b["exp"])):
-                        cx = b["exp"][x]
-                        if cx["on"] and not self.exploders[x]["active"]:
-                            if cx["sc"] < 10:
-                                vpos = np.array(cx["pos"])
-                                self.explode(vpos, force=True, eNum=x)
-                if "pu" in b:
-                    p = b["pu"]
-                    if p["p"] is not None:
-                        if self.pickups[0]["pos"] is None:
-                            self.plantPickup(np.array(p["p"]), p["t"])
-                    else:
-                        if self.pickups[0]["pos"] is not None:
-                            self.resetPickup()
-                if "ff" in b:
-                    self.fireSnd(b["ff"])
-                if "rl" in b:
-                    if self.directionalLights[0]["dir"][1] != b["rl"]:
-                        self.rotateLight(b["rl"])
-                if 'restPlayer' in b:
-                    if b['restPlayer'] is not None and self.restPlayer is None:
-                        if b['restPlayer'] != self.lastRestPlayer:
-                            self.respawnTest(b['restPlayer'])
-
-                if 'trans' in b:
-                    try:
-                        if self.transSync != b['trans']:
-                            self.lightTest()
-                            self.transSync = b['trans']
-                    except AttributeError:
-                        self.lightTest()
-                        self.transSync = b['trans']
-
-                if 'STAGEFLAGS' in b:
-                    self.stageFlags = b['STAGEFLAGS']
-
-            except queue.Empty: pass
+            try:
+                self._recvState(a)
             except KeyError:
                 raise #print("Game has already finished!")
-            except: raise
+
+    def _recvState(self, a):
+        if len(a[1]) == 0: return
+        try: b = json.loads(a[1])
+        except:
+            print(a[1])
+            raise
+        k = b["players"]
+        if self.isClient:
+            try:
+                self.activePlayers = b["act"]
+            except KeyError:
+                print("Username conflict!")
+                return
+
+            if "Host" in self.lastTimes:
+                if self.lastTimes["Host"] == int(b["time"]):
+                    return
+            self.lastTimes["Host"] = int(b["time"])
+
+        else:
+            if a[0] in self.lastTimes:
+                if self.lastTimes[a[0]] == int(b["time"]):
+                    return
+
+            self.activePlayers[a[0]] = list(k.keys())[0]
+            self.lastTimes[a[0]] = int(b["time"])
+
+        for pn in k:
+            pM = int(pn)
+            sc = self.players[pM]
+            a = k[pn]
+            if "hc" in a:
+                for i in range(len(a["hc"])):
+                    sc["pv"].colliders[i].hc = a["hc"][i]
+            if pM == self.selchar: continue
+            sc["b1"].offset[:3] = a["r1"][:3]
+            sc["moving"] = a["m1"]
+            sc["cr"] = a["c1"]
+            sc['cv'] = a['c2']
+            if 'vh' in a: sc['vh'] = a['vh']
+            if 'fCam' in a: sc['fCam'] = a['fCam']
+            if "ee" in a: sc["Energy"] = a["ee"]
+            if "fire" in a:
+                if a["fire"]:
+                    self.fire(a["fire"], pM, a["vh"])
+            if "fire2" in a:
+                if a["fire2"]:
+                    self.fire(a["fire2"], pM, a["vh"])
+
+            if 'throwAnim' in a: # IMPLIES 'fireColor' in a
+                #print(pn, a['throwAnim'])
+                if a['throwAnim'] and not sc['throwAnim']:
+                    sc['throwAnim'] = a['throwAnim']
+                    sc['fireColor'] = a['fireColor']
+                    sc['animFired'] = False
+                    sc['fireVH'] = a['vh']
+                    sc['poseThrow'] = self.throwKF[0][0]
+
+            if a["gg"] is not None:
+                if self.players[pM]["gestNum"] != a["gg"]:
+                    if self.players[pM]["gestId"] != a["gi"]:
+                        self.gesture(pM, a["gg"], a["gi"])
+
+            if a["jp"] > 0:
+                if self.players[pM]["jump"] < 0:
+                    if a["jp"] != -self.players[pM]["jump"]:
+                        self.jump(pM)
+
+            if 'vr' in a:
+                self.players[pM]['vr'] = a['vr']
+                self.players[pM]['cheight'] = a['vr']
+                if 'vrC' in a:
+                    self.players[pM]['vrC'] = a['vrC']
+
+            #if "hf" in a:
+            #    self.players[int(pn)]["isHit"] = a["hf"]
+        if "sp" in b:
+            for x in range(len(b["sp"])):
+                self.srbs[x].pos = np.array(b["sp"][x]["pos"])
+                self.srbs[x].v = np.array(b["sp"][x]["vel"])
+                self.srbs[x].disabled = b["sp"][x]["dis"]
+        if "exp" in b:
+            for x in range(len(b["exp"])):
+                cx = b["exp"][x]
+                if cx["on"] and not self.exploders[x]["active"]:
+                    if cx["sc"] < 10:
+                        vpos = np.array(cx["pos"])
+                        self.explode(vpos, force=True, eNum=x)
+        if "pu" in b:
+            p = b["pu"]
+            if p["p"] is not None:
+                if self.pickups[0]["pos"] is None:
+                    self.plantPickup(np.array(p["p"]), p["t"])
+            else:
+                if self.pickups[0]["pos"] is not None:
+                    self.resetPickup()
+        if "ff" in b:
+            self.fireSnd(b["ff"])
+        if "rl" in b:
+            if self.directionalLights[0]["dir"][1] != b["rl"]:
+                self.rotateLight(b["rl"])
+        if 'restPlayer' in b:
+            if b['restPlayer'] is not None and self.restPlayer is None:
+                if b['restPlayer'] != self.lastRestPlayer:
+                    self.respawnTest(b['restPlayer'])
+
+        if 'trans' in b:
+            try:
+                if self.transSync != b['trans']:
+                    self.lightTest()
+                    self.transSync = b['trans']
+            except AttributeError:
+                self.lightTest()
+                self.transSync = b['trans']
+
+        if 'STAGEFLAGS' in b:
+            self.stageFlags = b['STAGEFLAGS']
+
 
     def getHealth(self, pn):
         dmg = sum([a.hc for a in self.players[pn]["pv"].colliders]) / self.maxHP
