@@ -963,6 +963,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         ps.shader = 2
 
 
+    def addPlayerModel(self, mfile):
+        mpath = PATH + "../Models/"
+
+        kwargs = self.modelConfig[mfile]
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath + mfile,
+            animated=True, shadow='R',
+            **kwargs)
+
     def createObjects(self):
         if self.stage < 4:
             snd = self.ENVTRACKS
@@ -984,13 +994,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.footSize = rigData['footSize']
         self.breathRate = rigData['breathRate']
 
+        with open(mpath+'ModelConfig.json') as fi:
+            self.modelConfig = json.load(fi)
 
-        self.addVertObject(
-            VertModel, [0,0,0],
-            filename=mpath+'Body/B10Fc.obj',
-            animated=True, mip=1, texMode=None,
-            scale=0.2, rot=(0,0,0),
-            shadow='R')
+        self.addPlayerModel('Body/B10Fc.obj')
         for f in self.vtNames:
             mat = self.matShaders[self.vtNames[f]]
             if 'Cornea' in f:
@@ -1013,28 +1020,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 mat.update(normal='ClothTrim')
             if 'Clothes' in f:
                 mat.update(normal='Clothes', args={'NMmipBias':0.1})
-
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(
-            VertModel, [0,0,0],
-            filename=mpath+"Samus_PED/Samus_3B.obj",
-            animated=True, texMul=1, reflect="1a",
-            useShaders={'args':{'specular':1}},
-            scale=1.33, shadow="")
+        self.addPlayerModel("Samus_PED/Samus_3B.obj")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         extractByUV(t1, t2, 0,0.25,0,0.25)
         self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
-
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(
-            VertModel, [0,0,0],
-            filename=mpath+"Zelda2/Test5b.obj",
-            animated=True, texMul=2.5,
-            useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
-            scale=0.33, shadow="R")
+        self.addPlayerModel("Zelda2/Test5b.obj")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
@@ -1043,15 +1038,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                   'translucent':1, 'roughness':0.12, 'f0':0.6,
                   'hairShading':1, 'tangentDir': 1},
             normal='Z2H')
-
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(
-            VertModel, [0,0,0],
-            filename=mpath+"L3/L3.obj",
-            animated=True, texMul=1,
-            useShaders={'args':{'specular': 1}, 'normal':'Link'},
-            scale=0.75, shadow="R")
+        self.addPlayerModel("L3/L3.obj")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         extractByUV(t1, t2, 0.5,0.75,0,0.25)
@@ -1060,16 +1049,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                   'translucent':1, 'roughness':0.12, 'f0':0.6,
                   'hairShading':1, 'tangentDir': 1},
             normal='L3H')
-
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"Test3/Test3J.obj",
-                animated=True, useShaders={'args':{'specular':1}},
-                scale=0.8 / 1.08, shadow="R")
-
+            self.addPlayerModel("Test3/Test3J.obj")
             t1 = self.vertObjects[-1]
             t2 = self.vertObjects[-3]
             extractByUV(t1, t2, 352/1024,(352+128)/1024,513/1024,(513+256)/1024)
@@ -1079,41 +1062,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.matShaders[self.vertObjects[-1].nextMtl.texNum].update(
                 shader='sub', args={'emPow':0.6}, noline=True)
 
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"Zelda/Ztest4.obj",
-                animated=True,
-                texMul=2, useShaders={'args':{'specular':1}},
-                scale=1, shadow="R")
+            self.addPlayerModel("Zelda/Ztest4.obj")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"LinkTP/Li.obj",
-                animated=True,
-                texMul=1.5, useShaders={'args':{'specular':1}},
-                scale=0.75, shadow="R")
+            self.addPlayerModel("LinkTP/Li.obj")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"Ahri/Ahri4.obj",
-                animated=True, useShaders={'args':{'specular':1}},
-                scale=1.8, shadow="R")
+            self.addPlayerModel("Ahri/Ahri4.obj")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"Stormtrooper/Trooper5.obj",
-                animated=True, useShaders={'args':{'specular':1}},
-                scale=1.4, shadow="R")
+            self.addPlayerModel("Stormtrooper/Trooper5.obj")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(
-                VertModel, [0,0,0],
-                filename=mpath+"Vader/Vader5.obj",
-                animated=True, useShaders={'args':{'specular':1}},
-                scale=1.6, shadow="R")
+            self.addPlayerModel("Vader/Vader5.obj")
             self.addPlayer(self.vertObjects[-1])
 
         self.baseVertObjN = len(self.vertObjects)
