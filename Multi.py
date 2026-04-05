@@ -29,7 +29,7 @@ import numpy
 import numpy.random as nr
 import random
 import time
-from Utils import displayFPS
+from Utils import displayFPS, writeAVShaderDefines
 
 nr.seed(int((time.time() * 1000) % 1000))
 random.seed(int((time.time() * 1000) % 1000))
@@ -156,30 +156,17 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.dofLvl = kwargs['DOF']
         self.renderBackend = kwargs["Render"]
 
-        ssrLevels = [0, 160, 320, 640]
-
-        with open(PATH + "Shaders_src/av_SSR_temp.c") as f:
-            with open(PATH + "Shaders_src/av_SSR.c", "w") as g:
-                for i in f.readlines():
-                    if i[0] == "#":
-                        if "REFL_LENGTH" in i:
-                            i = " ".join(i.split(" ")[:-1]) + " "
-                            i += str(ssrLevels[self.doSSR]) + "\n"
-                    g.write(i)
-
-        rvlLevels = [0, 8, 16, 64]
-        absLevel = 0.06
-        with open(PATH + "Shaders_src/av_fog_temp.c") as f:
-            with open(PATH + "Shaders_src/av_fog.c", "w") as g:
-                for i in f.readlines():
-                    if i[0] == "#":
-                        if "NSAMPLES" in i:
-                            i = " ".join(i.split(" ")[:-1]) + " "
-                            i += str(rvlLevels[self.doRTVL]) + "\n"
-                        elif "ABSORB" in i:
-                            i = " ".join(i.split(" ")[:-1]) + " "
-                            i += str(absLevel) + "f\n"
-                    g.write(i)
+        if self.renderBackend == 'CL':
+            ssrLevels = [0, 160, 320, 640]
+            rvlLevels = [0, 8, 16, 64]
+            absLevel = 0.06
+            sd = {
+                PATH+"Shaders_src/av_SSR_temp.c":{
+                    "REFL_LENGTH":ssrLevels[self.doSSR]},
+                PATH+"Shaders_src/av_fog_temp.c":{
+                    "NSAMPLES":rvlLevels[self.doRTVL],
+                    "ABSORB":absLevel}}
+            writeAVShaderDefines(sd)
 
         stageNames = ["Desert", "CB Atrium", "Taiga",
                       "New Stage", "Forest", 'Strachan']

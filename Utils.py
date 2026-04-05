@@ -176,3 +176,17 @@ def openZfile(fi, mode='r'):
         return io.StringIO(s, newline=None)
     elif mode == 'rb':
         return io.BytesIO(raw)
+
+
+def writeAVShaderDefines(sd: dict):
+    '''sd = {"shader_temp.c":{"DEF":val, ...}, ...}'''
+    for fi in sd:
+        fo = fi.replace('_temp.', '.')
+        with open(fi) as f, open(fo, 'w') as g:
+            for i in f.readlines():
+                if i[0] == "#":
+                    for sdef in sd[fi]:
+                        if sdef in i:
+                            i = " ".join(i.split(" ")[:-1]) + " "
+                            i += str(sd[fi][sdef]) + "\n"
+                g.write(i)
