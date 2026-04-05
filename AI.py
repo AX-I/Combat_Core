@@ -59,9 +59,13 @@ def sightLine(target, current, navMap, clear=False, relax=0):
     for i in range(diff-relax):
         cy = cpos[0] + i*slopey
         cx = cpos[1] + i*slopex
-        if not navMap["map"][int(cy), int(cx)]:
-            visible = False
-            break
+        try:
+            if not navMap["map"][int(cy), int(cx)]:
+                visible = False
+                break
+        except IndexError:
+            # out of bounds
+            return True
 
         if not clear: continue
 
@@ -421,8 +425,12 @@ class AIManager:
         cpos = (a["b1"].offset[:3] - navMap["origin"])[::2] / navMap["scale"]
         cpos = np.round(cpos).astype("int")
 
-        if hm[tuple(cpos)] == False:
-            agent.behavior["follow"] += 0.1
+        try:
+            if hm[tuple(cpos)] == False:
+                agent.behavior["follow"] += 0.1
+        except IndexError:
+            # out of bounds
+            return
 
         nav = False
         try:
