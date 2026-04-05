@@ -1891,6 +1891,22 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i['ps'] = ps
         i['ps'].shader = 2
 
+    def seedPickups(self):
+        for i in self.pickups:
+            if i["pos"] is not None: continue
+
+            xy = self.BORDER[0]+5 + nr.rand(2)*(self.stageSize-10)
+            plant = True
+            if self.stage == 1:
+                if self.terrain.getHeight(*xy) > 2:
+                    continue
+            for a in self.players:
+                dist = np.sum(np.abs(xy - a["b1"].offset[::2]))
+                if dist < 5: plant = False
+            if plant:
+                newpos = np.array((xy[0], self.terrain.getHeight(*xy) + 0.8, xy[1]))
+                self.plantPickup(newpos)
+
     def resetPickup(self):
         i = self.pickups[0]
         cs, ce, tn = i["obj"].cStart, i["obj"].cEnd, i["obj"].texNum
@@ -1899,6 +1915,408 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         i['t'] = -self.frameNum
 
     def qq(self): self.doQuit = True
+
+
+    # ==== Gameloop functions ====
+    def checkAlive(self):
+        endText = [("WIN", (60, 220, 120, 255)),
+                   ("LOSE", (220, 60, 80, 255)),
+                   ("DRAW", (128, 192, 255, 255))]
+
+        alive = 0
+        for pn in self.actPlayers:
+            alive += self.getHealth(pn) > 0
+
+        if alive <= 1:
+            try: f = self.endTime
+            except:
+                self.endTime = time.time()
+                snd = self.ENVTRACKS
+                self.si.put({'Loop':{'Track':PATH+"../Sound/" + snd[self.stage],
+                                     'loop': False}})
+            if (time.time() - self.endTime) > 16:
+                self.uInfo["Quit"] = "Press R to return to menu"
+                if not self.waitFinished:
+                    self.bindKey("r", self.qq)
+                    self.waitFinished = True
+        if alive == 1:
+            c = self.getHealth(self.selchar)
+            if c > 0:
+                self.WIN = True
+                self.uInfo["End"] = endText[0]
+            else: self.uInfo["End"] = endText[1]
+        elif alive == 0: self.uInfo["End"] = endText[2]
+
+    def checkEnergy(self, a):
+        if a["Energy"] > 0.95:
+            if self.getHealth(a["id"]) < 0.95:
+                a["pv"].colliders[0].hc -= 0.01
+
+        tn = a["id"]
+        if self.getHealth(tn) <= 0:
+            if "deathTime" not in a:
+                a["deathTime"] = time.time()
+                for xn in a["ctexn"]:
+                    self.matShaders[xn] = {'temp': self.matShaders[xn]}
+
+            a['pv'].disable(disableKinematics=False)
+            a["Energy"] = 0
+            tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
+            for xn in a["ctexn"]:
+                self.matShaders[xn]['shader'] = "sub"
+                self.matShaders[xn]['args'] = {'emPow':tr}
+            g = a["ghost"]
+            if (not self.VRMode) or (self.frameNum & 1):
+                g.changePos(a["b1"].offset[:3])
+                g.step()
+        elif tn not in self.actPlayers:
+            a["pv"].pos[:] = -10.
+            a['pv'].disable()
+        else:
+            a['pv'].enable()
+            a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0]) \
+                          - a['animOffset'] + np.array([0,a['legIKoffset'],0])
+            a["Energy"] += 0.05 * self.frameTime
+            a["Energy"] = min(1, a["Energy"])
+
+    def footstepSnd(self, a):
+        sfn = ['Short_Heavy_0{}.wav', 'StonyPath_0{}.wav']
+        sf = sfn[self.stage&1]
+
+        if self.stage == 2:
+            sf = 'Short_Heavy_0{}.wav'
+            if self.iceMap.getHeight(*a['b1'].offset[::2]):
+                sf = 'StonyPath_0{}.wav'
+
+        if self.stage == 4:
+            sf = 'Short_Heavy_0{}.wav'
+            if a['b1'].offset[0] < 12 and \
+               -2 < a['b1'].offset[2] < 41:
+                sf = 'StonyPath_0{}.wav'
+
+        sf = sf.format(random.randint(1, 6))
+        self.si.put({"Play":(PATH+'../Sound/New/'+sf,
+                             self.volmFX / 2,
+                             (a['b1'].offset[:3], 6, 1.2))})
+
+    def playerMove(self, a):
+        CURRTIME = self.CURRTIME
+
+        hvel = self.hvel
+        maxSlope = 1
+        maxStep = 0.4
+
+        a['pv'].noforces = (a['jump'] < 0)
+
+        if a["jump"] > 0:
+            ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
+            if (ih + a["cheight"]) > a["b1"].offset[1]:
+                # stuck on side of terrain
+                vx,vy = a['pv'].v[::2]
+                if vx*vx+vy*vy > 0.0001:
+                    a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
+
+            ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
+            if (ih + a["cheight"]) > a["b1"].offset[1]:
+                # landed on terrain
+                a["jump"] = -a["jump"]
+                self.setYoffset(a)
+
+                self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
+                                     abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
+                                     (a['b1'].offset[:3], 6, 1))})
+
+                if abs(a["pv"].v[1]) > 8:
+                    a["pv"].colliders[0].hc += abs(abs(a["pv"].v[1]) - 6)
+                    a["isHit"] = self.frameNum
+
+                a['pv'].forces[0,1] = 0
+                a['pv'].v[:] = 0
+
+
+        a['pv'].v[::2] *= 1 - 0.04 * Phys.eucLen(a['pv'].v) * self.frameTime
+
+        if Phys.eucLen(a['pv'].v) < 0.01:
+            a['pv'].v *= 0
+
+        if a["gesturing"]:
+            a["moving"] = 0
+            self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
+
+        if a["moving"]:
+            transKF = self.transStartKF if a['moving'] > 0 else 4
+            if not a['movingOld']:
+                a['animTrans'] = CURRTIME
+                a['poset'] = self.keyFrames[transKF][0]
+                a['tempPose'] = a['rig'].exportPoseFlat()
+
+            bx = hvel*a["moving"]*cos(a["cr"])
+            by = hvel*a["moving"]*sin(a["cr"])
+            if a["fCam"]:
+                bx += hvel/3 * cos(a["cr"] + pi/2) * a["cv"]
+                by += hvel/3 * sin(a["cr"] + pi/2) * a["cv"]
+
+                d = sqrt(bx*bx + by*by) / hvel
+                bx /= d; by /= d
+
+            if a['moving'] < 0:
+                bx *= 0.9; by *= 0.9
+
+            jbx = bx; jby = by
+            bx *= self.frameTime; by *= self.frameTime
+
+            if CURRTIME - a['animTrans'] < 0.2:
+                fact = (CURRTIME - a['animTrans']) / 0.2
+                fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                bx *= fact; by *= fact
+
+            ax, ay = a["b1"].offset[::2] - a['animOffset'][::2]
+            ih = self.STAGECONFIG.getHeight(self,
+                    np.array([ax + bx, a['b1'].offset[1], ay + by])) + a["cheight"]
+
+            navheight = a["b1"].offset[1] + a['legIKoffset']
+            slopeOk = (ih - navheight) < (hvel*self.frameTime * maxSlope)
+            stepOk = (ih - navheight) < maxStep
+            fx = a["b1"].offset[0] + bx
+            fy = a["b1"].offset[2] + by
+            b1, b2 = self.BORDER
+            borderOk = (b1 < fx < b2) and (b1 < fy < b2)
+
+            if (slopeOk or stepOk) and borderOk:
+                if a["jump"] <= 0:
+                    a["b1"].offset[0] += bx
+                    a["b1"].offset[2] += by
+                    if (navheight - ih) > maxStep:
+                        # fell off terrain
+                        a['jump'] = self.frameNum
+                        a['pv'].forces[0,1] = -9.81
+                        a['pv'].v[1] = 0.0
+
+                if a["jump"] <= 0:
+                    a['pv'].v[::2] = (jbx, jby)
+
+                    self.setYoffset(a)
+
+                    if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
+                        a['lastStep'] = time.time()
+                        self.footstepSnd(a)
+
+                playerStuck = False
+            elif not borderOk:
+                if (a["b1"].offset[0] < b1): a["b1"].offset[0] = b1
+                elif (a["b1"].offset[0] > b2): a["b1"].offset[0] = b2
+                if (a["b1"].offset[2] < b1): a["b1"].offset[2] = b1
+                elif (a["b1"].offset[2] > b2): a["b1"].offset[2] = b2
+                playerStuck = True
+            else:
+                playerStuck = True
+
+
+            if not self.isClient:
+                if a['id'] in self.aiNums:
+                    self.agents[a['id']].isStuck = playerStuck
+
+            df = 1# + 3*self.VRMode
+
+            if CURRTIME - a['animTrans'] < 0.2:
+                # print('Trans idle->walk')
+                fact = (CURRTIME - a['animTrans']) / 0.2
+                fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                a["rig"].interpPoseFlat(a['tempPose'], self.keyFrames[transKF][3], fact)
+
+                off = np.array(self.keyFrames[transKF][2])
+                if a['moving'] < 0: off[1] = -0.4 * off[1] - 0.08
+                off = (off @ a['b1'].rotMat) * fact
+                off += a['b1'].lastOffset * (1-fact)
+                a['b1'].offset[:3] += off - a['b1'].lastOffset
+                a['b1'].lastOffset = off
+                a['animOffset'] = off
+            else:
+                self.stepPoseLoop(a, a["obj"], self.keyFrames,
+                                  df*self.frameTime * self.poseDt*a["moving"],
+                                  isFlat=True)
+
+        elif a["movingOld"]:
+            if a['jump'] <= 0:
+                a['pv'].v[:] = 0
+            a['animTrans'] = CURRTIME
+            a['tempPose'] = a['rig'].exportPoseFlat()
+
+        if not a['moving'] and not a['gesturing']:
+            if CURRTIME - a['animTrans'] < 0.2:
+                # print('Trans walk->idle')
+                fact = (CURRTIME - a['animTrans']) / 0.2
+                fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
+                a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, fact)
+
+                off = a['b1'].lastOffset * (1-fact)
+                a['b1'].offset[:3] += off - a['b1'].lastOffset
+                a['b1'].lastOffset = off
+                a['animOffset'] = off
+            elif a['animTrans'] > 0:
+                a['rig'].importPose(self.idle, updateRoot=False)
+                a['animTrans'] *= -1
+
+        if self.frameNum - a['frameFired'] == 1:
+            if a['fireColor'] == 'blank':
+                a['projFXstart'] = CURRTIME
+            else:
+                a['throwAnim'] = True
+                a['animFired'] = False
+                a['poseThrow'] = self.throwKF[0][0]
+
+        if a['projFXstart'] > 0:
+            fxpos = a["b1"].offset[:3]
+            fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
+
+            a['projFX'].target = fxpos + fxoff
+            a['projFX'].changePos(fxpos + 0.6*fxoff)
+            a['projFX'].step(self.frameTime)
+            if CURRTIME - a['projFXstart'] > 0.12:
+                a['projFX'].reset()
+                a['projFXstart'] = -1
+
+                vh = a['fireVH']
+                if vh is None: vh = self.vv[1]
+                self.fire('blank', a['id'], vh)
+                a['frameFired'] = -100
+
+        if a['throwAnim']:
+            self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2.2,
+                              loop=False, bone=a['b1'].children[0],
+                              timer='poseThrow')
+            if not a['animFired'] and a['poseThrow'] > self.throwKF[5][0]:
+                a['animFired'] = True
+                self.fire(a['fireColor'], a['id'], a['fireVH'], throw=True)
+                a['frameFired'] = -100
+            if a['poseThrow'] > self.throwKF[-1][0]:
+                a['throwAnim'] = False
+
+
+        a["b1"].updateTM()
+
+        if CURRTIME - a['animTrans'] < 0.2:
+            self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.4)
+
+            self.setFullLegIKPos(a)
+
+            a['b1TempOff'] = np.array(a['animOffset'])
+
+        if a['throwAnim'] or a['gesturing']:
+            self.testLegIK(a)
+
+        if not a['moving'] and a['jump'] <= 0 and 'restAnim' not in a:
+            self.setYoffset(a)
+            if 'lastIKfacing' in a:
+                if abs(a['cr'] - a['lastIKfacing']) > 0.45*pi:
+                    a['animTrans'] = CURRTIME
+                    a['tempPose'] = a['rig'].exportPoseFlat()
+
+        if not a['moving'] and not a['gesturing'] \
+           and not a['throwAnim'] and 'restAnim' not in a \
+           and a['animTrans'] < 0 and ('poseFlash' not in a or \
+                                       a['poseFlash'] > self.flashKF[-1][0]):
+
+            breathRate = 0.5 # Between 0.5 and 1 is best
+
+            breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
+
+            self.stepPoseLoop(a, a['obj'], self.idlingTest,
+                              self.frameTime * (breathRate + 0.6)/2,
+                              loop=True, timer='poseIdle',
+                              offsetMult=breathRate * 0.9,
+                              isFlat=True)
+
+            a['tempPose'] = a['rig'].exportPoseFlat()
+            a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, 1 - breathRate * 0.9)
+
+
+            if CURRTIME + a['animTrans'] < 0.5:
+                # print('Trans idle->breathing')
+                fact = (CURRTIME + a['animTrans']) / 0.5
+
+                a['tempPose'] = a['rig'].exportPoseFlat()
+                a['rig'].interpPoseFlat(self.idleFlat, a['tempPose'], fact)
+
+                off = (1-fact) * a['b1TempOff'] + fact * a['animOffset']
+                a['b1'].offset[:3] += off - a['animOffset']
+                a['b1'].lastOffset = off
+                a['animOffset'] = off
+
+        # Include throwing for leg IK
+        if not a['moving'] and 'restAnim' not in a and a['animTrans'] < 0:
+
+            if 'vrC' in a:
+                armU = a['b1'].children[0].children[0]
+                armU.rotate((0,0,0))
+                armU.children[0].rotate((0,0,0))
+
+            a["rig"].b0.getTransform()
+
+            if a['id'] == self.selchar and self.cam1P \
+               and self.VRMode and self.frameNum > 1:
+                head = a['b1'].children[0].children[2]
+                hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
+                hpos -= a['b1'].offset[:3]
+                test = self.VRHandPos - self.VRpos + hpos
+                a['vrC'] = np.round(test, 3).tolist()
+
+                # For debug
+                ts = self.testSphere
+                diff = a['b1'].offset[:3] + test - ts.coords
+                self.draw.translate(diff, ts.cStart,
+                                    ts.cEnd, ts.texNum)
+                ts.coords += diff
+
+            if 'vrC' in a:
+                test = np.array(a['vrC'])
+                handLen = 0.7 if a['id'] == 0 else 0.1
+                doArmIK(a['b1'].children[0].children[0],
+                        a['b1'].offset[:3] + test, handLen)
+
+            footSize = self.footSize[a['id']]
+
+            # Skis
+            if self.stage == 2:
+                if a['id'] == self.selchar:
+                    footSize += 0.08
+
+            try: ikR, ikL = a['legIKPos']
+            except KeyError: pass
+            else:
+                try:
+                    interp = None
+                    if CURRTIME + a['animTrans'] < 0.4:
+                        interp = (CURRTIME + a['animTrans']) / 0.4
+                    doFullLegIK(a['b1'].children[1], ikR, a, footSize, interp)
+                    doFullLegIK(a['b1'].children[2], ikL, a, footSize, interp)
+                except IndexError:
+                    pass
+
+
+        if not self.fCam or a['id'] != self.selchar:
+            interp = None
+            if not a['moving'] and CURRTIME - a['animTrans'] < 0.2:
+                interp = (CURRTIME - a['animTrans']) / 0.2
+            self.testAnim(a, interp)
+
+        if a['fCam'] and a['id'] not in self.aiNums:
+            if a['id'] == self.selchar:
+                a['vh'] = self.vv[1]
+            torso = a['b1'].children[0]
+            head = a['b1'].children[0].children[2]
+            ang = head.angles
+            ang[1] = 0
+            ang[2] = -asin(a['vh']) - torso.angles[2]
+            head.rotate(ang)
+
+        self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+
+        if not a["fCam"]:
+            a["cr"] += a["cv"] * self.frameTime
+
+        a["b1"].rotate([0,a["cr"],0])
+        a["movingOld"] = a["moving"]
 
 
     def frameUpdate(self):
@@ -1926,6 +2344,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         CURRTIME = time.time()
+        self.CURRTIME = CURRTIME
 
         sc = self.selchar
 
@@ -1946,39 +2365,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         ic = self.isClient
 
-        endText = [("WIN", (60, 220, 120, 255)),
-                   ("LOSE", (220, 60, 80, 255)),
-                   ("DRAW", (128, 192, 255, 255))]
-
         if len(actPlayers) > 1:
             if not self.gameStarted and self.stage < 4:
                 snd = self.ENVTRACKS
                 self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
                 self.gameStarted = True
 
-            alive = 0
-            for pn in actPlayers:
-                alive += self.getHealth(pn) > 0
-
-            if alive <= 1:
-                try: f = self.endTime
-                except:
-                    self.endTime = time.time()
-                    snd = self.ENVTRACKS
-                    self.si.put({'Loop':{'Track':PATH+"../Sound/" + snd[self.stage],
-                                         'loop': False}})
-                if (time.time() - self.endTime) > 16:
-                    self.uInfo["Quit"] = "Press R to return to menu"
-                    if not self.waitFinished:
-                        self.bindKey("r", self.qq)
-                        self.waitFinished = True
-            if alive == 1:
-                c = self.getHealth(self.selchar)
-                if c > 0:
-                    self.WIN = True
-                    self.uInfo["End"] = endText[0]
-                else: self.uInfo["End"] = endText[1]
-            elif alive == 0: self.uInfo["End"] = endText[2]
+            self.checkAlive()
 
         self.testRest()
 
@@ -1986,11 +2379,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if SHOWALL:
             self.renderMask = [False for x in range(len(self.vtNames))]
             actPlayers = list(range(len(self.players)))
-
-
-        hvel = self.hvel
-        maxSlope = 1
-        maxStep = 0.4
 
 
         if self.frameNum == 0:
@@ -2028,36 +2416,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         for a in self.players:
-            if a["Energy"] > 0.95:
-                if self.getHealth(a["id"]) < 0.95:
-                    a["pv"].colliders[0].hc -= 0.01
-
-            tn = a["id"]
-            if self.getHealth(tn) <= 0:
-                if "deathTime" not in a:
-                    a["deathTime"] = time.time()
-                    for xn in a["ctexn"]:
-                        self.matShaders[xn] = {'temp': self.matShaders[xn]}
-
-                a['pv'].disable(disableKinematics=False)
-                a["Energy"] = 0
-                tr = 0.6 + 0.32 * min(40, (time.time() - a["deathTime"])*10) / 40
-                for xn in a["ctexn"]:
-                    self.matShaders[xn]['shader'] = "sub"
-                    self.matShaders[xn]['args'] = {'emPow':tr}
-                g = a["ghost"]
-                if (not self.VRMode) or (self.frameNum & 1):
-                    g.changePos(a["b1"].offset[:3])
-                    g.step()
-            elif tn not in actPlayers:
-                a["pv"].pos[:] = -10.
-                a['pv'].disable()
-            else:
-                a['pv'].enable()
-                a["pv"].pos = a["b1"].offset[:3] + np.array([0,-0.5,0]) \
-                              - a['animOffset'] + np.array([0,a['legIKoffset'],0])
-                a["Energy"] += 0.05 * self.frameTime
-                a["Energy"] = min(1, a["Energy"])
+            self.checkEnergy(a)
 
         self.frameProfile('Ghost/Energy')
 
@@ -2186,28 +2545,29 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         for i in range(len(self.exploders)):
             e = self.exploders[i]
-            if e["active"]:
-                for a in self.players:
-                    if a["id"] not in actPlayers: continue
-                    if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 4):
-                        a["pv"].colliders[0].hc += self.expPow / max(4, e["scale"]) * (self.frameTime * 20)
-                        a["isHit"] = self.frameNum
+            if not e["active"]: continue
 
-                frameScale = self.exscale ** (time.time() - e["start"])
+            for a in self.players:
+                if a["id"] not in actPlayers: continue
+                if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 4):
+                    a["pv"].colliders[0].hc += self.expPow / max(4, e["scale"]) * (self.frameTime * 20)
+                    a["isHit"] = self.frameNum
 
-                cs, ce, tn = e["obj"].cStart, e["obj"].cEnd, e["obj"].texNum
-                self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
-                e["scale"] *= frameScale / e["scale"]
-                self.matShaders[tn].update(args={'emPow': 2 / e["scale"]})
+            frameScale = self.exscale ** (time.time() - e["start"])
 
-                self.expLights[i] = {"pos": e["pos"], "i":np.array((40,40,10.)) / e["scale"]}
-                if e["scale"] > 30:
-                    e["active"] = False
-                    del self.expLights[i]
-                    self.draw.scale(e["pos"], 1 / e["scale"], cs, ce, tn)
-                    e["scale"] = 1
-                    self.draw.translate(-e["pos"], cs, ce, tn)
-                    e["pos"][:] = 0.
+            cs, ce, tn = e["obj"].cStart, e["obj"].cEnd, e["obj"].texNum
+            self.draw.scale(e["pos"], frameScale / e["scale"], cs, ce, tn)
+            e["scale"] *= frameScale / e["scale"]
+            self.matShaders[tn].update(args={'emPow': 2 / e["scale"]})
+
+            self.expLights[i] = {"pos": e["pos"], "i":np.array((40,40,10.)) / e["scale"]}
+            if e["scale"] > 30:
+                e["active"] = False
+                del self.expLights[i]
+                self.draw.scale(e["pos"], 1 / e["scale"], cs, ce, tn)
+                e["scale"] = 1
+                self.draw.translate(-e["pos"], cs, ce, tn)
+                e["pos"][:] = 0.
 
 
         self.pointLights = self.envPointLights + list(self.expLights.values())
@@ -2245,20 +2605,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameProfile('BlackHoles')
 
         if not self.isClient:
-            if int(self.dt1) & 31 == 0:
-                for i in self.pickups:
-                    if i["pos"] is None:
-                        xy = self.BORDER[0]+5 + nr.rand(2)*(self.stageSize-10)
-                        plant = True
-                        if self.stage == 1:
-                            if self.terrain.getHeight(*xy) > 2:
-                                continue
-                        for a in self.players:
-                            dist = np.sum(np.abs(xy - a["b1"].offset[::2]))
-                            if dist < 5: plant = False
-                        if plant:
-                            newpos = np.array((xy[0], self.terrain.getHeight(*xy) + 0.8, xy[1]))
-                            self.plantPickup(newpos)
+            if int(CURRTIME) & 31 == 0:
+                self.seedPickups()
 
         for i in self.pickups:
             if i["pos"] is not None:
@@ -2292,334 +2640,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for a in self.players:
             if a["id"] not in actPlayers: continue
 
-            a['pv'].noforces = (a['jump'] < 0)
-
-            if a["jump"] > 0:
-                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
-                if (ih + a["cheight"]) > a["b1"].offset[1]:
-                    # stuck on side of terrain
-                    vx,vy = a['pv'].v[::2]
-                    if vx*vx+vy*vy > 0.0001:
-                        a['b1'].offset[::2] -= a['pv'].v[::2] * self.frameTime
-
-                ih = self.STAGECONFIG.getHeight(self, a["b1"].offset[:3] - a['animOffset'][:3])
-                if (ih + a["cheight"]) > a["b1"].offset[1]:
-                    # landed on terrain
-                    a["jump"] = -a["jump"]
-                    self.setYoffset(a)
-
-                    self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
-                                         abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
-                                         (a['b1'].offset[:3], 6, 1))})
-
-                    if abs(a["pv"].v[1]) > 8:
-                        a["pv"].colliders[0].hc += abs(abs(a["pv"].v[1]) - 6)
-                        a["isHit"] = self.frameNum
-
-                    a['pv'].forces[0,1] = 0
-                    a['pv'].v[:] = 0
-
-
-            a['pv'].v[::2] *= 1 - 0.04 * Phys.eucLen(a['pv'].v) * self.frameTime
-
-            if Phys.eucLen(a['pv'].v) < 0.01:
-                a['pv'].v *= 0
-
-            if a["gesturing"]:
-                a["moving"] = 0
-                self.stepGest(a, a["obj"], self.frameTime * self.poseDt)
-
-            if a["moving"]:
-                transKF = self.transStartKF if a['moving'] > 0 else 4
-                if not a['movingOld']:
-                    a['animTrans'] = CURRTIME
-                    a['poset'] = self.keyFrames[transKF][0]
-                    a['tempPose'] = a['rig'].exportPoseFlat()
-
-                bx = hvel*a["moving"]*cos(a["cr"])
-                by = hvel*a["moving"]*sin(a["cr"])
-                if a["fCam"]:
-                    bx += hvel/3 * cos(a["cr"] + pi/2) * a["cv"]
-                    by += hvel/3 * sin(a["cr"] + pi/2) * a["cv"]
-
-                    d = sqrt(bx*bx + by*by) / hvel
-                    bx /= d; by /= d
-
-                if a['moving'] < 0:
-                    bx *= 0.9; by *= 0.9
-
-                jbx = bx; jby = by
-                bx *= self.frameTime; by *= self.frameTime
-
-                if CURRTIME - a['animTrans'] < 0.2:
-                    fact = (CURRTIME - a['animTrans']) / 0.2
-                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    bx *= fact; by *= fact
-
-                ax, ay = a["b1"].offset[::2] - a['animOffset'][::2]
-                ih = self.STAGECONFIG.getHeight(self,
-                        np.array([ax + bx, a['b1'].offset[1], ay + by])) + a["cheight"]
-
-                navheight = a["b1"].offset[1] + a['legIKoffset']
-                slopeOk = (ih - navheight) < (hvel*self.frameTime * maxSlope)
-                stepOk = (ih - navheight) < maxStep
-                fx = a["b1"].offset[0] + bx
-                fy = a["b1"].offset[2] + by
-                b1, b2 = self.BORDER
-                borderOk = (b1 < fx < b2) and (b1 < fy < b2)
-
-                if (slopeOk or stepOk) and borderOk:
-                    if a["jump"] <= 0:
-                        a["b1"].offset[0] += bx
-                        a["b1"].offset[2] += by
-                        if (navheight - ih) > maxStep:
-                            # fell off terrain
-                            a['jump'] = self.frameNum
-                            a['pv'].forces[0,1] = -9.81
-                            a['pv'].v[1] = 0.0
-
-                    if a["jump"] <= 0:
-                        a['pv'].v[::2] = (jbx, jby)
-
-                        self.setYoffset(a)
-
-                        if time.time() - a['lastStep'] > 0.3 + 0.06 * random.random():
-                            a['lastStep'] = time.time()
-
-                            sfn = ['Short_Heavy_0{}.wav', 'StonyPath_0{}.wav']
-                            sf = sfn[self.stage&1]
-
-                            if self.stage == 2:
-                                sf = 'Short_Heavy_0{}.wav'
-                                if self.iceMap.getHeight(*a['b1'].offset[::2]):
-                                    sf = 'StonyPath_0{}.wav'
-
-                            if self.stage == 4:
-                                sf = 'Short_Heavy_0{}.wav'
-                                if a['b1'].offset[0] < 12 and \
-                                   -2 < a['b1'].offset[2] < 41:
-                                    sf = 'StonyPath_0{}.wav'
-
-                            sf = sf.format(random.randint(1, 6))
-                            self.si.put({"Play":(PATH+'../Sound/New/'+sf,
-                                                 self.volmFX / 2,
-                                                 (a['b1'].offset[:3], 6, 1.2))})
-                    playerStuck = False
-                elif not borderOk:
-                    if (a["b1"].offset[0] < b1): a["b1"].offset[0] = b1
-                    elif (a["b1"].offset[0] > b2): a["b1"].offset[0] = b2
-                    if (a["b1"].offset[2] < b1): a["b1"].offset[2] = b1
-                    elif (a["b1"].offset[2] > b2): a["b1"].offset[2] = b2
-                    playerStuck = True
-                else:
-                    playerStuck = True
-
-
-                if not self.isClient:
-                    if a['id'] in self.aiNums:
-                        self.agents[a['id']].isStuck = playerStuck
-
-                df = 1# + 3*self.VRMode
-
-                if CURRTIME - a['animTrans'] < 0.2:
-                    # print('Trans idle->walk')
-                    fact = (CURRTIME - a['animTrans']) / 0.2
-                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    a["rig"].interpPoseFlat(a['tempPose'], self.keyFrames[transKF][3], fact)
-
-                    off = np.array(self.keyFrames[transKF][2])
-                    if a['moving'] < 0: off[1] = -0.4 * off[1] - 0.08
-                    off = (off @ a['b1'].rotMat) * fact
-                    off += a['b1'].lastOffset * (1-fact)
-                    a['b1'].offset[:3] += off - a['b1'].lastOffset
-                    a['b1'].lastOffset = off
-                    a['animOffset'] = off
-                else:
-                    self.stepPoseLoop(a, a["obj"], self.keyFrames,
-                                      df*self.frameTime * self.poseDt*a["moving"],
-                                      isFlat=True)
-
-            elif a["movingOld"]:
-                if a['jump'] <= 0:
-                    a['pv'].v[:] = 0
-                a['animTrans'] = CURRTIME
-                a['tempPose'] = a['rig'].exportPoseFlat()
-
-            if not a['moving'] and not a['gesturing']:
-                if CURRTIME - a['animTrans'] < 0.2:
-                    # print('Trans walk->idle')
-                    fact = (CURRTIME - a['animTrans']) / 0.2
-                    fact = 2*fact**2 if fact < 0.5 else 1 - 2*(fact-1)**2
-                    a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, fact)
-
-                    off = a['b1'].lastOffset * (1-fact)
-                    a['b1'].offset[:3] += off - a['b1'].lastOffset
-                    a['b1'].lastOffset = off
-                    a['animOffset'] = off
-                elif a['animTrans'] > 0:
-                    a['rig'].importPose(self.idle, updateRoot=False)
-                    a['animTrans'] *= -1
-
-            if self.frameNum - a['frameFired'] == 1:
-                if a['fireColor'] == 'blank':
-                    a['projFXstart'] = CURRTIME
-                else:
-                    a['throwAnim'] = True
-                    a['animFired'] = False
-                    a['poseThrow'] = self.throwKF[0][0]
-
-            if a['projFXstart'] > 0:
-                fxpos = a["b1"].offset[:3]
-                fxoff = np.array([cos(a["cr"]),0,sin(a["cr"])])
-
-                a['projFX'].target = fxpos + fxoff
-                a['projFX'].changePos(fxpos + 0.6*fxoff)
-                a['projFX'].step(self.frameTime)
-                if CURRTIME - a['projFXstart'] > 0.12:
-                    a['projFX'].reset()
-                    a['projFXstart'] = -1
-
-                    vh = a['fireVH']
-                    if vh is None: vh = self.vv[1]
-                    self.fire('blank', a['id'], vh)
-                    a['frameFired'] = -100
-
-            if a['throwAnim']:
-                self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2.2,
-                                  loop=False, bone=a['b1'].children[0],
-                                  timer='poseThrow')
-                if not a['animFired'] and a['poseThrow'] > self.throwKF[5][0]:
-                    a['animFired'] = True
-                    self.fire(a['fireColor'], a['id'], a['fireVH'], throw=True)
-                    a['frameFired'] = -100
-                if a['poseThrow'] > self.throwKF[-1][0]:
-                    a['throwAnim'] = False
-
-
-            a["b1"].updateTM()
-
-            if CURRTIME - a['animTrans'] < 0.2:
-                self.testLegIK(a, (CURRTIME - a['animTrans']) / 0.4)
-
-                self.setFullLegIKPos(a)
-
-                a['b1TempOff'] = np.array(a['animOffset'])
-
-            if a['throwAnim'] or a['gesturing']:
-                self.testLegIK(a)
-
-            if not a['moving'] and a['jump'] <= 0 and 'restAnim' not in a:
-                self.setYoffset(a)
-                if 'lastIKfacing' in a:
-                    if abs(a['cr'] - a['lastIKfacing']) > 0.45*pi:
-                        a['animTrans'] = CURRTIME
-                        a['tempPose'] = a['rig'].exportPoseFlat()
-
-            if not a['moving'] and not a['gesturing'] \
-               and not a['throwAnim'] and 'restAnim' not in a \
-               and a['animTrans'] < 0 and ('poseFlash' not in a or \
-                                           a['poseFlash'] > self.flashKF[-1][0]):
-
-                breathRate = 0.5 # Between 0.5 and 1 is best
-
-                breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
-
-                self.stepPoseLoop(a, a['obj'], self.idlingTest,
-                                  self.frameTime * (breathRate + 0.6)/2,
-                                  loop=True, timer='poseIdle',
-                                  offsetMult=breathRate * 0.9,
-                                  isFlat=True)
-
-                a['tempPose'] = a['rig'].exportPoseFlat()
-                a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, 1 - breathRate * 0.9)
-
-
-                if CURRTIME + a['animTrans'] < 0.5:
-                    # print('Trans idle->breathing')
-                    fact = (CURRTIME + a['animTrans']) / 0.5
-
-                    a['tempPose'] = a['rig'].exportPoseFlat()
-                    a['rig'].interpPoseFlat(self.idleFlat, a['tempPose'], fact)
-
-                    off = (1-fact) * a['b1TempOff'] + fact * a['animOffset']
-                    a['b1'].offset[:3] += off - a['animOffset']
-                    a['b1'].lastOffset = off
-                    a['animOffset'] = off
-
-            # Include throwing for leg IK
-            if not a['moving'] and 'restAnim' not in a and a['animTrans'] < 0:
-
-                if 'vrC' in a:
-                    armU = a['b1'].children[0].children[0]
-                    armU.rotate((0,0,0))
-                    armU.children[0].rotate((0,0,0))
-
-                a["rig"].b0.getTransform()
-
-                if a['id'] == sc and self.cam1P \
-                   and self.VRMode and self.frameNum > 1:
-                    head = a['b1'].children[0].children[2]
-                    hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
-                    hpos -= a['b1'].offset[:3]
-                    test = self.VRHandPos - self.VRpos + hpos
-                    a['vrC'] = np.round(test, 3).tolist()
-
-                    # For debug
-                    ts = self.testSphere
-                    diff = a['b1'].offset[:3] + test - ts.coords
-                    self.draw.translate(diff, ts.cStart,
-                                        ts.cEnd, ts.texNum)
-                    ts.coords += diff
-
-                if 'vrC' in a:
-                    test = np.array(a['vrC'])
-                    handLen = 0.7 if a['id'] == 0 else 0.1
-                    doArmIK(a['b1'].children[0].children[0],
-                            a['b1'].offset[:3] + test, handLen)
-
-                footSize = self.footSize[a['id']]
-
-                # Skis
-                if self.stage == 2:
-                    if a['id'] == self.selchar:
-                        footSize += 0.08
-
-                try: ikR, ikL = a['legIKPos']
-                except KeyError: pass
-                else:
-                    try:
-                        interp = None
-                        if CURRTIME + a['animTrans'] < 0.4:
-                            interp = (CURRTIME + a['animTrans']) / 0.4
-                        doFullLegIK(a['b1'].children[1], ikR, a, footSize, interp)
-                        doFullLegIK(a['b1'].children[2], ikL, a, footSize, interp)
-                    except IndexError:
-                        pass
-
-
-            if not self.fCam or a['id'] != self.selchar:
-                interp = None
-                if not a['moving'] and CURRTIME - a['animTrans'] < 0.2:
-                    interp = (CURRTIME - a['animTrans']) / 0.2
-                self.testAnim(a, interp)
-
-            if a['fCam'] and a['id'] not in self.aiNums:
-                if a['id'] == self.selchar:
-                    a['vh'] = self.vv[1]
-                torso = a['b1'].children[0]
-                head = a['b1'].children[0].children[2]
-                ang = head.angles
-                ang[1] = 0
-                ang[2] = -asin(a['vh']) - torso.angles[2]
-                head.rotate(ang)
-
-            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
-
-            if not a["fCam"]:
-                a["cr"] += a["cv"] * self.frameTime
-
-            a["b1"].rotate([0,a["cr"],0])
-            a["movingOld"] = a["moving"]
+            self.playerMove(a)
 
         self.frameProfile('PlayerMove')
 
