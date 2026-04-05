@@ -2801,6 +2801,51 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         out = 0.7 * overlay + 0.3 * self.rgb[self.H-n:self.H,:n]
         self.rgb[self.H-n:self.H,:n] = out
 
+
+def runApp(app):
+    print("Starting")
+    app.start()
+    print("Running")
+    app.runBackend()
+    if hasattr(app, 'statTime'):
+        games = 1
+        tim = time.time() - app.statTime
+        try:
+            with open(PATH+"lib/Stat2.txt") as f:
+                games += int(f.readline().split(': ')[1])
+                tim += float(f.readline().split(': ')[1])
+        except: pass
+        with open(PATH+"lib/Stat2.txt", "w") as f:
+            text = 'Games Played: {}\nTime Spent (secs): {}'
+            f.write(text.format(games, round(tim, 2)))
+
+    if hasattr(app, "WIN"):
+        state = 0
+        try:
+            with open(PATH+"lib/Stat.txt") as f:
+                state = int(f.read())
+        except: pass
+        with open(PATH+"lib/Stat.txt", "w") as f:
+            state = state | (1 << app.stage)
+            f.write(str(state))
+    fps = app.frameNum/app.totTime
+    print("avg fps:", fps)
+    print("Closing network")
+    app.qi.put(None)
+    while not app.qo.empty():
+        try: app.qo.get(True, 0.2)
+        except: pass
+    app.qi.close()
+    app.qo.close()
+    app.qi.join_thread()
+    app.qo.join_thread()
+    app.server.terminate()
+    app.server.join()
+    try: app.navProcess.terminate()
+    except: pass
+    if not os.path.exists(PATH+"lib/Stat.txt"):
+        with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
+
 def run():
     global app
 
@@ -2815,50 +2860,7 @@ def run():
     while True:
         app = CombatApp()
         if app.proceed:
-            print("Starting")
-            app.start()
-            print("Running")
-            app.runBackend()
-            if hasattr(app, 'statTime'):
-                games = 1
-                tim = time.time() - app.statTime
-                try:
-                    with open(PATH+"lib/Stat2.txt") as f:
-                        games += int(f.readline().split(': ')[1])
-                        tim += float(f.readline().split(': ')[1])
-                except: pass
-                with open(PATH+"lib/Stat2.txt", "w") as f:
-                    text = 'Games Played: {}\nTime Spent (secs): {}'
-                    f.write(text.format(games, round(tim, 2)))
-
-            if hasattr(app, "WIN"):
-                state = 0
-                try:
-                    with open(PATH+"lib/Stat.txt") as f:
-                        state = int(f.read())
-                except: pass
-                with open(PATH+"lib/Stat.txt", "w") as f:
-                    state = state | (1 << app.stage)
-                    f.write(str(state))
-            fps = app.frameNum/app.totTime
-            print("avg fps:", fps)
-            print("Closing network")
-            app.qi.put(None)
-            while not app.qo.empty():
-                try: app.qo.get(True, 0.2)
-                except: pass
-            app.qi.close()
-            app.qo.close()
-            app.qi.join_thread()
-            app.qo.join_thread()
-            app.server.terminate()
-            app.server.join()
-            try: app.navProcess.terminate()
-            except: pass
-            try:
-                with open(PATH+"lib/Stat.txt") as f: pass
-            except FileNotFoundError:
-                with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
+            runApp(app)
         print("Closing sound")
         app.si.put({"Fade":{'Time':0, 'Tracks':{'*'}}}, True, 0.1)
         time.sleep(2.1)
