@@ -63,15 +63,16 @@ def sightLine(target, current, navMap, clear=False, relax=0):
             visible = False
             break
 
-        if clear:
-            rvec = np.array((diffx, diffy))
-            rvec /= np.linalg.norm(rvec)
-            cy += rvec[0]; cx += rvec[1]
-            if not navMap["map"][int(cy), int(cx)]:
-                visible = False; break
-            cy -= 2*rvec[0]; cx -= 2*rvec[1]
-            if not navMap["map"][int(cy), int(cx)]:
-                visible = False; break
+        if not clear: continue
+
+        rvec = np.array((diffx, diffy))
+        rvec /= np.linalg.norm(rvec)
+        cy += rvec[0]; cx += rvec[1]
+        if not navMap["map"][int(cy), int(cx)]:
+            visible = False; break
+        cy -= 2*rvec[0]; cx -= 2*rvec[1]
+        if not navMap["map"][int(cy), int(cx)]:
+            visible = False; break
 
     return visible
 
@@ -99,26 +100,12 @@ def dijkstra(tpos, cpos, nmap):
     while True:
         dist = dm[iy, ix]
         td = dist + 1
-        if nm[iy+1, ix]:
-            cd = dm[iy+1, ix]
-            if (td < cd) or (cd == -1):
-                dm[iy+1, ix] = td
-                prev[iy+1, ix] = (iy, ix)
-        if nm[iy-1, ix]:
-            cd = dm[iy-1, ix]
-            if (td < cd) or (cd == -1):
-                dm[iy-1, ix] = td
-                prev[iy-1, ix] = (iy, ix)
-        if nm[iy, ix+1]:
-            cd = dm[iy, ix+1]
-            if (td < cd) or (cd == -1):
-                dm[iy, ix+1] = td
-                prev[iy, ix+1] = (iy, ix)
-        if nm[iy, ix-1]:
-            cd = dm[iy, ix-1]
-            if (td < cd) or (cd == -1):
-                dm[iy, ix-1] = td
-                prev[iy, ix-1] = (iy, ix)
+        for coord in [(iy+1, ix), (iy-1, ix), (iy, ix+1), (iy, ix-1)]:
+            if nm[coord]:
+                cd = dm[coord]
+                if (td < cd) or (cd == -1):
+                    dm[coord] = td
+                    prev[coord] = (iy, ix)
 
         nm[iy, ix] = False
 
@@ -193,134 +180,137 @@ class AIManager:
             self.navResults[r[0]] = r[1]
 
         for pn in self.agents:
-            agent = self.agents[pn]
-            a = self.players[pn]
+            self._updateAgent(pn, playerIndex)
 
-            closestDist = 1000
-            closestPlayer = None
+    def _updateAgent(self, pn, playerIndex):
+        agent = self.agents[pn]
+        a = self.players[pn]
 
-            closestDistTarget = 1000
-            closestTarget = None
+        closestDist = 1000
+        closestPlayer = None
 
-            for p in self.actPlayers:
-                if (p == pn) or ("deathTime" in self.players[p]): continue
+        closestDistTarget = 1000
+        closestTarget = None
 
-                d = np.sum((a["b1"].offset - self.players[p]["b1"].offset)**2)
+        for p in self.actPlayers:
+            if (p == pn) or ("deathTime" in self.players[p]): continue
 
-                if (d < closestDist):
-                    closestPlayer = p
-                    closestDist = d
+            d = np.sum((a["b1"].offset - self.players[p]["b1"].offset)**2)
 
-                if p in playerIndex:
-                    if "CPU " in playerIndex[p]: continue
+            if (d < closestDist):
+                closestPlayer = p
+                closestDist = d
 
-                if (d < closestDistTarget):
-                    closestTarget = p
-                    closestDistTarget = d
+            if p in playerIndex:
+                if "CPU " in playerIndex[p]: continue
 
-            if closestPlayer is None:
-                try:
-                    if time.time() - self.endTime > (3 + random.random()*2):
-                        if a["gestId"] != "gg":
-                            gi = 2
-                            if self.uInfo["End"][0] == "DRAW":
-                                gi = (0,2,3)[random.randint(0,2)]
-                            self.gesture(pn, gi, "gg")
-                except AttributeError:
-                    pass
-                closestPlayer = self.selchar
-            if closestTarget is None:
-                closestTarget = self.selchar
+            if (d < closestDistTarget):
+                closestTarget = p
+                closestDistTarget = d
 
-            # Change this to retreat if closestTarget otherwise
-            # sidestep if following and closestPlayer
-            if closestDist < 3:
-                if not "deathTime" in a:
-                    agent.behavior["retreat"] = 0.5
-                    agent.navTarget = self.players[closestPlayer]
-
-            if agent.behavior["retreat"] > 0:
-                if closestDist > 5:
-                    agent.behavior["retreat"] = 0
-                    agent.navTarget = self.players[closestTarget]
-
-            if agent.navTarget is None:
-                agent.navTarget = self.players[closestTarget]
-
-            if closestTarget != agent.navTarget["id"]:
-                if "deathTime" in agent.navTarget:
-                    agent.targetInterest = 0
-                agent.targetInterest -= 2*self.frameTime
-
-            if agent.targetInterest < 0:
-                agent.navTarget = self.players[closestTarget]
-                agent.targetInterest = 4
-
-            diff = (a["b1"].offset - np.array((*a['animOffset'], 0))) - agent.lastPos
-
-            if not agent.isStuck:
-                agent.stuck = 0
-
-            a["cv"] = 0
-
-            choice = list(agent.behavior)[sample(list(agent.behavior.values()))]
-
-            if choice == "follow":
-                self._follow(pn)
-            if choice == "navigate":
-                self._navigate(pn)
-            if choice == "pathfind":
-                self._pathfind(pn)
-            if choice == "retreat":
-                self._retreat(pn)
-            if choice == "none":
-                agent.behavior["follow"] += 0.1
-
-            # Avoid / deflect incoming projectiles
-            for i in range(len(self.spheres)):
-                if "deathTime" in a: continue
-                rb = self.srbs[i]
-                if rb.disabled: continue
-
-                d = a["b1"].offset[:3] - rb.pos
-                sp = agent.navTarget["b1"].offset[:3] - rb.pos
-                if normalize(d) @ normalize(rb.v) > 0.9:
-                    if normalize(sp) @ normalize(rb.v) < -0.9:
-                        avoid = True
-##                        if a["Energy"] > 0.2:
-##                            comp = 0#np.linalg.norm(d) / self.bulletSpeed
-##                            fol = follow(rb.pos + comp * rb.v, a["b1"].offset[:3],
-##                                     1, 0, True)
-##                            a["cr"] = fol[1]
-##                            vh = fol[2]
-##                            avoid = not self.fire("red", pn, vh)
-                        if avoid:
-                            vvh = np.array((sin(a["cr"]), 0, -cos(a["cr"])))
-                            x = vvh @ (normalize(d) - normalize(rb.v))
-                            a["cv"] = 3 * -normalize(x)
-                            a["moving"] = -1
-
+        if closestPlayer is None:
             try:
-                x = not "CPU " in playerIndex[agent.navTarget["id"]]
-            except KeyError:
-                x = True
-            if x:
-                self._fire(pn)
+                if time.time() - self.endTime > (3 + random.random()*2):
+                    if a["gestId"] != "gg":
+                        gi = 2
+                        if self.uInfo["End"][0] == "DRAW":
+                            gi = (0,2,3)[random.randint(0,2)]
+                        self.gesture(pn, gi, "gg")
+            except AttributeError:
+                pass
+            closestPlayer = self.selchar
+        if closestTarget is None:
+            closestTarget = self.selchar
 
-            if self.frameNum == 20:
-                self.gesture(pn, 2, "ss")
+        # Change this to retreat if closestTarget otherwise
+        # sidestep if following and closestPlayer
+        if closestDist < 3:
+            if not "deathTime" in a:
+                agent.behavior["retreat"] = 0.5
+                agent.navTarget = self.players[closestPlayer]
 
-            if "deathTime" in a:
-                if (self.frameNum - a["deathTime"])*self.frameTime >= 2:
-                    if a["gestId"] != "aa":
-                        gi = 1
-                        if "End" in self.uInfo:
-                            if self.uInfo["End"][0] == "DRAW":
-                                gi = (0,2,3)[random.randint(0,2)]
-                        self.gesture(pn, gi, "aa")
+        if agent.behavior["retreat"] > 0:
+            if closestDist > 5:
+                agent.behavior["retreat"] = 0
+                agent.navTarget = self.players[closestTarget]
 
-            agent.lastPos = np.array(a["b1"].offset - np.array((*a['animOffset'],0)))
-            agent.targPred = np.array(agent.navTarget["b1"].offset)
+        if agent.navTarget is None:
+            agent.navTarget = self.players[closestTarget]
+
+        if closestTarget != agent.navTarget["id"]:
+            if "deathTime" in agent.navTarget:
+                agent.targetInterest = 0
+            agent.targetInterest -= 2*self.frameTime
+
+        if agent.targetInterest < 0:
+            agent.navTarget = self.players[closestTarget]
+            agent.targetInterest = 4
+
+        diff = (a["b1"].offset - np.array((*a['animOffset'], 0))) - agent.lastPos
+
+        if not agent.isStuck:
+            agent.stuck = 0
+
+        a["cv"] = 0
+
+        choice = list(agent.behavior)[sample(list(agent.behavior.values()))]
+
+        if choice == "follow":
+            self._follow(pn)
+        if choice == "navigate":
+            self._navigate(pn)
+        if choice == "pathfind":
+            self._pathfind(pn)
+        if choice == "retreat":
+            self._retreat(pn)
+        if choice == "none":
+            agent.behavior["follow"] += 0.1
+
+        # Avoid / deflect incoming projectiles
+        for i in range(len(self.spheres)):
+            if "deathTime" in a: continue
+            rb = self.srbs[i]
+            if rb.disabled: continue
+
+            d = a["b1"].offset[:3] - rb.pos
+            sp = agent.navTarget["b1"].offset[:3] - rb.pos
+            if normalize(d) @ normalize(rb.v) > 0.9:
+                if normalize(sp) @ normalize(rb.v) < -0.9:
+                    avoid = True
+##                    if a["Energy"] > 0.2:
+##                        comp = 0#np.linalg.norm(d) / self.bulletSpeed
+##                        fol = follow(rb.pos + comp * rb.v, a["b1"].offset[:3],
+##                                 1, 0, True)
+##                        a["cr"] = fol[1]
+##                        vh = fol[2]
+##                        avoid = not self.fire("red", pn, vh)
+                    if avoid:
+                        vvh = np.array((sin(a["cr"]), 0, -cos(a["cr"])))
+                        x = vvh @ (normalize(d) - normalize(rb.v))
+                        a["cv"] = 3 * -normalize(x)
+                        a["moving"] = -1
+
+        try:
+            x = not "CPU " in playerIndex[agent.navTarget["id"]]
+        except KeyError:
+            x = True
+        if x:
+            self._fire(pn)
+
+        if self.frameNum == 20:
+            self.gesture(pn, 2, "ss")
+
+        if "deathTime" in a:
+            if (self.frameNum - a["deathTime"])*self.frameTime >= 2:
+                if a["gestId"] != "aa":
+                    gi = 1
+                    if "End" in self.uInfo:
+                        if self.uInfo["End"][0] == "DRAW":
+                            gi = (0,2,3)[random.randint(0,2)]
+                    self.gesture(pn, gi, "aa")
+
+        agent.lastPos = np.array(a["b1"].offset - np.array((*a['animOffset'],0)))
+        agent.targPred = np.array(agent.navTarget["b1"].offset)
 
     def _retreat(self, pn):
         agent = self.agents[pn]
