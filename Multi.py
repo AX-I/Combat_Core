@@ -976,20 +976,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         mpath = PATH + "../Models/"
 
+        with open(mpath+'Rigs.json') as fi:
+            rigData = json.load(fi)
+
         # Rigfile, scale, height
-        self.rpi = [
-            (mpath + "Body/B10Fc.rig", 0.2, 1.47),
-            (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
-            (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
-            (mpath + "L3/L3.rig", 0.75, 1.16),
-            (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
-            (mpath + "Zelda/Ztest3.rig", 1, 1.32),
-            (mpath + "LinkTP/Li.rig", 0.75, 1.5),
-            (mpath + "Ahri/Ahri4.rig", 1.8, 1.62),
-            (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
-            (mpath + "Vader/Vader5.rig", 1.6, 1.56),
-        ]
-        self.footSize = (0.2, 0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
+        self.rpi = [(mpath + r[0], *r[1:]) for r in rigData['rigs']]
+        self.footSize = rigData['footSize']
+        self.breathRate = rigData['breathRate']
 
 
         self.addVertObject(
@@ -2215,7 +2208,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             breathRate = 0.5 # Between 0.5 and 1 is best
 
-            breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
+            breathRate *= self.breathRate[a['id']]
 
             self.stepPoseLoop(
                 a, a['obj'], self.idlingTest,
