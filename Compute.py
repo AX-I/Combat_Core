@@ -267,8 +267,9 @@ class ThreeDBackend:
             mat = self.matShaders[f]
             if 'alpha' not in mat: continue
             tex = self.texAlphas[mat['alpha']]
-            self.draw.addTexAlpha(tex, name=mat['alpha'],
-                                  mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
+            self.draw.addTexAlpha(
+                tex, name=mat['alpha'],
+                mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
 
         del self.texAlphas
 
@@ -362,11 +363,12 @@ class ThreeDBackend:
         self.draw.clearZBuffer()
 
         s = [0,1]
-        self.draw.drawAll(self.matShaders,
-                          mask=self.renderMask,
-                          shadowIds=s,
-                          useOpacitySM=self.useOpSM,
-                          stage=self.stage)
+        self.draw.drawAll(
+            self.matShaders,
+            mask=self.renderMask,
+            shadowIds=s,
+            useOpacitySM=self.useOpSM,
+            stage=self.stage)
 
         cc = []
         for ps in self.particleSystems:
@@ -380,8 +382,9 @@ class ThreeDBackend:
             ps = cc[i][0]
             try: shader = ps.shader
             except AttributeError: shader=1
-            self.draw.drawPS(ps.pc, ps.color, ps.opacity, ps.size, ps.tex,
-                             shader)
+            self.draw.drawPS(
+                ps.pc, ps.color, ps.opacity, ps.size, ps.tex,
+                shader)
 
 
     def finishRender(self):
@@ -396,30 +399,32 @@ class ThreeDBackend:
         self.debugOverlay()
 
         if self.VRMode:
-            if self.GL:
-                try: _ = self.VRtex
-                except:
-                    print('Setup VR')
-                    import openvr
-                    self.VRtex = openvr.Texture_t()
-                    self.VRtex.handle = int(self.draw.FB_GL)
-                    self.VRtex.eType = openvr.TextureType_OpenGL
-                    self.VRtex.eColorSpace = openvr.ColorSpace_Gamma
-
-                self.cmp.submit(openvr.Eye_Left, self.VRtex)
-                self.cmp.submit(openvr.Eye_Right, self.VRtex)
-            else:
-                rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
-                ibuf = ctypes.create_string_buffer(rgba.tobytes())
-
-                b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
-                self.ov.showOverlay(b)
-                b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
-                self.ov.hideOverlay(b2)
-                self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
-
+            self.submitVR()
 
         return [self.rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]
+
+    def submitVR(self):
+        if self.GL:
+            try: _ = self.VRtex
+            except:
+                print('Setup VR')
+                import openvr
+                self.VRtex = openvr.Texture_t()
+                self.VRtex.handle = int(self.draw.FB_GL)
+                self.VRtex.eType = openvr.TextureType_OpenGL
+                self.VRtex.eColorSpace = openvr.ColorSpace_Gamma
+
+            self.cmp.submit(openvr.Eye_Left, self.VRtex)
+            self.cmp.submit(openvr.Eye_Right, self.VRtex)
+        else:
+            rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
+            ibuf = ctypes.create_string_buffer(rgba.tobytes())
+
+            b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
+            self.ov.showOverlay(b)
+            b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
+            self.ov.hideOverlay(b2)
+            self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
 
     def simpleShaderVert(self, mask=None, updateLights=True):
         if mask is None:
@@ -582,15 +587,16 @@ class ThreeDBackend:
             action = self.evtQ.get_nowait()
         except Empty:
             self.empty += 1
-        else:
-            if action is None:
-                self.doQuit = True
-            elif action[0] == "event":
-                self.doEvent(action)
-            elif action[0] == "eventk":
-                self.moveKey(action[1])
-            elif action in self.handles:
-                self.handles[action]()
+            return
+
+        if action is None:
+            self.doQuit = True
+        elif action[0] == "event":
+            self.doEvent(action)
+        elif action[0] == "eventk":
+            self.moveKey(action[1])
+        elif action in self.handles:
+            self.handles[action]()
 
     def finish(self):
         try:
