@@ -246,14 +246,15 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         while wait:
             try:
                 action = self.evtQ.get(True, 0.2)
-                if "Run" in action:
-                    return action["Run"]
-                elif "Vol" in action:
-                    try: self.si.put_nowait(action)
-                    except Full: pass
-                elif "Play" in action or "Fade" in action or "Cresc" in action:
-                    self.si.put(action)
-            except Empty: pass
+            except Empty: continue
+
+            if "Run" in action:
+                return action["Run"]
+            elif "Vol" in action:
+                try: self.si.put_nowait(action)
+                except Full: pass
+            elif "Play" in action or "Fade" in action or "Cresc" in action:
+                self.si.put(action)
 
     def customizeFrontend(self):
         self.bindKey("r", self.rotateLight)
@@ -430,7 +431,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.si.put({'Fade':{'Time':0, 'Tracks':{PATH+'../Sound/NoiseOpen.flac'}}})
 
-        self.si.put({'Play':(PATH+'../Sound/NoiseFlash.flac', self.volmFX * 1.1, False)})
+        self.si.put({'Play':(
+            PATH+'../Sound/NoiseFlash.flac', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
         for p in self.actPlayers:
@@ -479,8 +481,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if 'restAnim' in a: return
 
-        self.si.put({'Play':(PATH+'../Sound/Recover.flac', self.volmFX * 0.8,
-                             False)})
+        self.si.put({'Play':(
+            PATH+'../Sound/Recover.flac', self.volmFX * 0.8, False)})
 
         a['restStart'] = time.time()
         a['restFrame'] = -100
@@ -519,51 +521,53 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         addKF = [(0, 0), (1, 0.3), (2, 0.4), (3, 0.2), (5, 0)]
 
-        if 'restAnim' in a:
-            t = time.time() - a['restStart']
-            a['moving'] = False
-            a['animTrans'] = -1
-            self.stepPoseLoop(a, a['obj'], self.restKF, self.frameTime*0.4,
-                              loop=False, timer='restAnim')
+        if 'restAnim' not in a: return
 
-            self.setYoffsetTest(a)
+        t = time.time() - a['restStart']
+        a['moving'] = False
+        a['animTrans'] = -1
+        self.stepPoseLoop(
+            a, a['obj'], self.restKF, self.frameTime*0.4,
+            loop=False, timer='restAnim')
 
-            self.matShaders[r.texNum]['args']['emPow'] = Anim.interpAttr(t, addKF)
-            self.draw.changeShader(r.texNum, self.matShaders[r.texNum])
+        self.setYoffsetTest(a)
 
-            self.draw.setUVOff(r.texNum, (0,0), (1,1), (t*0.2, 0))
+        self.matShaders[r.texNum]['args']['emPow'] = Anim.interpAttr(t, addKF)
+        self.draw.changeShader(r.texNum, self.matShaders[r.texNum])
 
-            if self.getHealth(a['id']) < 0.6:
-                a['pv'].colliders[0].hc -= self.frameTime * 4
+        self.draw.setUVOff(r.texNum, (0,0), (1,1), (t*0.2, 0))
 
-            xn = a["ctexn"][0]
-            mat = self.matShaders[xn]
-            if 'emPow' in mat['args']:
-                mat['args']['emPow'] -= 0.6 * self.frameTime
-                self.draw.changeShader(xn, mat)
+        if self.getHealth(a['id']) < 0.6:
+            a['pv'].colliders[0].hc -= self.frameTime * 4
 
-                if mat['args']['emPow'] < 0:
-                    mat['args']['emPow'] = 0
-                    a['restFrame'] = self.frameNum
-                    a['undoGhostTime'] = time.time()
-                    self.undoGhost()
-            elif 'undoGhostTime' in a:
-                hl = max(0, min(1, 0.6 * (time.time() - a['undoGhostTime'])))
-                for i in a["ctexn"]:
-                    self.draw.highlight([hl,hl,hl], i, mult=True)
+        xn = a["ctexn"][0]
+        mat = self.matShaders[xn]
+        if 'emPow' in mat['args']:
+            mat['args']['emPow'] -= 0.6 * self.frameTime
+            self.draw.changeShader(xn, mat)
 
-            if self.frameNum - a['restFrame'] == 1:
-                d = self.directionalLights[0]
-                self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+            if mat['args']['emPow'] < 0:
+                mat['args']['emPow'] = 0
+                a['restFrame'] = self.frameNum
+                a['undoGhostTime'] = time.time()
+                self.undoGhost()
+        elif 'undoGhostTime' in a:
+            hl = max(0, min(1, 0.6 * (time.time() - a['undoGhostTime'])))
+            for i in a["ctexn"]:
+                self.draw.highlight([hl,hl,hl], i, mult=True)
 
-            if a['restAnim'] >= self.restKF[-1][0]:
-                del a['restAnim']
-                self.restPlayer = None
-                if 'deathTime' in a:
-                    del a['deathTime']
-                self.draw.translate(-self.ringPos,
-                                    r.cStart, r.cEnd, r.texNum)
-                a['movingOld'] = True
+        if self.frameNum - a['restFrame'] == 1:
+            d = self.directionalLights[0]
+            self.draw.setPrimaryLight(np.array([d["i"]]), np.array([viewVec(*d["dir"])]))
+
+        if a['restAnim'] >= self.restKF[-1][0]:
+            del a['restAnim']
+            self.restPlayer = None
+            if 'deathTime' in a:
+                del a['deathTime']
+            self.draw.translate(-self.ringPos,
+                                r.cStart, r.cEnd, r.texNum)
+            a['movingOld'] = True
 
     def setYoffsetTest(self, p):
         try: footR = p['b1'].children[1].children[0].children[0]
@@ -637,8 +641,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p['pv'].forces[0,1] = -9.81
 
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
-        self.si.put({"Play":(PATH + jfn, self.volmFX / 3,
-                             (p['b1'].offset[:3], 5, 1.2))})
+        self.si.put({"Play":(
+            PATH + jfn, self.volmFX / 3,
+            (p['b1'].offset[:3], 5, 1.2))})
 
     def stepGest(self, p, vobj, st=1):
         p["poset"] += p["pstep"] * st
@@ -743,15 +748,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         final = p['rig'].interpTree(temp, pose, interp)
         head.rotate(final['angle'])
 
-        if p['id'] in self.eyeUV:
-            uvp = self.eyeUV[p['id']]
-            scale = uvp[1][0] - uvp[0][0]
-            sigH = 1 if uvp[2] == 'L' else -1
-            sigV = 1 if uvp[3] == 'U' else -1
+        if p['id'] not in self.eyeUV: return
+        uvp = self.eyeUV[p['id']]
+        scale = uvp[1][0] - uvp[0][0]
+        sigH = 1 if uvp[2] == 'L' else -1
+        sigV = 1 if uvp[3] == 'U' else -1
 
-            self.draw.setUVOff(p['obj'].texNum, *uvp[:2],
-                               (targy * (0.2  * scale * sigV),  # vertical
-                                targz * (0.12 * scale * sigH))) # horizontal
+        self.draw.setUVOff(
+            p['obj'].texNum, *uvp[:2],
+            (targy * (0.2  * scale * sigV),  # vertical
+             targz * (0.12 * scale * sigH))) # horizontal
 
     def testLegIK(self, p, interp=None):
         """p in self.players"""
@@ -940,8 +946,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.expNum = (self.expNum + 1) % len(self.exploders)
 
-        self.si.put({"Play":(PATH+"../Sound/Exp.wav",
-                             self.volmFX / 3, (np.array(p), 6, 1))})
+        self.si.put({"Play":(
+            PATH+"../Sound/Exp.wav",
+            self.volmFX / 3, (np.array(p), 6, 1))})
 
     def extractByUV(self, src, dst, u1,u2,v1,v2):
         """Origin is bottom left, u up, v right"""
@@ -1016,12 +1023,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
 
         ps = AttractParticleSystem(
-                0.4, (0,0,0.), 6,
-                (0,0,0.), (0,0),
-                vel=0.0, randVel=0.0,
-                nParticles=40,
-                size=0.1, opacity=0.5,
-                color=(0.2,0.2,0.2), randColor=0)
+            0.4, (0,0,0.), 6,
+            (0,0,0.), (0,0),
+            vel=0.0, randVel=0.0,
+            nParticles=40,
+            size=0.1, opacity=0.5,
+            color=(0.2,0.2,0.2), randColor=0)
         self.addParticleSystem(ps)
         a['projFX'] = ps
         a['projFXstart'] = -1
@@ -1042,25 +1049,27 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         mpath = PATH + "../Models/"
 
         # Rigfile, scale, height
-        self.rpi = [(mpath + "Body/B10Fc.rig", 0.2, 1.47),
-                    (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
-                    (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
-                    (mpath + "L3/L3.rig", 0.75, 1.16),
-                    (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
-                    (mpath + "Zelda/Ztest3.rig", 1, 1.32),
-                    (mpath + "LinkTP/Li.rig", 0.75, 1.5),
-                    (mpath + "Ahri/Ahri4.rig", 1.8, 1.62),
-                    (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
-                    (mpath + "Vader/Vader5.rig", 1.6, 1.56),
-                    ]
+        self.rpi = [
+            (mpath + "Body/B10Fc.rig", 0.2, 1.47),
+            (mpath + "Samus_PED/Samus_3B.rig", 1.33, 1.66),
+            (mpath + "Zelda2/Test5b.rig", 0.33, 1.16),
+            (mpath + "L3/L3.rig", 0.75, 1.16),
+            (mpath + "Test3/Test3J.rig", 0.8 / 1.08, 1.32 / 1.08),
+            (mpath + "Zelda/Ztest3.rig", 1, 1.32),
+            (mpath + "LinkTP/Li.rig", 0.75, 1.5),
+            (mpath + "Ahri/Ahri4.rig", 1.8, 1.62),
+            (mpath + "Stormtrooper/Trooper5.rig", 1.4, 1.7),
+            (mpath + "Vader/Vader5.rig", 1.6, 1.56),
+        ]
         self.footSize = (0.2, 0.2, 0.1, 0.2, 0.1, 0, 0.2, 0.08, 0.16, 0.16)
 
 
-        self.addVertObject(VertModel, [0,0,0],
-                       filename=mpath+'Body/B10Fc.obj',
-                       animated=True, mip=1, texMode=None,
-                       scale=0.2, rot=(0,0,0),
-                       shadow='R')
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath+'Body/B10Fc.obj',
+            animated=True, mip=1, texMode=None,
+            scale=0.2, rot=(0,0,0),
+            shadow='R')
         for f in self.vtNames:
             mat = self.matShaders[self.vtNames[f]]
             if 'Cornea' in f:
@@ -1069,10 +1078,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if 'Gold' in f:
                 mat.update(shader='metallic', args={'roughness':0.3})
             if 'Hair' in f:
-                mat.update(args={'specular':0.8,
-                            'NMmipBias':0.1, 'translucent':1,
-                            'roughness':0.12, 'f0':0.6,
-                            'hairShading':1}, normal='Hair')
+                mat.update(args={
+                    'specular':0.8, 'NMmipBias':0.1,
+                    'translucent':1, 'roughness':0.12, 'f0':0.6,
+                    'hairShading':1}, normal='Hair')
             if 'Face' in f:
                 mat.update(args={'specular':1}, normal='Face')
             if 'Skin' in f:
@@ -1086,11 +1095,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Samus_PED/Samus_3B.obj",
-                           animated=True, texMul=1, reflect="1a",
-                           useShaders={'args':{'specular':1}},
-                           scale=1.33, shadow="")
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath+"Samus_PED/Samus_3B.obj",
+            animated=True, texMul=1, reflect="1a",
+            useShaders={'args':{'specular':1}},
+            scale=1.33, shadow="")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         self.extractByUV(t1, t2, 0,0.25,0,0.25)
@@ -1098,41 +1108,46 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"Zelda2/Test5b.obj",
-                           animated=True, texMul=2.5,
-                           useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
-                           scale=0.33, shadow="R")
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath+"Zelda2/Test5b.obj",
+            animated=True, texMul=2.5,
+            useShaders={'args':{'specular': 1}, 'normal':'Zelda'},
+            scale=0.33, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         self.extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
-        self.matShaders[t2.texNum].update(args={'specular':0.8,
-                            'NMmipBias':0.1, 'translucent':1,
-                            'roughness':0.12, 'f0':0.6,
-                            'hairShading':1, 'tangentDir': 1}, normal='Z2H')
+        self.matShaders[t2.texNum].update(
+            args={'specular':0.8, 'NMmipBias':0.1,
+                  'translucent':1, 'roughness':0.12, 'f0':0.6,
+                  'hairShading':1, 'tangentDir': 1},
+            normal='Z2H')
 
         self.addPlayer(self.vertObjects[-1])
 
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath+"L3/L3.obj",
-                           animated=True, texMul=1,
-                           useShaders={'args':{'specular': 1}, 'normal':'Link'},
-                           scale=0.75, shadow="R")
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath+"L3/L3.obj",
+            animated=True, texMul=1,
+            useShaders={'args':{'specular': 1}, 'normal':'Link'},
+            scale=0.75, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         self.extractByUV(t1, t2, 0.5,0.75,0,0.25)
-        self.matShaders[t2.texNum].update(args={'specular':0.8,
-                            'NMmipBias':0.1, 'translucent':1,
-                            'roughness':0.12, 'f0':0.6,
-                            'hairShading':1, 'tangentDir': 1}, normal='L3H')
+        self.matShaders[t2.texNum].update(
+            args={'specular':0.8, 'NMmipBias':0.1,
+                  'translucent':1, 'roughness':0.12, 'f0':0.6,
+                  'hairShading':1, 'tangentDir': 1},
+            normal='L3H')
 
         self.addPlayer(self.vertObjects[-1])
 
         if LOADALL:
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Test3/Test3J.obj",
-                               animated=True, useShaders={'args':{'specular':1}},
-                               scale=0.8 / 1.08, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"Test3/Test3J.obj",
+                animated=True, useShaders={'args':{'specular':1}},
+                scale=0.8 / 1.08, shadow="R")
 
             t1 = self.vertObjects[-1]
             t2 = self.vertObjects[-3]
@@ -1143,36 +1158,41 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.matShaders[self.vertObjects[-1].nextMtl.texNum].update(
                 shader='sub', args={'emPow':0.6}, noline=True)
 
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Zelda/Ztest4.obj",
-                               animated=True,
-                               texMul=2, useShaders={'args':{'specular':1}},
-                               scale=1, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"Zelda/Ztest4.obj",
+                animated=True,
+                texMul=2, useShaders={'args':{'specular':1}},
+                scale=1, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"LinkTP/Li.obj",
-                               animated=True,
-                               texMul=1.5, useShaders={'args':{'specular':1}},
-                               scale=0.75, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"LinkTP/Li.obj",
+                animated=True,
+                texMul=1.5, useShaders={'args':{'specular':1}},
+                scale=0.75, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Ahri/Ahri4.obj",
-                               animated=True, useShaders={'args':{'specular':1}},
-                               scale=1.8, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"Ahri/Ahri4.obj",
+                animated=True, useShaders={'args':{'specular':1}},
+                scale=1.8, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Stormtrooper/Trooper5.obj",
-                               animated=True, useShaders={'args':{'specular':1}},
-                               scale=1.4, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"Stormtrooper/Trooper5.obj",
+                animated=True, useShaders={'args':{'specular':1}},
+                scale=1.4, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
-            self.addVertObject(VertModel, [0,0,0],
-                               filename=mpath+"Vader/Vader5.obj",
-                               animated=True, useShaders={'args':{'specular':1}},
-                               scale=1.6, shadow="R")
+            self.addVertObject(
+                VertModel, [0,0,0],
+                filename=mpath+"Vader/Vader5.obj",
+                animated=True, useShaders={'args':{'specular':1}},
+                scale=1.6, shadow="R")
             self.addPlayer(self.vertObjects[-1])
 
         self.baseVertObjN = len(self.vertObjects)
@@ -1196,64 +1216,78 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.srbs = []
         p = [0,0,0]
         for i in range(self.numBullets):
-            self.addVertObject(VertSphere, p, n=12, scale=0.25,
-                               texture=PATH+"../Assets/Blank.png",
-                               instanced=True,
-                               useShaders={'shader':"emissive",'args':{'emPow':2}})
+            self.addVertObject(
+                VertSphere, p, n=12, scale=0.25,
+                texture=PATH+"../Assets/Blank.png",
+                instanced=True,
+                useShaders={'shader':"emissive",'args':{'emPow':2}})
             self.spheres.append(("blank", self.vertObjects[-1]))
 
-            self.srbs.append(Phys.RigidBody(2, p, vel=[0.,0,0.],
-                                            usegravity=0, elasticity=0.8))
-            self.srbs[-1].addCollider(Phys.BulletCollider(0.25, False,
-                                                          rb=self.srbs[-1]))
+            self.srbs.append(
+                Phys.RigidBody(
+                    2, p, vel=[0.,0,0.],
+                    usegravity=0, elasticity=0.8))
+            self.srbs[-1].addCollider(
+                Phys.BulletCollider(
+                    0.25, False,
+                    rb=self.srbs[-1]))
             self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.sphereTrails = []
         for i in range(self.numBullets):
-            self.addVertObject(VertPlane, self.spheres[i][1].coords - np.array([0,0.2,0]),
-                               n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
-                               texture=PATH+"../Assets/BlankAdd.png",
-                               useShaders={'shader':"add",'args':{'emPow':0.4},
-                                           'noline':True, 'texMode':'clamp'})
+            self.addVertObject(
+                VertPlane, self.spheres[i][1].coords - np.array([0,0.2,0]),
+                n=(1,1), scale=1, h1=[0.01,0,0], h2=[0,0.4,0],
+                texture=PATH+"../Assets/BlankAdd.png",
+                useShaders={'shader':"add",'args':{'emPow':0.4},
+                            'noline':True, 'texMode':'clamp'})
             self.sphereTrails.append(self.vertObjects[-1])
 
         for i in range(self.numBullets // 2):
-            self.addVertObject(VertSphere, p, n=16, scale=0.5,
-                               texture=PATH+"../Assets/Red.png",
-                               instanced=True,
-                               useShaders={'shader':"emissive",'args':{'emPow':2.5}})
+            self.addVertObject(
+                VertSphere, p, n=16, scale=0.5,
+                texture=PATH+"../Assets/Red.png",
+                instanced=True,
+                useShaders={'shader':"emissive",'args':{'emPow':2.5}})
             self.spheres.append(("red", self.vertObjects[-1]))
 
-            self.srbs.append(Phys.RigidBody(24, p, vel=[0.,0,0.],
-                                            usegravity=0, elasticity=0.8))
-            self.srbs[-1].addCollider(Phys.BulletCollider(0.5, False,
-                                                          rb=self.srbs[-1],
-                                                          damage=4))
+            self.srbs.append(
+                Phys.RigidBody(
+                    24, p, vel=[0.,0,0.],
+                    usegravity=0, elasticity=0.8))
+            self.srbs[-1].addCollider(
+                Phys.BulletCollider(
+                    0.5, False,
+                    rb=self.srbs[-1],
+                    damage=4))
             self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
 
-        self.addVertObject(VertModel, [0,-0.6,0], scale=(1,0.6,1),
-                           filename=PATH+'../Models/Rings.obj',
-                           shadow='', useShaders={'shader':'add','args':{'emPow':0.5},
-                                                  'noline':True})
+        self.addVertObject(
+            VertModel, [0,-0.6,0], scale=(1,0.6,1),
+            filename=PATH+'../Models/Rings.obj',
+            shadow='', useShaders={
+                'shader':'add','args':{'emPow':0.5}, 'noline':True})
         self.restRings = self.vertObjects[-1]
 
-        self.addVertObject(VertSphere, [0,0,0], scale=0.06,
-                           n=8, texture=PATH+"../Assets/LightBlue.png",
-                           useShaders={'emissive':1})
+        self.addVertObject(
+            VertSphere, [0,0,0], scale=0.06,
+            n=8, texture=PATH+"../Assets/LightBlue.png",
+            useShaders={'emissive':1})
         self.testSphere = self.vertObjects[-1]
 
 
         numFX = 4
         for i in range(numFX):
-            self.addVertObject(VertRing, [0,0,0], n=16,
+            self.addVertObject(
+                VertRing, [0,0,0], n=16,
                 radius=(0.5,1.2), z=0.3, uMult=5,
                 texture="../Assets/tex1_64x64_fa5ab1f63d767af9_14.png",
                 instanced=True,
-                shadow="", useShaders={'shader':'add', 'args':{'emPow':0.6},
-                                       'noline':True})
+                shadow="", useShaders={
+                    'shader':'add', 'args':{'emPow':0.6}, 'noline':True})
             obj = self.vertObjects[-1]
             obj.prevCoord = np.array([0,0,0.])
             obj.prevRot = np.identity(3)
@@ -1262,104 +1296,120 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.impulseFX = self.vertObjects[-numFX:]
 
 
-        fogParams = {2: (0.14,0.01, 60,10,np.array((0.1,0.15,0.4)) * 0.016),
-                     4: (0.02,0.002,40,30, np.array((0.15,0.18,0.2)) * 0.003),
-                     5: (0.04,0.001,24,0, (0,0,0))}
+        fogParams = {
+            2: (0.14,0.01, 60,10,np.array((0.1,0.15,0.4)) * 0.016),
+            4: (0.02,0.002,40,30, np.array((0.15,0.18,0.2)) * 0.003),
+            5: (0.04,0.001,24,0, (0,0,0))}
         if self.stage in fogParams:
             fog, fabs, fdist, fheight, famb = fogParams[self.stage]
 
-            self.addVertObject(VertPlane, [-1,-1,0],
-                           h1=[2,0,0], h2=[0,2,0], n=1,
-                           texture=PATH+"../Assets/Blank2.png",
-                           useShaders={"2d":1, 'shader':"fog",
-                                       'args':{'fogLight':fog, 'fogAbsorb':fabs,
-                                       'fogDist':fdist, 'fogHeight':fheight,
-                                       'fogAmb':famb}})
+            self.addVertObject(
+                VertPlane, [-1,-1,0],
+                h1=[2,0,0], h2=[0,2,0], n=1,
+                texture=PATH+"../Assets/Blank2.png",
+                useShaders={"2d":1, 'shader':"fog", 'args':{
+                    'fogLight':fog, 'fogAbsorb':fabs,
+                    'fogDist':fdist, 'fogHeight':fheight,
+                    'fogAmb':famb}})
             self.fogMTL = self.vertObjects[-1].texNum
 
         if self.stage == 4:
-            self.addVertObject(VertModel, [10,0,20], rot=(0,-pi/2,0),
-                               filename=PATH+"../Models/Temple/Clouds.obj",
-                               shadow="",
-                               useShaders={'shader':'add','args':{
-                                   'emPow':0.04, 'fadeDist':2}, 'noline':True})
+            self.addVertObject(
+                VertModel, [10,0,20], rot=(0,-pi/2,0),
+                filename=PATH+"../Models/Temple/Clouds.obj",
+                shadow="",
+                useShaders={'shader':'add','args':{
+                    'emPow':0.04, 'fadeDist':2}, 'noline':True})
             self.clouds = self.vertObjects[-1]
 
         for i in range(self.numBullets // 3):
-            self.addVertObject(VertSphere, p, n=12, scale=0.25,
-                               texture=PATH+"../Assets/Orange.png",
-                               instanced=True,
-                               useShaders={'shader':'add','args':{'emPow':0.4}})
+            self.addVertObject(
+                VertSphere, p, n=12, scale=0.25,
+                texture=PATH+"../Assets/Orange.png",
+                instanced=True,
+                useShaders={'shader':'add','args':{'emPow':0.4}})
             self.spheres.append(("orange", self.vertObjects[-1]))
 
-            self.srbs.append(Phys.RigidBody(10, p, vel=[0.,0,0.],
-                                            usegravity=0, elasticity=0.8))
-            self.srbs[-1].addCollider(Phys.BulletCollider(0.25, False,
-                                                          rb=self.srbs[-1],
-                                                          damage=6,
-                                                          explode=True))
+            self.srbs.append(
+                Phys.RigidBody(
+                    10, p, vel=[0.,0,0.],
+                    usegravity=0, elasticity=0.8))
+            self.srbs[-1].addCollider(
+                Phys.BulletCollider(
+                    0.25, False,
+                    rb=self.srbs[-1],
+                    damage=6,
+                    explode=True))
             self.srbs[-1].disable()
             self.w.addRB(self.srbs[-1])
 
         self.pickups = []
         for i in range(1):
-            self.addVertObject(VertSphere, p, n=12, scale=0.25,
-                               texture=PATH+"../Assets/Green.png",
-                               useShaders={'shader':'emissive',
-                                           'args':{'emPow':1.8}})
+            self.addVertObject(
+                VertSphere, p, n=12, scale=0.25,
+                texture=PATH+"../Assets/Green.png",
+                useShaders={'shader':'emissive', 'args':{'emPow':1.8}})
             self.pickups.append({"pos":None, "t":-1, "obj":self.vertObjects[-1]})
 
 
         self.blackHoles = []
         for i in range(self.numBullets // 5):
-            self.addVertObject(VertSphere, p, n=12, scale=0.3,
-                               texture=PATH+"../Assets/Black.png",
-                               instanced=True,
-                               useShaders={"emissive":0.0})
+            self.addVertObject(
+                VertSphere, p, n=12, scale=0.3,
+                texture=PATH+"../Assets/Black.png",
+                instanced=True,
+                useShaders={"emissive":0.0})
             self.spheres.append(("black", self.vertObjects[-1]))
 
-            self.srbs.append(Phys.RigidBody(16, p, vel=[0.,0,0.],
-                                            usegravity=0, elasticity=0.2,
-                                            noforces=True))
-            self.srbs[-1].addCollider(Phys.BulletCollider(0.3, False,
-                                                          rb=self.srbs[-1],
-                                                          damage=3, hl=0,
-                                                          blackHole=True))
+            self.srbs.append(
+                Phys.RigidBody(
+                    16, p, vel=[0.,0,0.],
+                    usegravity=0, elasticity=0.2,
+                    noforces=True))
+            self.srbs[-1].addCollider(
+                Phys.BulletCollider(
+                    0.3, False,
+                    rb=self.srbs[-1],
+                    damage=3, hl=0,
+                    blackHole=True))
             self.srbs[-1].disable()
             self.srbs[-1].colliders[0].onHit = lambda x: self.explode(x)
 
             self.w.addRB(self.srbs[-1])
 
-            ps = ContinuousParticleSystem(np.array([0,0,0.]), (0,pi/2),
-                                          vel=0.0, randVel=0.01,
-                                          nParticles=2400,
-                                          randPos=0.2,
-                                          lifespan=400,
-                                          size=0.3, opacity=0.7,
-                                          color=(0,0,0), randColor=0)
+            ps = ContinuousParticleSystem(
+                np.array([0,0,0.]), (0,pi/2),
+                vel=0.0, randVel=0.01,
+                nParticles=2400,
+                randPos=0.2,
+                lifespan=400,
+                size=0.3, opacity=0.7,
+                color=(0,0,0), randColor=0)
             self.addParticleSystem(ps)
 
             self.blackHoles.append({"rb":self.srbs[-1], "ps":ps})
 
         if self.stage == 0:
-            self.addVertObject(VertWater, [-1, 2, -10], size=240,
-                           scale=0.22, pScale=0.04,
-                 wDir=[(0.4,-0.17), (0.4, 0.2)],
-                 wLen=[(10, 4, 3), (7, 5, 2)],
-                 wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
-                 wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
-                           texture=PATH+"../Assets/Blue.png",
-                           useShaders={'shader':"SSR"})
+            self.addVertObject(
+                VertWater, [-1, 2, -10], size=240,
+                scale=0.22, pScale=0.04,
+                wDir=[(0.4,-0.17), (0.4, 0.2)],
+                wLen=[(10, 4, 3), (7, 5, 2)],
+                wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
+                wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
+                texture=PATH+"../Assets/Blue.png",
+                useShaders={'shader':"SSR"})
             self.water = self.vertObjects[-1]
 
         for i in range(len(self.players)):
-            ps = ContinuousParticleSystem(np.array([0,0,0.]), (0,pi/2),
-                                          vel=0.03, randVel=0.01,
-                                          nParticles=2400,
-                                          randPos=0.2,
-                                          lifespan=1200,
-                                          size=0.2, opacity=0.6,
-                                          color=(0,0,0), randColor=0)
+            ps = ContinuousParticleSystem(
+                np.array([0,0,0.]), (0,pi/2),
+                vel=0.03, randVel=0.01,
+                nParticles=2400,
+                randPos=0.2,
+                lifespan=1200,
+                size=0.2, opacity=0.6,
+                color=(0,0,0), randColor=0)
             self.addParticleSystem(ps)
             self.players[i]["ghost"] = ps
 
@@ -1367,10 +1417,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.expLights = {}
         for i in range(self.numBullets // 3):
             p = np.array([0., 0, 0])
-            self.addVertObject(VertSphere, p, n=24, scale=0.25,
-                               texture=PATH+"../Assets/Orange1.png",
-                               instanced=True,
-                               useShaders={'shader':"add", 'args':{'emPow':2.}})
+            self.addVertObject(
+                VertSphere, p, n=24, scale=0.25,
+                texture=PATH+"../Assets/Orange1.png",
+                instanced=True,
+                useShaders={'shader':"add", 'args':{'emPow':2.}})
             self.exploders.append({"pos":p, "active":False,
                                    "scale":1, "obj":self.vertObjects[-1]})
 
@@ -1387,27 +1438,31 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             c = [(b1, 0, b1), (b1, 0, b1), (b2, 0, b1), (b1, 0, b2)]
             h = [(ss, 0, 0), (0, 0, ss), (0, 0, ss), (ss, 0, 0)]
             for i in range(4):
-                self.addVertObject(VertPlane, np.array(c[i]) - np.array([0,2,0]),
-                                   n=15, h1=h[i], h2=[0, 22, 0],
-                                   texture=PATH+"../Assets/Magenta.png",
-                                   useShaders={'shader':"border"})
+                self.addVertObject(
+                    VertPlane, np.array(c[i]) - np.array([0,2,0]),
+                    n=15, h1=h[i], h2=[0, 22, 0],
+                    texture=PATH+"../Assets/Magenta.png",
+                    useShaders={'shader':"border"})
 
         try: self.STAGECONFIG.setupPostprocess(self)
         except AttributeError: pass
 
         sr = self.shRes
         fact = (1,1,1,0.9,0.5,1)[self.stage]
-        self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
-                                "size":sr, "scale":24*sr/2048 * fact})
-        self.shadowCams.append({"pos":[40, 5, 40], "dir":[pi/2, 1.1],
-                                "size":sr, "scale":160*sr/2048})
+        self.shadowCams.append({
+            "pos":[40, 5, 40], "dir":[pi/2, 1.1],
+            "size":sr, "scale":24*sr/2048 * fact})
+        self.shadowCams.append({
+            "pos":[40, 5, 40], "dir":[pi/2, 1.1],
+            "size":sr, "scale":160*sr/2048})
 
         print(f'Textures in {time.time() - self.loadStart:.2f}')
         self.makeObjects(1)
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + "../Sound/Noise.flac",
-                                                 PATH + '../Sound/Plains3v4.wav',
-                                                 PATH + '../Sound/Env_Plains_R.wav'
+        self.si.put({"Fade":{'Time':0, 'Tracks':{
+            PATH + "../Sound/Noise.flac",
+            PATH + '../Sound/Plains3v4.wav',
+            PATH + '../Sound/Env_Plains_R.wav'
         }}})
 
 
@@ -1458,8 +1513,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def fireSnd(self, color):
         snd = {"blank":("A",4), "orange":("B",3), "red":("C",4), "black":("D",2.5)}
-        self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volmFX / 2 / snd[color][1])})
+        self.si.put({"Play":(
+            PATH+"../Sound/Fire" + snd[color][0] + ".wav",
+            self.volmFX / 2 / snd[color][1])})
 
     def fireAnim(self, color, sc=None, vh=None):
         if sc is None:
@@ -1501,8 +1557,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         snd = {"blank":("A",2), "orange":("B",1.5), "red":("C",2), "black":("D",1.5)}
 
-        self.si.put({"Play":(PATH+"../Sound/Fire" + snd[color][0] + ".wav",
-                             self.volmFX / snd[color][1], (a["b1"].offset[:3], 2.7, 1))})
+        self.si.put({"Play":(
+            PATH+"../Sound/Fire" + snd[color][0] + ".wav",
+            self.volmFX / snd[color][1], (a["b1"].offset[:3], 2.7, 1))})
 
         if sc == self.selchar and color == 'blank':
             self.frameFired = color
@@ -1514,12 +1571,14 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.tempPos = np.array(self.pos)
 
         if self.stage == 4:
-            self.si.put({'Play':(PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
+            self.si.put({'Play':(
+                PATH+'../Sound/NoiseOpen.flac', self.volmFX * 0.9, True)})
         elif self.stage == 5:
             pass
         elif self.isClient:
             snd = self.ENVTRACKS
-            self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
+            self.si.put({"Play":(
+                PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
             self.gameStarted = True
 
         self.qi.put(True)
@@ -1549,16 +1608,18 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.idlingTest = Anim.loadAnim(p+'IdlingTest6.ava')
         for i in range(len(self.idlingTest)):
-            self.idlingTest[i] = (self.idlingTest[i][0] * 1.6,
-                                  self.idlingTest[i][1],
-                                  self.idlingTest[i][2] * 0.6,
-                                  self.idlingTest[i][3])
+            self.idlingTest[i] = (
+                self.idlingTest[i][0] * 1.6,
+                self.idlingTest[i][1],
+                self.idlingTest[i][2] * 0.6,
+                self.idlingTest[i][3])
 
         self.throwKF = Anim.loadAnim(PATH+'../Poses/Throw.ava')
         for i in range(len(self.throwKF)):
-            self.throwKF[i] = (self.throwKF[i][0],
-                               self.throwKF[i][1]['children'][0],
-                               self.throwKF[i][2])
+            self.throwKF[i] = (
+                self.throwKF[i][0],
+                self.throwKF[i][1]['children'][0],
+                self.throwKF[i][2])
 
         self.restPlayer = None
         self.lastRestPlayer = None
@@ -1585,8 +1646,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a['b1'].lastOffset = np.array((0,0,0), 'float32')
 
             a["b1"].offset = np.array((xpos, 0, 15 + space*n, 1.))
-            a["b1"].offset[1] = self.terrain.getHeight(a["b1"].offset[0],
-                                                       a["b1"].offset[2]) + 1.6
+            a["b1"].offset[1] = self.terrain.getHeight(
+                *a['b1'].offset[::2]) + 1.6
             a["rig"].importPose(self.idle, updateRoot=False)
             self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
 
@@ -1870,8 +1931,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.draw.translate(pos, cs, ce, tn)
         i["pos"] = pos; i["t"] = t
 
-        self.si.put({"Play":(PATH+"../Sound/Pickup.wav",
-                             self.volmFX / 3, (i["pos"], 4, 1))})
+        self.si.put({"Play":(
+            PATH+"../Sound/Pickup.wav",
+            self.volmFX / 3, (i["pos"], 4, 1))})
 
         if 'ps' in i:
             i['ps'].reset()
@@ -1879,14 +1941,16 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             i['ps'].opacity = 0.3
             return
 
-        ps = ContinuousParticleSystem(pos, (0,-pi/2),
-                                      vel=0.02, randVel=0.0,
-                                      nParticles=40,
-                                      randPos=0.25,
-                                      lifespan=1200,
-                                      size=0.15, opacity=0.3,
-                                      color=(0.08,0.4,0.06), randColor=0,
-                                      circular=True)
+        ps = ContinuousParticleSystem(
+            pos, (0,-pi/2),
+            vel=0.02, randVel=0.0,
+            nParticles=40,
+            randPos=0.25,
+            lifespan=1200,
+            size=0.15, opacity=0.3,
+            color=(0.08,0.4,0.06), randColor=0,
+            circular=True
+        )
         self.addParticleSystem(ps)
         i['ps'] = ps
         i['ps'].shader = 2
@@ -1995,9 +2059,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 sf = 'StonyPath_0{}.wav'
 
         sf = sf.format(random.randint(1, 6))
-        self.si.put({"Play":(PATH+'../Sound/New/'+sf,
-                             self.volmFX / 2,
-                             (a['b1'].offset[:3], 6, 1.2))})
+        self.si.put({"Play":(
+            PATH+'../Sound/New/'+sf,
+            self.volmFX / 2,
+            (a['b1'].offset[:3], 6, 1.2))})
 
     def playerMove(self, a):
         CURRTIME = self.CURRTIME
@@ -2022,9 +2087,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a["jump"] = -a["jump"]
                 self.setYoffset(a)
 
-                self.si.put({"Play":(PATH+"../Sound/New/Quiver.wav",
-                                     abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
-                                     (a['b1'].offset[:3], 6, 1))})
+                self.si.put({"Play":(
+                    PATH+"../Sound/New/Quiver.wav",
+                    abs(a['pv'].v[1]) / 8 * self.volmFX / 3,
+                    (a['b1'].offset[:3], 6, 1))})
 
                 if abs(a["pv"].v[1]) > 8:
                     a["pv"].colliders[0].hc += abs(abs(a["pv"].v[1]) - 6)
@@ -2132,9 +2198,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['b1'].lastOffset = off
                 a['animOffset'] = off
             else:
-                self.stepPoseLoop(a, a["obj"], self.keyFrames,
-                                  df*self.frameTime * self.poseDt*a["moving"],
-                                  isFlat=True)
+                self.stepPoseLoop(
+                    a, a["obj"], self.keyFrames,
+                    df*self.frameTime * self.poseDt*a["moving"],
+                    isFlat=True)
 
         elif a["movingOld"]:
             if a['jump'] <= 0:
@@ -2182,9 +2249,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['frameFired'] = -100
 
         if a['throwAnim']:
-            self.stepPoseLoop(a, a['obj'], self.throwKF, self.frameTime*2.2,
-                              loop=False, bone=a['b1'].children[0],
-                              timer='poseThrow')
+            self.stepPoseLoop(
+                a, a['obj'], self.throwKF, self.frameTime*2.2,
+                loop=False, bone=a['b1'].children[0],
+                timer='poseThrow')
             if not a['animFired'] and a['poseThrow'] > self.throwKF[5][0]:
                 a['animFired'] = True
                 self.fire(a['fireColor'], a['id'], a['fireVH'], throw=True)
@@ -2221,11 +2289,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             breathRate *= (1, 0.9, 1.1, 1, 1.12, 1.02, 1.08, 1.05, 0.98, 0.92)[a['id']]
 
-            self.stepPoseLoop(a, a['obj'], self.idlingTest,
-                              self.frameTime * (breathRate + 0.6)/2,
-                              loop=True, timer='poseIdle',
-                              offsetMult=breathRate * 0.9,
-                              isFlat=True)
+            self.stepPoseLoop(
+                a, a['obj'], self.idlingTest,
+                self.frameTime * (breathRate + 0.6)/2,
+                loop=True, timer='poseIdle',
+                offsetMult=breathRate * 0.9,
+                isFlat=True)
 
             a['tempPose'] = a['rig'].exportPoseFlat()
             a['rig'].interpPoseFlat(a['tempPose'], self.idleFlat, 1 - breathRate * 0.9)
@@ -2264,8 +2333,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 # For debug
                 ts = self.testSphere
                 diff = a['b1'].offset[:3] + test - ts.coords
-                self.draw.translate(diff, ts.cStart,
-                                    ts.cEnd, ts.texNum)
+                self.draw.translate(diff, ts.cStart, ts.cEnd, ts.texNum)
                 ts.coords += diff
 
             if 'vrC' in a:
@@ -2368,7 +2436,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if len(actPlayers) > 1:
             if not self.gameStarted and self.stage < 4:
                 snd = self.ENVTRACKS
-                self.si.put({"Play":(PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
+                self.si.put({"Play":(
+                    PATH+"../Sound/" + snd[self.stage], self.volm * 0.8, True)})
                 self.gameStarted = True
 
             self.checkAlive()
@@ -2420,8 +2489,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.frameProfile('Ghost/Energy')
 
-        impulses = self.w.stepWorld(self.frameTime,
-                                    checkColl=(self.frameNum & vf == 0))
+        impulses = self.w.stepWorld(
+            self.frameTime,
+            checkColl=(self.frameNum & vf == 0))
 
         self.frameProfile('StepWorld')
 
@@ -2655,10 +2725,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.draw.noiseDist = min(0.1, nd + 0.6*self.frameTime)
             ppos = self.players[self.iceEffect[1]]['b1'].offset[:3]
             self.draw.noisePos = ppos
-            self.pointLights.append({'i':(0.2,0.6,1.5),
-                                        'pos': ppos + 1.5*self.vVhorz() + np.array((0,1,0))})
-            self.pointLights.append({'i':(0.3,0.5,1.1),
-                                        'pos': ppos - 1.5*self.vVhorz() + np.array((0,1,0))})
+            self.pointLights.append({
+                'i':(0.2,0.6,1.5),
+                'pos': ppos + 1.5*self.vVhorz() + np.array((0,1,0))})
+            self.pointLights.append({
+                'i':(0.3,0.5,1.1),
+                'pos': ppos - 1.5*self.vVhorz() + np.array((0,1,0))})
         else:
             self.draw.noiseDist = max(-1, nd - 0.2*self.frameTime)
 
@@ -2699,12 +2771,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             for a in self.players:
                 if a["id"] not in actPlayers: continue
                 tn = a["id"]
-                if tn != sc:
-                    if raySphereIntersect(self.pos, self.vv, a["b1"].offset[:3], 0.5):
-                        try:
-                            px = playerIndex[tn]
-                            self.uInfo["nameTag"] = str(px)
-                        except KeyError: pass
+                if tn == sc: continue
+                if raySphereIntersect(self.pos, self.vv, a["b1"].offset[:3], 0.5):
+                    try:
+                        px = playerIndex[tn]
+                        self.uInfo["nameTag"] = str(px)
+                    except KeyError: pass
 
 
         if self.doSh: self.shadowChar()
