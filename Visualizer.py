@@ -416,7 +416,8 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             fr = fr[::-1,:,::-1]
             self.cframe.frombytes(fr.tobytes())
         ts = time.strftime("%Y %b %d %H-%M-%S", time.gmtime())
-        self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".jpg", quality=91)
+        self.cframe.save(PATH + "Screenshots/Screenshot " + ts + ".jpg",
+                         quality=91, subsampling='4:4:4')
 
     def sendKey(self, key):
         try: self.evtQ.put_nowait(("eventk", key))
@@ -607,6 +608,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
 
 
 def writeRes(a):
+    if os.path.exists(PATH+"Resolutions.txt"): return
     try:
         with open(PATH+"Resolutions.txt", "w") as f:
             f.write("==== Active Fullscreen Resolutions ====\n")
