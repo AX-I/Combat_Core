@@ -507,7 +507,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.draw.changeShader(xn, self.matShaders[xn], stage=self.stage)
 
 
-        self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+        self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
         for xn in a["ctexn"]:
             self.draw.highlight([0,0,0], xn, mult=True)
             self.matShaders[xn]['highlight'] = (0,0,0)
@@ -664,7 +664,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         initPose = self.idleFlat if p['pstep'] < 0 else p['tempPose']
         p["rig"].interpPoseFlat(initPose, self.gestures[p["gestNum"]], p["poset"])
-        self.updateRig(p["rig"], p["ctexn"], p["num"], vobj)
+        self.updateRig(p["rig"], p["ctexn"], p["id"], vobj)
 
         if finish: self.gestFinish(p["id"])
 
@@ -997,7 +997,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a = {"posen":0, "poset":0, "pstep":6,
              "moving":False, "movingOld":False, "cr":0, "cv":0,
              "ctexn":None, "rig":None, "obj":o,
-             "pv":pv, "num":len(self.players), "isHit":-100,
+             "pv":pv, "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "fCam": False,
              "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
@@ -1012,10 +1012,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.w.addRB(pv)
         pv.disable()
 
-        a["cheight"] = self.rpi[a["num"]][2] + 0.06 * (self.stage == 2)
+        a["cheight"] = self.rpi[a["id"]][2] + 0.06 * (self.stage == 2)
 
-        r = json.load(open(self.rpi[a["num"]][0]))
-        a["rig"] = Rig(r, scale=self.rpi[a["num"]][1])
+        r = json.load(open(self.rpi[a["id"]][0]))
+        a["rig"] = Rig(r, scale=self.rpi[a["id"]][1])
         a["b1"] = a["rig"].b0
         a["allBones"] = a["rig"].allBones
 
@@ -1637,7 +1637,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 ctexn.append(c.texNum)
             a["ctexn"] = ctexn
 
-            self.draw.initBoneTransforms(a["num"], len(a["allBones"]))
+            self.draw.initBoneTransforms(a["id"], len(a["allBones"]))
 
             for b in range(len(a["allBones"])):
                 for i in a["ctexn"]:
@@ -1649,7 +1649,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a["b1"].offset[1] = self.terrain.getHeight(
                 *a['b1'].offset[::2]) + 1.6
             a["rig"].importPose(self.idle, updateRoot=False)
-            self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+            self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
 
         self.shadowObjects()
         self.setupShadowCams()
@@ -1735,11 +1735,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         dat = {}
         for i in self.actPlayers:
             a = self.players[i]
-            dat[a["num"]] = self.serializePlayerState(a)
+            dat[a["id"]] = self.serializePlayerState(a)
             if 'vr' in a:
-                dat[a['num']]['vr'] = float(a['cheight'])
+                dat[a['id']]['vr'] = float(a['cheight'])
             if 'vrC' in a:
-                dat[a['num']]['vrC'] = a['vrC']
+                dat[a['id']]['vrC'] = a['vrC']
         dat[self.selchar]['vh'] = float(self.vv[1])
         dat[self.selchar]['fCam'] = self.fCam
 
@@ -1774,11 +1774,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def sendPlayer(self):
         dat = {}
         a = self.players[self.selchar]
-        dat[a["num"]] = self.serializePlayerState(a)
+        dat[a["id"]] = self.serializePlayerState(a)
         if self.VRMode:
-            dat[a['num']]['vr'] = float(a['cheight'])
+            dat[a['id']]['vr'] = float(a['cheight'])
             if 'vrC' in a:
-                dat[a['num']]['vrC'] = a['vrC']
+                dat[a['id']]['vrC'] = a['vrC']
 
         adat = {"players":dat, "time":self.frameNum,
                 'restPlayer':self.restPlayer}
@@ -2378,7 +2378,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             ang[2] = -asin(a['vh']) - torso.angles[2]
             head.rotate(ang)
 
-        self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+        self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
 
         if not a["fCam"]:
             a["cr"] += a["cv"] * self.frameTime
@@ -2762,7 +2762,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             a = self.players[sc]
             a["cr"] = atan2(self.vv[2], self.vv[0])
             if not a["moving"]:
-                self.updateRig(a["rig"], a["ctexn"], a["num"], a["obj"])
+                self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
             if not self.VRMode and not self.cam1P and not self.camFree:
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
                 self.pos[1] -= a['legIKoffset']
