@@ -56,7 +56,7 @@ import OpsConv
 import AI
 import Anim
 
-from VertObjects import VertWater0, VertRing
+from VertObjects import VertWater0, VertRing, extractByUV
 from ParticleSystem import AttractParticleSystem
 
 from IK import doFullLegIK, doArmIK
@@ -950,34 +950,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             PATH+"../Sound/Exp.wav",
             self.volmFX / 3, (np.array(p), 6, 1))})
 
-    def extractByUV(self, src, dst, u1,u2,v1,v2):
-        """Origin is bottom left, u up, v right"""
-        t1 = src
-        t2 = dst
-        t1.create()
-        tu = np.array(t1.u)
-        tv = np.array(t1.v)
-        cond = ((tu >= u1) & (tu <= u2) & (tv >= v1) & (tv <= v2))
-        #print(cond.shape, cond[0])
-        cond = cond.all(axis=1)
-        if type(t1.wedgePoints) is list:
-            t1.wedgePoints = np.array(t1.wedgePoints)
-            t1.vertNorms = np.array(t1.vertNorms)
-        t2.wedgePoints = t1.wedgePoints[cond]
-        t2.vertNorms = t1.vertNorms[cond]
-        t2.bones = np.array(t1.bones)[cond]
-        t2.u = (tu[cond] - u1) / (u2 - u1)
-        t2.v = (tv[cond] - v1) / (v2 - v1)
-        t2.numWedges = np.sum(cond)
-        t2.create = lambda: 1
-        cond = np.logical_not(cond)
-        t1.wedgePoints = np.array(t1.wedgePoints)[cond]
-        t1.vertNorms = np.array(t1.vertNorms)[cond]
-        t1.bones = np.array(t1.bones)[cond]
-        t1.u = tu[cond]
-        t1.v = tv[cond]
-        t1.numWedges = np.sum(cond)
-        t1.create = lambda: 1
 
     def addPlayer(self, o):
         pv = Phys.RigidBody(64, [0.,0,0], forces=[(0,0,0)], noforces=False)
@@ -1103,7 +1075,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             scale=1.33, shadow="")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0,0.25,0,0.25)
+        extractByUV(t1, t2, 0,0.25,0,0.25)
         self.matShaders[t2.texNum] = {'shader':'add', 'noline':1, 'args':{'emPow':0.8}}
 
         self.addPlayer(self.vertObjects[-1])
@@ -1116,7 +1088,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             scale=0.33, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
+        extractByUV(t1, t2, 0.5,0.75,0.25,0.5)
         self.matShaders[t2.texNum].update(
             args={'specular':0.8, 'NMmipBias':0.1,
                   'translucent':1, 'roughness':0.12, 'f0':0.6,
@@ -1133,7 +1105,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             scale=0.75, shadow="R")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
-        self.extractByUV(t1, t2, 0.5,0.75,0,0.25)
+        extractByUV(t1, t2, 0.5,0.75,0,0.25)
         self.matShaders[t2.texNum].update(
             args={'specular':0.8, 'NMmipBias':0.1,
                   'translucent':1, 'roughness':0.12, 'f0':0.6,
@@ -1151,7 +1123,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             t1 = self.vertObjects[-1]
             t2 = self.vertObjects[-3]
-            self.extractByUV(t1, t2, 352/1024,(352+128)/1024,513/1024,(513+256)/1024)
+            extractByUV(t1, t2, 352/1024,(352+128)/1024,513/1024,(513+256)/1024)
             self.matShaders[t2.texNum]['nocast'] = 1
 
             self.addPlayer(self.vertObjects[-1])
