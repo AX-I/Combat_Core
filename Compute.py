@@ -236,14 +236,16 @@ class ThreeDBackend:
         GL = settings["Render"] == "GL"
         self.GL = GL
 
+        opts = {}
         if GL:
             import Ops_GL as Ops
+            opts['ires'] = settings['IRES']
+            opts['use_fsr'] = settings['FSR']
         else:
             import Ops_CL as Ops
+            opts['max_uv'] = len(self.vertPoints)
 
-        self.draw = Ops.CLDraw(
-            self.W, self.H,
-            ires=settings['IRES'], use_fsr=settings['FSR'])
+        self.draw = Ops.CLDraw(self.W, self.H, **opts)
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
 
@@ -395,8 +397,10 @@ class ThreeDBackend:
         result = self.draw.getFrame()
         if self.VRMode and self.GL:
             self.rgb = np.array(result)[::-1]
-        else:
+        elif self.GL:
             self.rgb = result
+        else:
+            self.rgb = result.astype('uint8')
 
         self.debugOverlay()
 

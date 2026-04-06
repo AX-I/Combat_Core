@@ -19,6 +19,7 @@
 # ======== ========
 
 import numpy as np
+import warnings
 import time
 from Utils import viewMat
 
@@ -105,8 +106,13 @@ def align34(a):
     return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
 class CLDraw:
-    def __init__(self, size_sky, max_uv, w, h, max_particles):
+    def __init__(self, w, h, size_sky=1, max_uv=64, max_particles=1,
+                 **kwargs):
         self.device = d
+
+        w = w//TILE_SIZE * TILE_SIZE
+        h = h//TILE_SIZE * TILE_SIZE
+
         self.W = np.int32(w)
         self.H = np.int32(h)
         self.WC = np.int32(w // TILE_SIZE)
@@ -200,11 +206,15 @@ class CLDraw:
 
         self.useCompound = []
 
+        self.noiseDist = 0
+
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s * self.H//2)
         self.caX, self.caY = np.float32(cx), np.float32(cy)
 
-    def drawPS(self, xyz, color, opacity, size):
+    def drawPS(self, xyz, color, opacity, size, *args):
+        warnings.warn('drawPS is disabled for CL backend')
+        return
         if xyz.shape[0] == 0: return
         vs = np.int32(xyz.shape[0]//BLOCK_SIZE + 1)
         cl.enqueue_copy(cq, self.PC, align34(xyz.astype("float32")))
@@ -281,10 +291,14 @@ class CLDraw:
         else: self.texSize.append(np.int32(rr.shape[0]))
         return len(self.TR) - 1
 
-    def addTextureGroup(self, xyz, uv, vn, r, g, b, shader=None, mip=False):
-        rr = r.astype("uint16")
-        gg = g.astype("uint16")
-        bb = b.astype("uint16")
+    def addTextureGroup(self, xyz, uv, vn, rgb,
+                        shader=None, mip=False, **kwargs):
+        if rgb.dtype == 'float16':
+            rgb = np.round(rgb * 65535).astype('uint16')
+
+        rr = np.array(rgb[:,:,0])
+        gg = np.array(rgb[:,:,1])
+        bb = np.array(rgb[:,:,2])
 
         p = xyz.astype("float32")
         p = align34(p)
@@ -336,9 +350,12 @@ class CLDraw:
         cl.enqueue_copy(cq, self.VN[tn], align34(vn.astype("float32")),
                         device_offset=cstart*3*4*4)
 
-    def addTexAlpha(self, a):
+    def addTexAlpha(self, a, **kwargs):
         self.TA.append(cl.Buffer(ctx, mf.READ_ONLY, size=a.nbytes))
         cl.enqueue_copy(cq, self.TA[-1], a, is_blocking=False)
+
+    def addNrmMap(self, nrm, name, **kwargs):
+        pass
 
     def setReflTex(self, name, r, g, b, size):
         rr = r.astype("uint16")
@@ -886,7 +903,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.GO, self.SSGO)
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
-    def gamma(self, ex, tonemap=None):
+    def gamma(self, ex, *args):
         s = 4; t = 4
         gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
                 np.float32(ex),
@@ -916,7 +933,10 @@ class CLDraw:
         cl.enqueue_copy(cq, self.GO, self.SSGO)
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
-    def blur(self):
+    def applyDoF(self):
+        pass
+
+    def blur(self, ex):
         s = 4; t = 4
         e = blur1.blurH(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
                     self.r2, self.g2, self.b2,
@@ -962,7 +982,7 @@ class CLDraw:
 
         self.SHADOWMAP[i] = s
 
-    def placeShadowMap(self, i, pos, facing, ambLight=None):
+    def placeShadowMap(self, i, pos, facing, ambLight=None, **kwargs):
         sm = self.SHADOWMAP[i]
         p = np.array(pos).astype("float32")
         cl.enqueue_copy(cq, sm["pos"], p)
@@ -1130,3 +1150,8 @@ class CLDraw:
     def getDB(self):
         cl.enqueue_copy(cq, self.hdb, self.DB)
         return self.hdb
+
+    def getDBpoint(self):
+        offset = (self.H//2 * self.W + self.W//2) * 4
+        cl.enqueue_copy(cq, self.hdb[0,:1], self.DB, src_offset=offset)
+        return self.hdb[0,:1].item()
