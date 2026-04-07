@@ -14,10 +14,11 @@ def getHeight(self, pos):
     return self.terrain.getHeight(*pos[::2])
 
 def setupStage(self):
-    self.addVertObject(VertModel, [13.32,0,20.4], rot=(0,0,0),
-                       filename=PATH+"../Atrium/Atrium8AtlasOpt.obj",
-                       scale=1.2, mip=2,
-                       subDiv=1, shadow="CR")
+    self.addVertObject(
+        VertModel, [13.32,0,20.4], rot=(0,0,0),
+        filename=PATH+"../Atrium/Atrium8AtlasOpt.obj",
+        scale=1.2, mip=2,
+        subDiv=1, shadow="CR")
 
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
@@ -40,9 +41,10 @@ def setupStage(self):
         if 'Glass' in f:
             mat.update(shader='SSRglass')
 
-    self.terrain = VertTerrain0([0,-0.6,0],
-                                PATH+"../Atrium/AtriumNav.png",
-                                scale=0.293, vertScale=20)
+    self.terrain = VertTerrain0(
+        [0,-0.6,0],
+        PATH+"../Atrium/AtriumNav.png",
+        scale=0.293, vertScale=20)
 
     hm = Image.open(PATH+"../Atrium/AtriumNavA.png")
     hm = np.array(hm)[:,:,0] < 80
@@ -51,8 +53,9 @@ def setupStage(self):
 
     self.atriumNav = {"map":hm, "scale":0.586, "origin":ho}
 
-    self.t2 = Phys.TerrainCollider([0,-0.6,0], self.terrain.size[0],
-                                   self.terrain.heights, 0.293)
+    self.t2 = Phys.TerrainCollider(
+        [0,-0.6,0], self.terrain.size[0],
+        self.terrain.heights, 0.293)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
@@ -64,8 +67,9 @@ def setupStage(self):
     # Local lights are getting out of hand
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.2,0.2,0.2]})
 
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
-                                  rot=(0,0,0), hdrScale=48)
+    self.skyBox = self.makeSkybox(
+        TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
+        rot=(0,0,0), hdrScale=48)
 
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1, rotY=3.27)

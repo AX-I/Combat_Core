@@ -18,44 +18,50 @@ def getHeight(self, pos):
 
 def setupStage(self):
 
-    self.addVertObject(VertTerrain, [-10, 0, -10],
-                    heights=PATH+"../Assets/TerrainA.png",
-                    texture=PATH+"../Assets/aerial_beach_01_diff_2k.jpg",
-                    scale=0.375, vertScale=26,
-                    shadow="CR", mip=2,
-                    uvspread=20, useShaders={'normal':'sand'})
+    self.addVertObject(
+        VertTerrain, [-10, 0, -10],
+        heights=PATH+"../Assets/TerrainA.png",
+        texture=PATH+"../Assets/aerial_beach_01_diff_2k.jpg",
+        scale=0.375, vertScale=26,
+        shadow="CR", mip=2,
+        uvspread=20, useShaders={'normal':'sand'})
     self.terrain = self.vertObjects[-1]
 
 
     nCloth = 19
     self.nCloth = nCloth
-    self.addVertObject(VertPlane, [20,8,20],
-                       n=nCloth, h2=[2,0,1.5], h1=[0.2,-3,0.1],
-                       texture=PATH+'../Assets/Preview_Forest.jpg',
-                       shadow="R",
-                       useShaders={'calcNorm': 0,
-                                   'args':{'translucent':1,'NMmipBias':0.1},
-                                   'normal':'Clothes', 'shadowDynamic':1})
+    self.addVertObject(
+        VertPlane, [20,8,20],
+        n=nCloth, h2=[2,0,1.5], h1=[0.2,-3,0.1],
+        texture=PATH+'../Assets/Preview_Forest.jpg',
+        shadow="R",
+        useShaders={
+            'calcNorm': 0,
+            'args':{'translucent':1,'NMmipBias':0.1},
+            'normal':'Clothes', 'shadowDynamic':1})
     self.cloth = self.vertObjects[-1]
     pinned = np.array([0, nCloth, (nCloth+1)*nCloth])
-    self.clothSim = PhysCloth.MassSprings(self.cloth.getVertices(),
-                                          self.cloth.getEdges(), 24000,
-                                          np.ones((nCloth+1)**2),
-                                          pinned, 1/20,
-                                          damp=0.002)
+    self.clothSim = PhysCloth.MassSprings(
+        self.cloth.getVertices(),
+        self.cloth.getEdges(), 24000,
+        np.ones((nCloth+1)**2),
+        pinned, 1/20,
+        damp=0.002)
     self.clothI = self.cloth.getIndices()
 
 
-    self.t2 = Phys.TerrainCollider([-10,0,-10], self.terrain.size[0],
-                                   self.terrain.heights, 0.375)
+    self.t2 = Phys.TerrainCollider(
+        [-10,0,-10], self.terrain.size[0],
+        self.terrain.heights, 0.375)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":np.array([1.8,1.2,0.4])*1.5})
     self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.32,0.1]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
-                                  rot=(0,-pi/3,0), hdrScale=12)
+    self.skyBox = self.makeSkybox(
+        TexSkyBox, 12, PATH+"../Skyboxes/Desert_2k.ahdr",
+        rot=(0,-pi/3,0), hdrScale=12)
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 

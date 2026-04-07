@@ -33,18 +33,20 @@ def setupStage(self):
     PZ = 10
     PA = np.array([(PX,0,PZ)], 'float')
 
-    self.stagePlatforms = np.array([(-1, 5,   -4),
-                                    (0.5,4.5, 0),
-                                    (2,  5.5, 4),
-                                    (1.5,5,   8.5)]) + PA
+    self.stagePlatforms = np.array([
+        (-1, 5,   -4),
+        (0.5,4.5, 0),
+        (2,  5.5, 4),
+        (1.5,5,   8.5)]) + PA
     self.stagePlatformPS = []
 
 
-    self.addVertObject(VertModel, [PX,0,PZ], rot=(0,0,0),
-                       filename="../Models/Strachan/T10.obj",
-                       scale=1, mip=2,
-                       useShaders={"cull":1},
-                       shadow="CR")
+    self.addVertObject(
+        VertModel, [PX,0,PZ], rot=(0,0,0),
+        filename="../Models/Strachan/T10.obj",
+        scale=1, mip=2,
+        useShaders={"cull":1},
+        shadow="CR")
 
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
@@ -83,10 +85,11 @@ def setupStage(self):
 
     self.buttons = []
     for c in [(PX,0,PZ+32),(PX,5.02,PZ-17)]:
-        self.addVertObject(VertModel, c,
-                           filename="../Models/Strachan/Button.obj",
-                           useShaders={"cull":1},
-                           shadow='R')
+        self.addVertObject(
+            VertModel, c,
+            filename="../Models/Strachan/Button.obj",
+            useShaders={"cull":1},
+            shadow='R')
 
         self.buttons.append({
             'obj': self.vertObjects[-1],
@@ -94,16 +97,19 @@ def setupStage(self):
         })
 
     for p in self.stagePlatforms:
-        self.addVertObject(VertModel, p,
-                           scale=0.85,
-                           filename='../Models/Strachan/Floating2.obj',
-                           mip=2, useShaders={'cull':1},
-                           shadow='CR')
+        self.addVertObject(
+            VertModel, p,
+            scale=0.85,
+            filename='../Models/Strachan/Floating2.obj',
+            mip=2, useShaders={'cull':1},
+            shadow='CR')
         tg = "../Assets/Blob.png"
-        self.addVertObject(VertSphere, p, scale=0.7,
-                           n=16, texture=tg)
-        self.addVertObject(VertSphere, p, scale=-0.5,
-                           n=12, texture=tg)
+        self.addVertObject(
+            VertSphere, p, scale=0.7,
+            n=16, texture=tg)
+        self.addVertObject(
+            VertSphere, p, scale=-0.5,
+            n=12, texture=tg)
 
     if len(self.stagePlatforms) > 0:
         glass = self.vertObjects[-1].texNum
@@ -112,16 +118,20 @@ def setupStage(self):
 
         self.platTexn = getTexN(self.vertObjects[-3]) + [glass]
 
-    self.w.addCollider(Phys.PlaneCollider((PX, 5, PZ-16),
-                                          (0,0,3),(10,0,0)))
+    self.w.addCollider(
+        Phys.PlaneCollider(
+            (PX, 5, PZ-16),
+            (0,0,3),(10,0,0)))
 
-    self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.2,0]),
-                       scale=(-1,1,1), filename='../Models/Strachan/Ring.obj',
-                       useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
-    self.addVertObject(VertModel, self.stagePlatforms[-1] + np.array([0,1.3,0]),
-                       scale=1.3, filename='../Models/Strachan/Ring.obj',
-                       rot=(0,pi/3,0),
-                       useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
+    self.addVertObject(
+        VertModel, self.stagePlatforms[-1] + np.array([0,1.2,0]),
+        scale=(-1,1,1), filename='../Models/Strachan/Ring.obj',
+        useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
+    self.addVertObject(
+        VertModel, self.stagePlatforms[-1] + np.array([0,1.3,0]),
+        scale=1.3, filename='../Models/Strachan/Ring.obj',
+        rot=(0,pi/3,0),
+        useShaders={'shader':'add','args':{'emPow':4}, 'noline':1})
     self.ringTest = self.vertObjects[-1]
 
     for f in self.vtNames:
@@ -131,15 +141,17 @@ def setupStage(self):
 
     self.pillars = []
     for i in range(6):
-        self.addVertObject(VertModel, [PX+7.2,0,PZ-10 + 5.8*i],
-                           filename="../Models/Strachan/TablePillar.obj",
-                           mip=2, useShaders={"cull":1},
-                           shadow="CR")
-        self.addVertObject(VertModel, [PX-5,-0.01,PZ-10 + 5.8*i],
-                           filename="../Models/Strachan/TablePillar.obj",
-                           rot=(0,pi,0),
-                           mip=2, useShaders={"cull":1},
-                           shadow="CR")
+        self.addVertObject(
+            VertModel, [PX+7.2,0,PZ-10 + 5.8*i],
+            filename="../Models/Strachan/TablePillar.obj",
+            mip=2, useShaders={"cull":1},
+            shadow="CR")
+        self.addVertObject(
+            VertModel, [PX-5,-0.01,PZ-10 + 5.8*i],
+            filename="../Models/Strachan/TablePillar.obj",
+            rot=(0,pi,0),
+            mip=2, useShaders={"cull":1},
+            shadow="CR")
         self.pillars.append(self.vertObjects[-1])
 
     for f in self.vtNames:
@@ -158,13 +170,15 @@ def setupStage(self):
     tscale = hscale / tsize
     coords = (PX - tsize*tscale/2, -0.4, PZ - tsize*tscale/2 + 8)
 
-    self.terrain = VertTerrain0(coords,
-                                "../Models/Strachan/Height.png",
-                                scale=tscale, vertScale=hscale+1,
-                                maxInf=True)
+    self.terrain = VertTerrain0(
+        coords,
+        "../Models/Strachan/Height.png",
+        scale=tscale, vertScale=hscale+1,
+        maxInf=True)
 
-    self.t2 = Phys.TerrainCollider(coords, self.terrain.size[0],
-                                   self.terrain.heights, tscale)
+    self.t2 = Phys.TerrainCollider(
+        coords, self.terrain.size[0],
+        self.terrain.heights, tscale)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
@@ -195,19 +209,20 @@ def setupStage(self):
     sv = np.array((-0.5,-0.5,0))
     sv /= Phys.eucLen(sv)
     for i in range(7):
-        self.spotLights.append({'i':si, 'pos':(10+PX, 9.5, 8*(i-2)+PZ),
-                                'vec':sv})
+        self.spotLights.append(
+            {'i':si, 'pos':(10+PX, 9.5, 8*(i-2)+PZ), 'vec':sv})
 
     si = np.array((0.55,0.75,0.95)) * 50
     sv = np.array((0.8,-0.2,0))
     sv /= Phys.eucLen(sv)
-    self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 16.8+PZ),
-                            'vec':sv})
-    self.spotLights.append({'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ),
-                            'vec':sv})
+    self.spotLights.append(
+        {'i':si*0.6, 'pos':(-27+PX, 2.5, 16.8+PZ), 'vec':sv})
+    self.spotLights.append(
+        {'i':si*0.6, 'pos':(-27+PX, 2.5, 23.8+PZ), 'vec':sv})
 
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
-                            rot=(0,0,0), hdrScale=48)
+    self.skyBox = self.makeSkybox(
+        TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
+        rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1, rotY=3.27)
 
@@ -220,21 +235,24 @@ def setupStage(self):
 
 def setupPostprocess(self):
     # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.8}})
+    self.addVertObject(
+        VertPlane, [-1,-1,0],
+        h1=[2,0,0], h2=[0,2,0], n=1,
+        texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+        texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.8}})
 
 def movePillars(self, i):
     btn = self.buttons[i]
     if btn['fullyLifted']:
-        self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
-                             (np.array((10,0,42)), 4, 6, True))})
+        self.si.put({'Play':(
+            SFX+'brick_scrape2.wav', self.volmFX, False,
+            (np.array((10,0,42)), 4, 6, True))})
         btn['fullyLifted'] = False
 
     if self.showPillars == -1:
-        self.si.put({'Play':(SFX+'chaingrind.wav', self.volmFX, False,
-                             (np.array((12,-2,10)), 80, 8, True))})
+        self.si.put({'Play':(
+            SFX+'chaingrind.wav', self.volmFX, False,
+            (np.array((12,-2,10)), 80, 8, True))})
 
         if time.time() - self.trackTime > 84:
             self.si.put({'Play':(SFX+'Sac_a.ogg', self.volm, False)})
@@ -257,12 +275,13 @@ def showPlatforms(self):
         return
     for p in self.stagePlatforms:
         self.w.addCollider(Phys.CircleCollider(0.6, p))
-        ps = CentripetalParticleSystem(p, (0, 0),
-                                       nParticles=30, lifespan=1200,
-                                       randPos=0.08, vel=0.0, randVel=0.0,
-                                       size=0.08, opacity=0.9,
-                                       color=(0.1,0.1,0.1), randColor=0,
-                                       f=0.001, r=0.6, cc=1)
+        ps = CentripetalParticleSystem(
+            p, (0, 0),
+            nParticles=30, lifespan=1200,
+            randPos=0.08, vel=0.0, randVel=0.0,
+            size=0.08, opacity=0.9,
+            color=(0.1,0.1,0.1), randColor=0,
+            f=0.001, r=0.6, cc=1)
         ps.shader = 2
         self.addParticleSystem(ps)
         self.stagePlatformPS.append(ps)
@@ -288,8 +307,9 @@ def testPlatforms(self):
 
     t = time.time() - self.showPlatforms
 
-    self.draw.setUVOff(self.ringTest.texNum, (0,0), (1,1),
-                       (0, t/3))
+    self.draw.setUVOff(
+        self.ringTest.texNum, (0,0), (1,1),
+        (0, t/3))
     self.matShaders[self.ringTest.texNum].update(args={'emPow': 2 + 2 * sin(t*2)})
 
 ##    if not self.lightsToggled:
@@ -320,10 +340,12 @@ def testPlatforms(self):
 
 def frameUpdate(self):
     if self.frameNum < 2:
-        self.addNrmMap(PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
-                       'wood_coffers')
-        self.addNrmMap(PATH + '../Models/Strachan/ButtonNrm.png',
-                       'ButtonNrm')
+        self.addNrmMap(
+            PATH + '../Models/Strachan/Wood_Ceiling_Coffers_002_nrm.png',
+            'wood_coffers')
+        self.addNrmMap(
+            PATH + '../Models/Strachan/ButtonNrm.png',
+            'ButtonNrm')
         self.bindKey('o', lambda: movePillars(self, 0))
         return
 
@@ -383,8 +405,9 @@ def frameUpdate(self):
         btn = self.buttons[i]
         if not (buttonPressed - 1) == i and btn['pos'] < 0:
             if btn['fullyPressed']:
-                self.si.put({'Play':(SFX+'brick_scrape2.wav', self.volmFX, False,
-                                 (np.array((10,0,42)), 4, 6, True))})
+                self.si.put({'Play':(
+                    SFX+'brick_scrape2.wav', self.volmFX, False,
+                    (np.array((10,0,42)), 4, 6, True))})
                 btn['fullyPressed'] = False
             b = btn['obj']
             btn['pos'] += mov
@@ -398,10 +421,12 @@ def frameUpdate(self):
         return
     if self.showPillars > 0.7:
         self.showPillars = 1000
-        self.si.put({'Play':(SFX+'metal_hit4.wav', self.volmFX, False,
-                             (np.array((20,-5,10)), 120, 8, True))})
-        self.si.put({'Play':(SFX+'metal_hit6.wav', self.volmFX, False,
-                             (np.array((12,-5,10)), 160, 8, True))})
+        self.si.put({'Play':(
+            SFX+'metal_hit4.wav', self.volmFX, False,
+            (np.array((20,-5,10)), 120, 8, True))})
+        self.si.put({'Play':(
+            SFX+'metal_hit6.wav', self.volmFX, False,
+            (np.array((12,-5,10)), 160, 8, True))})
         return
 
     self.showPillars += mov
@@ -417,10 +442,12 @@ def frameUpdate(self):
 
         tmin = (p.coords - pSize - self.terrain.coords) / tScale
         tmax = (p.coords + pSize - self.terrain.coords) / tScale
-        self.terrain.heights[int(tmin[0]):int(tmax[0]),
-                             int(tmin[2]):int(tmax[2])] += mov*i / tScale
-        self.t2.pts[int(tmin[0]):int(tmax[0]),
-                    int(tmin[2]):int(tmax[2])] += tr*i
+        self.terrain.heights[
+            int(tmin[0]):int(tmax[0]),
+            int(tmin[2]):int(tmax[2])] += mov*i / tScale
+        self.t2.pts[
+            int(tmin[0]):int(tmax[0]),
+            int(tmin[2]):int(tmax[2])] += tr*i
 
         for tn in self.pillarTexn:
             if tn not in batch: batch[tn] = []

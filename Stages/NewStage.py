@@ -16,11 +16,12 @@ def getHeight(self, pos):
 def setupStage(self):
     ox, oz = 15, 20
     mScale = 0.5
-    self.addVertObject(VertModel, [ox, 0, oz], rot=(0,0,0),
-                       filename=PATH+"../Models/NewStage.obj",
-                       scale=mScale, mip=2,
-                       useShaders={"cull":1},
-                       subDiv=1, shadow="CR")
+    self.addVertObject(
+        VertModel, [ox, 0, oz], rot=(0,0,0),
+        filename=PATH+"../Models/NewStage.obj",
+        scale=mScale, mip=2,
+        useShaders={"cull":1},
+        subDiv=1, shadow="CR")
 
     a = Image.open(PATH+"../Models/NewStageX3.png")
     navScale = 0.1
@@ -28,9 +29,10 @@ def setupStage(self):
     s = -a.size[0] * navScale * mScale
     navOrigin = [s+ox, 20 * mScale, s+oz]
 
-    self.terrain = VertTerrain0(navOrigin,
-                                PATH+"../Models/NewStageX3.png",
-                                scale=navScale, vertScale=navScaleV)
+    self.terrain = VertTerrain0(
+        navOrigin,
+        PATH+"../Models/NewStageX3.png",
+        scale=navScale, vertScale=navScaleV)
 
     hm = Image.open(PATH+"../Models/NewStageNav1.png")
     hm = np.array(hm)
@@ -42,15 +44,17 @@ def setupStage(self):
 
     self.atriumNav = {"map":hm, "scale":hs, "origin":ho}
 
-    self.t2 = Phys.TerrainCollider(navOrigin, self.terrain.size[0],
-                                   self.terrain.heights, navScale)
+    self.t2 = Phys.TerrainCollider(
+        navOrigin, self.terrain.size[0],
+        self.terrain.heights, navScale)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})
     self.directionalLights.append({"dir":[pi*2/3, 2.1+pi], "i":[0.5,0.4,0.1]})
     self.directionalLights.append({"dir":[0, pi/2], "i":[0.1,0.2,0.4]})
-    self.skyBox = self.makeSkybox(TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
-                            rot=(0,0,0), hdrScale=48)
+    self.skyBox = self.makeSkybox(
+        TexSkyBox, 12, PATH+"../Skyboxes/autumn_park_2k.ahdr",
+        rot=(0,0,0), hdrScale=48)
     skyShader = self.matShaders[self.skyBox.texNum]
     skyShader['args'].update(isEqui=1, rotY=3.27)

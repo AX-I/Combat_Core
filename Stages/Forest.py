@@ -44,22 +44,26 @@ def setupStage(self):
     tsize = 320
     tscale = 100 / tsize
     coords = [10 + tsize*tscale/2, -3.15, 20 + tsize*tscale/2]
-    self.terrain = VertTerrain0(coords, PATH+"../Models/Temple/HeightNewL.png",
-                                scale=tscale, vertScale=42.5)
+    self.terrain = VertTerrain0(
+        coords, PATH+"../Models/Temple/HeightNewL.png",
+        scale=tscale, vertScale=42.5)
 
-    self.t2 = Phys.TerrainCollider(coords, self.terrain.size[0],
-                                   self.terrain.heights, tscale)
+    self.t2 = Phys.TerrainCollider(
+        coords, self.terrain.size[0],
+        self.terrain.heights, tscale)
     self.t2.onHit = lambda x: self.explode(x)
     self.w.addCollider(self.t2)
 
-    self.addVertObject(VertModel, [10, 0, 20], rot=(0,-pi/2,0),
-                       filename=PATH+"../Models/Temple/Temple9test.obj",
-                       shadow="CR", mip=2,
-                       blender=True)
+    self.addVertObject(
+        VertModel, [10, 0, 20], rot=(0,-pi/2,0),
+        filename=PATH+"../Models/Temple/Temple9test.obj",
+        shadow="CR", mip=2,
+        blender=True)
 
-    self.addVertObject(VertModel, [10,-0.05,20], rot=(0,-pi/2,0),
-                       filename=PATH+"../Models/Temple/TempleTrans.obj",
-                       shadow="CR")
+    self.addVertObject(
+        VertModel, [10,-0.05,20], rot=(0,-pi/2,0),
+        filename=PATH+"../Models/Temple/TempleTrans.obj",
+        shadow="CR")
 
     for f in self.vtNames:
         mat = self.matShaders[self.vtNames[f]]
@@ -82,8 +86,8 @@ def setupStage(self):
             mat['args']['translucent'] = 1
         if 'Flame' in f:
             self.flameMTL = self.vtNames[f]
-            self.matShaders[self.flameMTL].update(shader='add', noline=1,
-                                                  args={'emPow': 4})
+            self.matShaders[self.flameMTL].update(
+                shader='add', noline=1, args={'emPow': 4})
             self.vertObjects[self.flameMTL].castShadow = False
         if 'SandFloor' in f:
             mat['normal'] = 'sand_floor'
@@ -102,9 +106,10 @@ def setupStage(self):
 
     ppc = np.array((-14.5,2.3,20))
     pic = np.array((1,1,1.))
-    self.envPointLights = [{'i':pi1, 'pos':pp1},
-                           {'i':pi2, 'pos':pp2},
-                           {'i':pic, 'pos':ppc}]
+    self.envPointLights = [
+        {'i':pi1, 'pos':pp1},
+        {'i':pi2, 'pos':pp2},
+        {'i':pic, 'pos':ppc}]
 
     # Torches
     fi = np.array((1,0.45,0.04)) * 10
@@ -139,39 +144,47 @@ def setupStage(self):
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}
 
-    self.si.put({'Preload':[PATH+"../Sound/Forest5.ogg",
-                            PATH+"../Sound/Forest4_Reverb.ogg",
-                            PATH+"../Sound/NoiseOpen.flac",
-                            PATH+"../Sound/ForestNoise.flac"]})
+    self.si.put({'Preload':[
+        PATH+"../Sound/Forest5.ogg",
+        PATH+"../Sound/Forest4_Reverb.ogg",
+        PATH+"../Sound/NoiseOpen.flac",
+        PATH+"../Sound/ForestNoise.flac"]})
 
 def setupPostprocess(self):
     # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.5}})
+    self.addVertObject(
+        VertPlane, [-1,-1,0],
+        h1=[2,0,0], h2=[0,2,0], n=1,
+        texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+        texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':0.5}})
 
 def changeMusic(self):
-    self.si.put({"Play":(PATH+"../Sound/Forest5.ogg", self.volm, True,
-                         (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
+    self.si.put({"Play":(
+        PATH+"../Sound/Forest5.ogg", self.volm, True,
+        (np.array((-14.5,3,20.)), 20, 4, 0.4, 6))})
 
     reverb = PATH+"../Sound/Forest4_Reverb.ogg"
 
     # Front L/R
-    self.si.put({"Play":(reverb, self.volm, True,
-                         (np.array((10,3,40.)), 12, 8, True))})
-    self.si.put({"Play":(reverb, self.volm, True,
-                         (np.array((10,3,0.)), 12, 8, True))})
+    self.si.put({"Play":(
+        reverb, self.volm, True,
+        (np.array((10,3,40.)), 12, 8, True))})
+    self.si.put({"Play":(
+        reverb, self.volm, True,
+        (np.array((10,3,0.)), 12, 8, True))})
     # Back L/R
-    self.si.put({"Play":(reverb, self.volm, True,
-                         (np.array((-40,3,40.)), 12, 8, True))})
-    self.si.put({"Play":(reverb, self.volm, True,
-                         (np.array((-40,3,0.)), 12, 8, True))})
+    self.si.put({"Play":(
+        reverb, self.volm, True,
+        (np.array((-40,3,40.)), 12, 8, True))})
+    self.si.put({"Play":(
+        reverb, self.volm, True,
+        (np.array((-40,3,0.)), 12, 8, True))})
     self.changedMusic = 2
 
 def changeNoise(self):
-    self.si.put({"Play":(PATH+"../Sound/ForestNoise.flac", self.volmFX, True,
-                         (np.array((55, 12, 20.)), 70, 16, 1.0))})
+    self.si.put({"Play":(
+        PATH+"../Sound/ForestNoise.flac", self.volmFX, True,
+        (np.array((55, 12, 20.)), 70, 16, 1.0))})
     self.changedMusic = 1
 
 def testTempleTrans(self):
@@ -186,8 +199,9 @@ def testTempleTrans(self):
                 self.lightTest()
                 t = 0
 
-    self.draw.setUVOff(self.flameMTL, (0,0), (1,1),
-                       (-int(t*14)//5*0.2, int(t*14-1)*0.2))
+    self.draw.setUVOff(
+        self.flameMTL, (0,0), (1,1),
+        (-int(t*14)//5*0.2, int(t*14-1)*0.2))
 
     if t > 10:
         # Fade out sky light if inside temple
@@ -239,12 +253,14 @@ def testTempleTrans(self):
         self.matShaders[self.sandstoneBricksTex] = {
             'shader':'dissolve',
             'args':{'fadeOrigin':(-14.5,0.5,20), 'fadeFact':8 * t}}
-        self.draw.changeShaderZ(self.sandstoneBricksTex,
-                                self.matShaders[self.sandstoneBricksTex])
+        self.draw.changeShaderZ(
+            self.sandstoneBricksTex,
+            self.matShaders[self.sandstoneBricksTex])
 
     # rest 1, peak 600
-    pointKF = [(0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
-               (5, 90), (6, 42), (7, 20), (8.5, 5), (10, 1)]
+    pointKF = [
+        (0, 1), (0.4, 600), (1, 600), (3, 400), (4, 180),
+        (5, 90), (6, 42), (7, 20), (8.5, 5), (10, 1)]
     self.envPointLights[2]['i'] = np.array((1,1,1.)) * Anim.interpAttr(t, pointKF)
 
 
@@ -254,11 +270,12 @@ def testTempleTrans(self):
 
     d['i'] = Anim.interpAttr(t, dirKF)
 
-    fogKF = [(0,   np.array((0.4, 0.2,400, 1))),
-             (0.8, np.array((1.6, 0.3,400, 1))),
-             (2,   np.array((1.6, 0.2,400, 1))),
-             (5, np.array((0.1, 0.01, 80,  0.6))),
-             (9, np.array((0.015,0.002,40, 0)))]
+    fogKF = [
+        (0,   np.array((0.4, 0.2,400, 1))),
+        (0.8, np.array((1.6, 0.3,400, 1))),
+        (2,   np.array((1.6, 0.2,400, 1))),
+        (5, np.array((0.1, 0.01, 80,  0.6))),
+        (9, np.array((0.015,0.002,40, 0)))]
 
     fparams = Anim.interpAttr(t, fogKF)
 
@@ -285,8 +302,9 @@ def testTempleTrans(self):
             a['animTrans'] = -1
 
             step = self.frameTime / (1 + dist/30 * (1 - (t > 4)))
-            self.stepPoseLoop(a, a['obj'], self.flashKF, step,
-                              loop=False, timer='poseFlash')
+            self.stepPoseLoop(
+                a, a['obj'], self.flashKF, step,
+                loop=False, timer='poseFlash')
 
 def frameUpdate(self):
     testTempleTrans(self)

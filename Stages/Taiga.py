@@ -27,14 +27,15 @@ def grassClump(self, c, options):
 def setupStage(self):
     mpath = PATH + '../Models/'
 
-    self.addVertObject(VertTerrain, [-50, 0, -50],
-                   heights=PATH+"../Assets/Terrain.tif",
-                   texture=PATH+"../Assets/Blank1.png",
-                   scale=0.6,
-                   vertScale=2.5/6553, vertPow=2, vertMax=50000,
-                   useShaders={'args':{'specular': 0.8, 'specRimEnvOff':(-0.1,-0.2,0.1)},
-                               'normal': 'snow', 'cull':1},
-                   uvspread=11, shadow="CR")
+    self.addVertObject(
+        VertTerrain, [-50, 0, -50],
+        heights=PATH+"../Assets/Terrain.tif",
+        texture=PATH+"../Assets/Blank1.png",
+        scale=0.6,
+        vertScale=2.5/6553, vertPow=2, vertMax=50000,
+        useShaders={'args':{'specular': 0.8, 'specRimEnvOff':(-0.1,-0.2,0.1)},
+                    'normal': 'snow', 'cull':1},
+        uvspread=11, shadow="CR")
     self.terrain = self.vertObjects[-1]
 
     tmpHeights = np.array(self.terrain.heights)
@@ -62,12 +63,14 @@ def setupStage(self):
     self.w.addCollider(self.t2)
 
     nr.seed(1); random.seed(1)
-    options = {"filename":mpath+"pine/Pine.obj", "static":True,
-               'instanced':True,
-           "texMode":None, "scale":0.2, "shadow":"C"}
-    options2 = {'filename':mpath+'TaigaNew/GrassClump.obj',
-                'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
-                'useShaders':{'args':{'translucent':1}}}
+    options = {
+        "filename":mpath+"pine/Pine.obj", "static":True,
+        'instanced':True,
+        "texMode":None, "scale":0.2, "shadow":"C"}
+    options2 = {
+        'filename':mpath+'TaigaNew/GrassClump.obj',
+        'static':True, 'texMode':None, 'scale':1, 'shadow':'R',
+        'useShaders':{'args':{'translucent':1}}}
 
     cn = []
     for i in range(-50, 70, 20):
@@ -112,10 +115,11 @@ def setupStage(self):
 
     tgpath = mpath + 'TaigaNew/'
     pfile = tgpath + "TaigaPillar.obj"
-    self.addVertObject(VertModel, [-2.12, 6.27, 17.52], filename=pfile,
-                       rot=(0,-47.8 * 3.14/180, 0), static=True,
-                       mip=2, useShaders={'args':{'specular': 0.4}, 'normal': 'rock'},
-                       shadow="CR")
+    self.addVertObject(
+        VertModel, [-2.12, 6.27, 17.52], filename=pfile,
+        rot=(0,-47.8 * 3.14/180, 0), static=True,
+        mip=2, useShaders={'args':{'specular': 0.4}, 'normal': 'rock'},
+        shadow="CR")
 
     # Large rocks
     pfile = tgpath + "LargeRocks.obj"
@@ -124,11 +128,12 @@ def setupStage(self):
             {'pos':(-1,5.5,-36.3), 'rot':(0,201/180*3.14,0)},
             {'pos':(-29,3.5,3.1), 'rot':(0,127/180*3.14,0)}]
     for o in objs:
-        self.addVertObject(VertModel, o['pos'], rot=o['rot'], static=True,
-                           filename=pfile,
-                           mip=2, useShaders={'args':{'specular': 0.4},
-                                              'normal':'largeRock', 'cull':1},
-                           shadow="CR")
+        self.addVertObject(
+            VertModel, o['pos'], rot=o['rot'], static=True,
+            filename=pfile,
+            mip=2, useShaders={'args':{'specular': 0.4},
+                               'normal':'largeRock', 'cull':1},
+            shadow="CR")
 
     # Background Mountain
     pfile = tgpath + "Mountain.obj"
@@ -142,10 +147,11 @@ def setupStage(self):
 
 
     iceW = 16
-    self.addVertObject(VertPlane, [8.5-iceW, 1.8, 7-iceW],
-                       h1=[iceW*2,0,0], h2=[0,0,iceW*2], n=16,
-                       texture=PATH+'../Assets/Blank3.png', uvspread=0.333,
-                       useShaders={'shader':'SSR', 'normal': 'ice'})
+    self.addVertObject(
+        VertPlane, [8.5-iceW, 1.8, 7-iceW],
+        h1=[iceW*2,0,0], h2=[0,0,iceW*2], n=16,
+        texture=PATH+'../Assets/Blank3.png', uvspread=0.333,
+        useShaders={'shader':'SSR', 'normal': 'ice'})
     self.iceMTL = self.vertObjects[-1].texNum
 
     # Background forests
@@ -157,16 +163,19 @@ def setupStage(self):
 
     # Background plain
     pfile = f'{mpath}TaigaNew/PlainsBackground.obj'
-    self.addVertObject(VertModel, [0,0,0], filename=pfile, shadow="R",
-                       useShaders={'args':{'specular': 0.8}, 'normal':'snow'})
+    self.addVertObject(
+        VertModel, [0,0,0], filename=pfile, shadow="R",
+        useShaders={'args':{'specular': 0.8}, 'normal':'snow'})
 
-    self.addVertObject(VertPlane, [350, -10.5, -520],
-                       h1=[650,0,0], h2=[0,0,1045], n=32,
-                       texture=PATH+'../Assets/Blank3.png', uvspread=0.2,
-                       useShaders={'shader':'SSR', 'normal': 'ice'})
-    self.addVertObject(VertPlane, [350, -11, -520],
-                       h1=[650,0,0], h2=[0,0,1045], n=32,
-                       texture=PATH+'../Assets/Grass.png') # for motion blur
+    self.addVertObject(
+        VertPlane, [350, -10.5, -520],
+        h1=[650,0,0], h2=[0,0,1045], n=32,
+        texture=PATH+'../Assets/Blank3.png', uvspread=0.2,
+        useShaders={'shader':'SSR', 'normal': 'ice'})
+    self.addVertObject(
+        VertPlane, [350, -11, -520],
+        h1=[650,0,0], h2=[0,0,1045], n=32,
+        texture=PATH+'../Assets/Grass.png') # for motion blur
 
     # Background ice spikes
     pfile = f'{mpath}TaigaNew/IceSpikes_border.obj'
@@ -177,19 +186,21 @@ def setupStage(self):
         normal='snow', args={'specular': 0.8})
 
     # Background blowing snow
-    psparams = [([350,5,300], 7, 100, 10, 10, 30),
-                ([370,5,300], 7, 121, 11, 10, 30),
-                ([400,10,400], 6, 117, 9, 12, 50),
-                ([400,15,500], 5.5, 112, 7, 15, 60)]
+    psparams = [
+        ([350,5,300], 7, 100, 10, 10, 30),
+        ([370,5,300], 7, 121, 11, 10, 30),
+        ([400,10,400], 6, 117, 9, 12, 50),
+        ([400,15,500], 5.5, 112, 7, 15, 60)]
     self.fogPS = []
     for p in psparams:
-        ps = ContinuousParticleSystem(p[0], (-pi/2,0),
-                                      vel=p[1], force=(0,0,0),
-                                      lifespan=p[2], nParticles=p[3],
-                                      randPos=p[4], randVel=0.1,
-                                      size=p[5], opacity=0.1,
-                                      color=np.array([1,0.24,0.18]) * 0.3,
-                                      tex='cloud')
+        ps = ContinuousParticleSystem(
+            p[0], (-pi/2,0),
+            vel=p[1], force=(0,0,0),
+            lifespan=p[2], nParticles=p[3],
+            randPos=p[4], randVel=0.1,
+            size=p[5], opacity=0.1,
+            color=np.array([1,0.24,0.18]) * 0.3,
+            tex='cloud')
         self.addParticleSystem(ps)
         self.fogPS.append(ps)
 
@@ -198,25 +209,28 @@ def setupStage(self):
     self.poles = []
     self.skiParticles = []
     for i in range(2*len(self.players)):
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath + 'Ski.obj', cache=False,
-                           instanced=True,
-                           mip=2, useShaders={'spec': 0.4},
-                           scale=0.6, rot=(0,-pi/2,0))
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath + 'Ski.obj', cache=False,
+            instanced=True,
+            mip=2, useShaders={'spec': 0.4},
+            scale=0.6, rot=(0,-pi/2,0))
         self.skis.append(self.vertObjects[-1])
-        self.addVertObject(VertModel, [0,0,0],
-                           filename=mpath + 'Pole.obj', cache=False,
-                           instanced=True,
-                           useShaders={'spec': 0.4},
-                           scale=1.2, rot=(0,pi/2,0))
+        self.addVertObject(
+            VertModel, [0,0,0],
+            filename=mpath + 'Pole.obj', cache=False,
+            instanced=True,
+            useShaders={'spec': 0.4},
+            scale=1.2, rot=(0,pi/2,0))
         self.poles.append(self.vertObjects[-1])
         ts = 1
-        ps = ContinuousParticleSystem([0,0,0.], (0,-pi/2),
-                                      vel=0.03/ts, force=(0,-0.01/ts/ts,0),
-                                      lifespan=90*ts, nParticles=30,
-                                      randPos=0.02, randVel=0.0/ts,
-                                      size=0.15, opacity=0.5,
-                                      color=np.array([1,0.3,0.24]) * 0.3)
+        ps = ContinuousParticleSystem(
+            [0,0,0.], (0,-pi/2),
+            vel=0.03/ts, force=(0,-0.01/ts/ts,0),
+            lifespan=90*ts, nParticles=30,
+            randPos=0.02, randVel=0.0/ts,
+            size=0.15, opacity=0.5,
+            color=np.array([1,0.3,0.24]) * 0.3)
         ps.shader = 2
         self.addParticleSystem(ps)
         self.skiParticles.append(ps)
@@ -236,21 +250,23 @@ def setupStage(self):
     self.effectPS = []
     for i in range(len(effectPos)):
         pos = np.array(effectPos[i]) - np.array([0,0.2,0])
-        self.addVertObject(VertModel, pos,
-                           filename=mpath + 'Effect.obj', cache=False,
-                           mip=2, useShaders={'shader':'add', 'args':{'emPow': 4},
-                                              'noline': True},
-                           scale=0.6, rot=(0,0,0))
+        self.addVertObject(
+            VertModel, pos,
+            filename=mpath + 'Effect.obj', cache=False,
+            mip=2, useShaders={'shader':'add', 'args':{'emPow': 4},
+                               'noline': True},
+            scale=0.6, rot=(0,0,0))
         t1 = self.vertObjects[-1]
         t1.create()
         t1.u = np.array(t1.u) + 0.3*i
         t1.create = lambda: 1
-        ps = ContinuousParticleSystem(pos, (0,-pi/2),
-                                      vel=0.01, force=(0,0,0),
-                                      lifespan=480, nParticles=15,
-                                      randPos=0.2, randVel=0.0,
-                                      size=0.15, opacity=1,
-                                      color=np.array([0.75,0.91,1]) * 0.3)
+        ps = ContinuousParticleSystem(
+            pos, (0,-pi/2),
+            vel=0.01, force=(0,0,0),
+            lifespan=480, nParticles=15,
+            randPos=0.2, randVel=0.0,
+            size=0.15, opacity=1,
+            color=np.array([0.75,0.91,1]) * 0.3)
         ps.shader = 2
         self.addParticleSystem(ps)
         self.effectPS.append(ps)
@@ -259,11 +275,12 @@ def setupStage(self):
     for i in range(2000):
         p = nr.rand(3) * np.array([70,12,70]) + np.array([-20,1.5,-20])
         r = random.random()*3
-        self.addVertObject(VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
-                           texture=PATH+'../Assets/Snowflake.png',
-                           useShaders={'shader':'add', 'args':{'emPow':1},
-                                       'noline':1}, mip=2,
-                           rot=(0,r,0))
+        self.addVertObject(
+            VertPlane, p, n=1, h1=[0,0.2,0], h2=[0.2,0,0],
+            texture=PATH+'../Assets/Snowflake.png',
+            useShaders={'shader':'add', 'args':{'emPow':1},
+                        'noline':1}, mip=2,
+            rot=(0,r,0))
 
     LInt = np.array([1,0.24,0.18]) * 2.6
 
@@ -299,15 +316,17 @@ def setupStage(self):
 
 def setupPostprocess(self):
     # Sun glare
-    self.addVertObject(VertPlane, [-1,-1,0],
-            h1=[2,0,0], h2=[0,2,0], n=1,
-            texture=PATH+'../Assets/DirtMaskTex_2x.webp',
-            texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':1}})
+    self.addVertObject(
+        VertPlane, [-1,-1,0],
+        h1=[2,0,0], h2=[0,2,0], n=1,
+        texture=PATH+'../Assets/DirtMaskTex_2x.webp',
+        texMul=0.4, useShaders={'2d':1, 'shader':'lens', 'args':{'mul':1}})
 
 def frameUpdate(self):
     if self.frameNum == 0:
-        self.si.put({"Play":(PATH+"../Sound/WindNoise.ogg", self.volmFX, True,
-                             (np.array((10, 10, 100.)), 600, 10, 0.6, None, 40))})
+        self.si.put({"Play":(
+            PATH+"../Sound/WindNoise.ogg", self.volmFX, True,
+            (np.array((10, 10, 100.)), 600, 10, 0.6, None, 40))})
         cloudim = Image.open('../Models/Temple/Cloud1a.png')
         cloudtex = np.array(cloudim)[:,:,0]
         self.draw.addPSTex(np.ascontiguousarray(cloudtex), 'cloud')
