@@ -313,7 +313,7 @@ def mainHandleMouse(self, frame, click=False):
     w = self.menuEntry.shape[1]
     h2 = self.H*0.54
 
-    xc = self.W*0.8 - self.H*0.6 - self.parx
+    xc = self.W*0.8 - self.H*0.56 - self.parx
     yc = self.menuButtonCenters[-1][0] - 0.053*self.H
     offset2 = (self.menuEntry.shape[1] - self.menuButton.shape[1])/2
 
