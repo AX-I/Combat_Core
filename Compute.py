@@ -241,7 +241,9 @@ class ThreeDBackend:
         else:
             import Ops_CL as Ops
 
-        self.draw = Ops.CLDraw(self.W, self.H, ires=settings['IRES'], use_fsr=1)
+        self.draw = Ops.CLDraw(
+            self.W, self.H,
+            ires=settings['IRES'], use_fsr=settings['FSR'])
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
 
