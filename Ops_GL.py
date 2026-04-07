@@ -578,11 +578,16 @@ class CLDraw:
         vertices = xyz
 
         try:
-            PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
+            self.PSvao.release()
+            self.PSvbo.release()
+        except: pass
+
+        try:
+            self.PSvbo = ctx.buffer(vertices.astype('float32').tobytes())
         except moderngl.Error:
             return False
 
-        self.PSvao = ctx.vertex_array(self.psProg, PSvbo, 'in_vert')
+        self.PSvao = ctx.vertex_array(self.psProg, self.PSvbo, 'in_vert')
 
         self.fbo.use()
         self.fbo.depth_mask = True
