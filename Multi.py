@@ -154,6 +154,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doSSR = kwargs["SSR"]
         self.doRTVL = kwargs["RTVL"]
         self.dofLvl = kwargs['DOF']
+        self.doSSAO = kwargs['SSAO']
         self.renderBackend = kwargs["Render"]
 
         if self.renderBackend == 'CL':
@@ -215,7 +216,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.blackPoint = 0.02
 
         self.tonemap = 'aces'
-        self.doSSAO = False
         self.doScrSh = False
         self.showDebug = False
         self.doMB = True
