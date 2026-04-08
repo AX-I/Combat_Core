@@ -30,7 +30,7 @@ PLATFORM = sys.platform
 
 import traceback
 
-from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter, PngImagePlugin
+from PIL import Image, ImageTk, ImageDraw, ImageFont, PngImagePlugin
 
 from Menu import CombatMenu
 
@@ -61,11 +61,11 @@ else:
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-from ImgUtils import NPTextDraw
+from ImgUtils import NPCanvas
 from profilehooks import profile
 
 
-class ThreeDVisualizer(CombatMenu, Frame, NPTextDraw):
+class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
     def __init__(self, pipe, eq, infQ,
                  width, height,
                  mouseSensitivity=20,
