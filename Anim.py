@@ -106,37 +106,38 @@ class AnimManager:
                 r = p[timer] - keyFrames[k][0]
                 r /= keyFrames[k+1][0] - keyFrames[k][0]
                 break
-        if k is not None:
-            sign = 1 if st > 0 else -1
+        if k is None: return
 
-            if p['jump'] < 0 and bone is None:
-                # Linear interp
-                # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
-                # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
+        sign = 1 if st > 0 else -1
 
-                off = cubicInterpLoop(keyFrames, k, p, timer) @ p['b1'].rotMat
-                if st < 0: off[1] = -0.4 * off[1] - 0.08
+        if p['jump'] < 0 and bone is None:
+            # Linear interp
+            # off = (keyFrames[k][2] @ p['b1'].rotMat) * (1-r)
+            # off += (keyFrames[k+1][2] @ p['b1'].rotMat) * r
 
-                off *= offsetMult
+            off = cubicInterpLoop(keyFrames, k, p, timer) @ p['b1'].rotMat
+            if st < 0: off[1] = -0.4 * off[1] - 0.08
 
-                p['b1'].offset[:3] += off - p['b1'].lastOffset
-                p['b1'].lastOffset = off
-                p['animOffset'] = off
+            off *= offsetMult
 
+            p['b1'].offset[:3] += off - p['b1'].lastOffset
+            p['b1'].lastOffset = off
+            p['animOffset'] = off
+
+        if bone is None:
+            ang = p['b1'].angles
+            diff = np.array(keyFrames[k][1]['angle'], 'float32') * (1-r)
+            diff += np.array(keyFrames[k+1][1]['angle'], 'float32') * r
+            diff[2] *= sign
+            p['b1'].rotate(ang + diff)
+
+        if isFlat:
+            pose = p['rig'].interpFlat(keyFrames[k][3], keyFrames[k+1][3], r)
+            p['rig'].importPoseFlat(pose, updateRoot=False)
+        else:
+            pose = p['rig'].interpTree(keyFrames[k][1], keyFrames[k+1][1], r)
             if bone is None:
-                ang = p['b1'].angles
-                diff = np.array(keyFrames[k][1]['angle'], 'float32') * (1-r)
-                diff += np.array(keyFrames[k+1][1]['angle'], 'float32') * r
-                diff[2] *= sign
-                p['b1'].rotate(ang + diff)
-
-            if isFlat:
-                pose = p['rig'].interpFlat(keyFrames[k][3], keyFrames[k+1][3], r)
-                p['rig'].importPoseFlat(pose, updateRoot=False)
+                bone = p['rig']
+                bone.importPose(pose, updateRoot=False)
             else:
-                pose = p['rig'].interpTree(keyFrames[k][1], keyFrames[k+1][1], r)
-                if bone is None:
-                    bone = p['rig']
-                    bone.importPose(pose, updateRoot=False)
-                else:
-                    bone.importPose(pose, updateRoot=True)
+                bone.importPose(pose, updateRoot=True)
