@@ -80,15 +80,16 @@ class NPCanvas:
 
         source = self.UItexts[dText]
 
-        self.prog.blend(self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
-                        fr, self.W, self.H,
-                        source['buf'], *source['shape'],
-                        np.float32(coords[1]), np.float32(coords[0]),
-                        np.int32(coords[1]), np.int32(coords[0]),
-                        np.int32(1),
-                        np.int32(0),
-                        np.float32(0),
-                        g_times_l=True)
+        self.prog.blend(
+            self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
+            fr, self.W, self.H,
+            source['buf'], *source['shape'],
+            np.float32(coords[1]), np.float32(coords[0]),
+            np.int32(coords[1]), np.int32(coords[0]),
+            np.int32(1),
+            np.int32(0),
+            np.float32(0),
+            g_times_l=True)
 
 
     def blend(self, dest: cl.Buffer, source: cl.Buffer,
@@ -115,19 +116,21 @@ class NPCanvas:
                 effectArg = source.filters['crop']
                 del source.filters['crop']
 
-        self.prog.blend(self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
-                        dest, self.W, self.H,
-                        source['buf'], *source['shape'],
-                        np.float32(coords[0]), np.float32(coords[1]),
-                        np.int32(coords[0]), np.int32(coords[1]),
-                        np.int32(METHOD[method]),
-                        np.int32(effectApplied),
-                        np.float32(effectArg),
-                        g_times_l=True)
+        self.prog.blend(
+            self.cq, (source.areaBS, 1), (BLOCK_SIZE, 1),
+            dest, self.W, self.H,
+            source['buf'], *source['shape'],
+            np.float32(coords[0]), np.float32(coords[1]),
+            np.int32(coords[0]), np.int32(coords[1]),
+            np.int32(METHOD[method]),
+            np.int32(effectApplied),
+            np.float32(effectArg),
+            g_times_l=True)
 
 
     def gamma(self, dest: cl.Buffer):
         """Convert linear -> gamma"""
-        self.prog.gamma(self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
-                        dest, self.W, self.H,
-                        g_times_l=True)
+        self.prog.gamma(
+            self.cq, (self.W*self.H//BLOCK_SIZE, 1), (BLOCK_SIZE, 1),
+            dest, self.W, self.H,
+            g_times_l=True)
