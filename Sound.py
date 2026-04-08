@@ -144,9 +144,10 @@ class SoundManager:
         self.channels = n
         self.rate = r
         self.width = w
-        self.stream = self.p.open(format=self.p.get_format_from_width(w),
-                             channels=n, rate=r,
-                             output=True)
+        self.stream = self.p.open(
+            format=self.p.get_format_from_width(w),
+            channels=n, rate=r,
+            output=True)
         
         running = True
         self.rcount = 0
@@ -155,54 +156,16 @@ class SoundManager:
             num = 0
             while not batchDone:
                 try: cmd = self.si.get(True, 0.01)
-                except Empty: batchDone = True
-                else:
-                    if cmd is None:
-                        running = False
-                        break
-                    if "Play" in cmd:
-                        # Either {"Play": ('file', vol, loop)} or
-                        #        {"Play": ('file', vol, loop, params)} or
-                        #        {"Play": ('file', vol, params)
-                        if len(cmd['Play']) < 3:
-                            self.playFile(*cmd["Play"])
-                        elif type(cmd['Play'][2]) is bool:
-                            self.playFile(*cmd["Play"][:3])
-                            if len(cmd['Play']) == 4:
-                                self.positionTracks[self.ptcount] = \
-                                    {'track':self.tcount,
-                                     'baseVol':cmd['Play'][1],
-                                     'params':cmd['Play'][3]}
-                                self.ptcount += 1
-                        elif type(cmd['Play'][2]) is dict:
-                            self.playFile(cmd['Play'][0], cmd['Play'][1],
-                                          **cmd['Play'][2])
-                        else:
-                            attn, chdelay = self.sndAttn(*cmd['Play'][2], usechdelay=True)
-                            self.playFile(cmd["Play"][0],
-                                          cmd['Play'][1] * attn,
-                                          chdelay=chdelay)
+                except Empty:
+                    batchDone = True
+                    continue
 
-                    elif 'SetPos' in cmd:
-                        self.pos = cmd['SetPos']['pos']
-                        self.vvh = cmd['SetPos']['vvh']
-                    elif "Fade" in cmd:
-                        self.fade = self.rcount + cmd["Fade"]['Time']
-                        self.fadeTracks = cmd['Fade']['Tracks']
-                    elif "FadeTime" in cmd:
-                        self.fadeTime = cmd["FadeTime"]
-                    elif "Vol" in cmd:
-                        if 1 in self.tracks:
-                            self.tracks[1]["vol"] = np.array(cmd["Vol"])
-                    elif "Cresc" in cmd:
-                        self.globalVol *= cmd["Cresc"]
-                    elif "Loop" in cmd:
-                        for i in self.tracks:
-                            if self.tracks[i]['filename'] == cmd['Loop']['Track']:
-                                self.tracks[i]['loop'] = cmd['Loop']['loop']
-                    elif "Preload" in cmd:
-                        for f in cmd['Preload']:
-                            self.preloadFile(f)
+                if cmd is None:
+                    running = False
+                    break
+
+                self.processCmd(cmd)
+
                 num += 1
                 if num > 7:
                     batchDone = True
@@ -219,6 +182,51 @@ class SoundManager:
         while not self.si.empty():
             try: self.si.get(True, 0.1)
             except Empty: pass
+
+    def processCmd(self, cmd):
+        if "Play" in cmd:
+            # Either {"Play": ('file', vol, loop)} or
+            #        {"Play": ('file', vol, loop, params)} or
+            #        {"Play": ('file', vol, params)
+            if len(cmd['Play']) < 3:
+                self.playFile(*cmd["Play"])
+            elif type(cmd['Play'][2]) is bool:
+                self.playFile(*cmd["Play"][:3])
+                if len(cmd['Play']) == 4:
+                    self.positionTracks[self.ptcount] = \
+                        {'track':self.tcount,
+                         'baseVol':cmd['Play'][1],
+                         'params':cmd['Play'][3]}
+                    self.ptcount += 1
+            elif type(cmd['Play'][2]) is dict:
+                self.playFile(cmd['Play'][0], cmd['Play'][1],
+                              **cmd['Play'][2])
+            else:
+                attn, chdelay = self.sndAttn(*cmd['Play'][2], usechdelay=True)
+                self.playFile(cmd["Play"][0],
+                              cmd['Play'][1] * attn,
+                              chdelay=chdelay)
+
+        elif 'SetPos' in cmd:
+            self.pos = cmd['SetPos']['pos']
+            self.vvh = cmd['SetPos']['vvh']
+        elif "Fade" in cmd:
+            self.fade = self.rcount + cmd["Fade"]['Time']
+            self.fadeTracks = cmd['Fade']['Tracks']
+        elif "FadeTime" in cmd:
+            self.fadeTime = cmd["FadeTime"]
+        elif "Vol" in cmd:
+            if 1 in self.tracks:
+                self.tracks[1]["vol"] = np.array(cmd["Vol"])
+        elif "Cresc" in cmd:
+            self.globalVol *= cmd["Cresc"]
+        elif "Loop" in cmd:
+            for i in self.tracks:
+                if self.tracks[i]['filename'] == cmd['Loop']['Track']:
+                    self.tracks[i]['loop'] = cmd['Loop']['loop']
+        elif "Preload" in cmd:
+            for f in cmd['Preload']:
+                self.preloadFile(f)
 
     def output(self):
         frames = np.zeros((CHUNK,self.channels), "int16")
@@ -332,10 +340,10 @@ class SoundManager:
 if __name__ == "__main__":
     import queue
     q = queue.Queue(8)
-    q.put({"Play":["C:/AXI_Visualizer/Sound/Env_Desert.wav", (0.7, 0.7), False]})
-    q.put({"Play":["C:/AXI_Visualizer/Sound/Pickup.wav", (0.2, 0.8), True]})
-    q.put({"Play":["C:/AXI_Visualizer/Sound/FireA.wav", (0.4, 0.2), True]})
-    q.put({"Play":["C:/AXI_Visualizer/Sound/FireD.wav", (0.7, 0.2), True]})
+    q.put({"Play":["../Sound/New_rv1.ogg", (0.7, 0.7), False]})
+    q.put({"Play":["../Sound/Pickup.wav", (0.2, 0.8), True]})
+    q.put({"Play":["../Sound/FireA.wav", (0.4, 0.2), True]})
+    q.put({"Play":["../Sound/FireD.wav", (0.7, 0.2), True]})
     q.put({"Fade":{'Time':150, 'Tracks':'*'}})
     a = SoundManager(q)
     a.run(2, 22050, 2)
