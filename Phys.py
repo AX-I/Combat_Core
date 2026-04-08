@@ -20,7 +20,7 @@
 
 import numpy as np
 import math
-from math import sin, cos
+from Utils import rotMat
 
 D = 3
 G = 9.8
@@ -252,17 +252,7 @@ class TerrainCollider(Collider):
             row = np.stack((ri, self.h[i], rj)).T
             self.pts.append(row)
 
-        rr = rot
-        rotX = np.array([[1, 0, 0],
-                         [0, cos(rr[0]), -sin(rr[0])],
-                         [0, sin(rr[0]), cos(rr[0])]])
-        rotY = np.array([[cos(rr[1]), 0, sin(rr[1])],
-                         [0, 1, 0],
-                         [-sin(rr[1]), 0, cos(rr[1])]])
-        rotZ = np.array([[cos(rr[2]), -sin(rr[2]), 0],
-                         [sin(rr[2]), cos(rr[2]), 0],
-                         [0, 0, 1]])
-        self.rotMat = rotX @ rotZ @ rotY
+        self.rotMat = rotMat(rot)
         
         self.pts = np.array(self.pts) * self.S @ self.rotMat + self.pos
 
@@ -424,15 +414,16 @@ class World:
             if self.coLs[i].disabled: continue
             for j in range(i+1, len(self.coLs)):
                 if self.coLs[j].disabled: continue
-                
-                if self.coLs[i].isCollide(self.coLs[j]):
-                    if self.coLs[i].onCollide(self.coLs[j]) and \
-                       self.coLs[j].onCollide(self.coLs[i]):
-                        im = self.coLs[i].collisionImpulse(self.coLs[j])
-                        if self.coLs[i].prop == 'player' or self.coLs[j].prop == 'player':
-                            pass
-                        else:
-                            impulses.append(im)
+
+                if not self.coLs[i].isCollide(self.coLs[j]): continue
+
+                if self.coLs[i].onCollide(self.coLs[j]) and \
+                   self.coLs[j].onCollide(self.coLs[i]):
+                    im = self.coLs[i].collisionImpulse(self.coLs[j])
+                    if self.coLs[i].prop == 'player' or self.coLs[j].prop == 'player':
+                        pass
+                    else:
+                        impulses.append(im)
 
         return impulses
 

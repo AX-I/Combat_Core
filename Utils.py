@@ -20,12 +20,10 @@
 
 # Random utilities for 3D
 
-from numpy import sqrt, ones_like, array
-from math import sin, cos, pi, asin, acos, log2, ceil
+from math import sin, cos, pi, log2
 import numpy as np
 
 import multiprocessing as mp
-from PIL import Image
 
 import sys
 PLATFORM = sys.platform
@@ -108,7 +106,7 @@ def anglesToCoords(ab):
     x = cos(ab[0]) * cos(ab[1])
     y = sin(ab[1])
     z = sin(ab[0]) * cos(ab[1])
-    return array((x, y, z))
+    return np.array((x, y, z))
 
 def fmtTime(t):
     color = '\033[90m' if t<0.001 \
