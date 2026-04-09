@@ -294,9 +294,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if dl == 0:
             return
 
-        self.draw.shaderParams['{DOF_2P2}'] = f'{dl+1}'
-        self.draw.shaderParams['{DOF_P2}'] = f'{2**(dl+1)}'
-        self.draw.shaderParams['{DOF_SAMPLES}'] = f'{(2**(dl+1))**2}'
+        self.draw.shaderParams.update({
+            '{DOF_2P2}': f'{dl+1}',
+            '{DOF_P2}': f'{2**(dl+1)}',
+            '{DOF_SAMPLES}': f'{(2**(dl+1))**2}'})
         self.reloadShaders()
 
 
