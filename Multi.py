@@ -92,7 +92,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.si = mp.Queue(64)
         self.SM = mp.Process(target=playSound, args=(self.si,), name="Sound")
         self.SM.start()
-        self.si.put({"Play":(PATH + "../Sound/Plains3v4.wav", volm, True)})
+        self.si.put({"Play":(PATH + "../Sound/Plains3v_ms4.ogg", volm, True)})
 
         self.si.put({'Preload':[PATH + "../Sound/Noise.flac"]})
 
@@ -102,7 +102,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         except TypeError:
             self.proceed = False
 
-        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v4.wav'}}})
+        self.si.put({"Fade":{'Time':0, 'Tracks':{PATH + '../Sound/Plains3v_ms4.ogg'}}})
 
         if not self.proceed: return
 
@@ -1340,8 +1340,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{
             PATH + "../Sound/Noise.flac",
-            PATH + '../Sound/Plains3v4.wav',
-            PATH + '../Sound/Env_Plains_R.wav'
+            PATH + '../Sound/Plains3v_ms4.ogg',
         }}})
 
 

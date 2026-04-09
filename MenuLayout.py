@@ -271,7 +271,7 @@ def mainMenuLayout(self):
                   (titleY-self.H2, titleX-self.W2 -14*resScale),
                   blur=2, bFill=whiteBG,
                   method='gauss', blurWidth=bWidth)
-    self.drawText(frame, "v1.4", whiteFG, self.c2Font,
+    self.drawText(frame, "v1.5", whiteFG, self.c2Font,
                   (titleY-self.H2 + 84*resScale, titleX-self.W2 + self.H*0.37),
                   bFill=whiteBG,
                   blur=2, blurWidth=bWidth, method='gauss')

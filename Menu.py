@@ -74,7 +74,7 @@ USE_DIBFMT = USE_GL and (PLATFORM == 'win32')
 import OpsConv
 BLOCK_SIZE = 128
 
-HELPTEXT = """AXI Combat v1.4
+HELPTEXT = """AXI Combat v1.5
 ======= ======= ======= =======
 General Usage
 
@@ -107,14 +107,14 @@ H - toggle SSAO
 N - toggle AI navigation overlay
 
 ======= ======= ======= =======
-Copyright AgentX Industries 2020-2022
+Copyright AgentX Industries 2020-2026
 
 For more info see https://axi.x10.mx/Combat
 """
 
-ABTTEXT = """AXI Combat v1.4
-Copyright © AgentX Industries 2020-2022
-Copyright © Louis Zhang 2020-2022
+ABTTEXT = """AXI Combat v1.5
+Copyright © AgentX Industries 2020-2026
+Copyright © Louis Zhang 2020-2026
 https://axi.x10.mx
 ======= ======= ======= =======
 The AXI Combat engine is licensed under the GNU General Public License v3 (GPLv3).
