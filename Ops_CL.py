@@ -207,6 +207,7 @@ class CLDraw:
         self.useCompound = []
 
         self.noiseDist = 0
+        self.doSSAO = False
 
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s * self.H//2)
@@ -354,11 +355,15 @@ class CLDraw:
         cl.enqueue_copy(cq, self.VN[tn], align34(vn.astype("float32")),
                         device_offset=cstart*3*4*4)
 
-    def addTexAlpha(self, a, **kwargs):
+    def addTexAlpha(self, a, *args, **kwargs):
         self.TA.append(cl.Buffer(ctx, mf.READ_ONLY, size=a.nbytes))
         cl.enqueue_copy(cq, self.TA[-1], a, is_blocking=False)
 
     def addNrmMap(self, nrm, name, **kwargs):
+        pass
+    def addPSTex(self, tex, name):
+        pass
+    def addBakedShadow(self, i, tex):
         pass
 
     def setReflTex(self, name, r, g, b, size):
@@ -868,6 +873,14 @@ class CLDraw:
         #print("Pixel:", time.time()-a)
         #a = time.time()
 
+        if self.doSSAO:
+            s = 16
+            ssao.ao(cq, (self.H//s, self.W//s), (s, s),
+                    self.RO, self.GO, self.BO,
+                    self.DB, self.sScale, self.RAND,
+                    self.W, self.H, np.int32(s), g_times_l=True)
+
+
     def clearZBuffer(self):
         s = 4; t = 4
         clearframe.clearFrame(cq, (s, s), (t, t), self.DB,
@@ -914,17 +927,13 @@ class CLDraw:
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
 
-    def ssao(self):
+    def ssao(self, doSSAO):
         try: _ = self.RAND
         except:
             ra = np.random.rand(64).astype("float32")
             self.RAND = makeRBuf(ra.nbytes)
             cl.enqueue_copy(cq, self.RAND, ra)
-        s = 16
-        ssao.ao(cq, (self.H//s, self.W//s), (s, s),
-                self.RO, self.GO, self.BO,
-                self.DB, self.sScale, self.RAND,
-                self.W, self.H, np.int32(s), g_times_l=True)
+        self.doSSAO = doSSAO
 
     def dof(self, focus, aperture=None):
         s = 16
