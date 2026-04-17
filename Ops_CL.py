@@ -21,7 +21,7 @@
 import numpy as np
 import warnings
 import time
-from Utils import viewMat
+from Utils import viewMat, createMips
 
 import pyopencl as cl
 
@@ -295,6 +295,10 @@ class CLDraw:
                         shader=None, mip=False, **kwargs):
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
+
+        if 'mip' in shader:
+            mip = rgb.shape[0]
+            rgb = createMips(rgb)[None,:]
 
         rr = np.array(rgb[:,:,0])
         gg = np.array(rgb[:,:,1])
