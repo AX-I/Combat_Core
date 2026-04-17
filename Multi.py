@@ -81,8 +81,6 @@ def playSound(si):
 class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def __init__(self):
 
-        self.maxFPS = 66
-
         kwargs = OpsConv.getSettings()
         width, height, fovx = kwargs["W"], kwargs["H"], kwargs["FOV"]
         volm = float(kwargs["Volume"])
@@ -155,6 +153,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.doRTVL = kwargs["RTVL"]
         self.dofLvl = kwargs['DOF']
         self.doSSAO = kwargs['SSAO']
+        self.maxFPS = kwargs['MaxFPS']
+
         self.renderBackend = kwargs["Render"]
 
         if self.renderBackend == 'CL':

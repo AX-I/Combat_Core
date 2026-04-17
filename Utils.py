@@ -49,9 +49,10 @@ def displayFPS(self):
         self.fpsDisplay = round(30 / self.fpsAccum, 1)
         self.fpsAccum = 0
     self.fpsAccum += self.frameTime
+    xoff = 4 if self.fpsDisplay >= 100 else 0
 
     self.textDraw.drawText(self.rgb, f'{self.fpsDisplay}', (255,255,255),
-                           self.debugFont, (-self.H2+20,-self.W2+20), blur=0)
+                           self.debugFont, (-self.H2+20,-self.W2+20+xoff), blur=0)
 
 
 def raySphereIntersect(p, v, c, r):
