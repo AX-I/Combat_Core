@@ -2774,6 +2774,7 @@ def run():
 
     import warnings
     warnings.simplefilter("ignore")
+    warnings.simplefilter("default", UserWarning)
     import urllib3
     urllib3.disable_warnings()
 
