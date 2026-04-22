@@ -389,8 +389,11 @@ class CLDraw:
         v = align34(vM)
         cl.enqueue_copy(cq, self.VIEWMAT, v.astype("float32"))
 
-    def rotate(self, oldRM, rotMat, origin, cStart, cEnd, tn):
+    def rotate(self, rotMat, cStart, cEnd, tn):
         if cEnd is None: cEnd = self.gSize[tn]
+
+        origin = np.zeros((3,))
+        oldRM = np.eye(3)
         oo = origin.astype("float32")
         o = makeRBuf(oo.nbytes)
         cl.enqueue_copy(cq, o, oo)
