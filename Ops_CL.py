@@ -549,6 +549,13 @@ class CLDraw:
         sm = self.SHADOWMAP[0]
         sm1 = self.SHADOWMAP[1]
 
+        smArgs = (
+            sm["map"], sm["dim2"], sm["scale"],
+            sm["vec"], sm["pos"])
+        sm1Args = (
+            sm1["map"], sm1["dim2"], sm1["scale"],
+            sm1["vec"], sm1["pos"])
+
         for tn in range(len(self.gSize)):
             if mask[tn]:
                 gsn.append(0)
@@ -613,10 +620,7 @@ class CLDraw:
                     self.TR[tn], self.TG[tn], self.TB[tn],
                     self.texSize[tn],
                     self.TA[shaders[tn]["alpha"]],
-                    sm["map"], sm["dim2"], sm["scale"],
-                    sm["vec"], sm["pos"],
-                    sm1["map"], sm1["dim2"], sm1["scale"],
-                    sm1["vec"], sm1["pos"],
+                    *smArgs, *sm1Args,
                     *endArgs, g_times_l=True)
             elif "mip" in shaders[tn]:
                 drawMip.drawSmall(
@@ -626,10 +630,7 @@ class CLDraw:
                     np.float32(shaders[tn]["mip"]),
                     self.TR[tn], self.TG[tn], self.TB[tn],
                     self.texSize[tn],
-                    sm["map"], sm["dim2"], sm["scale"],
-                    sm["vec"], sm["pos"],
-                    sm1["map"], sm1["dim2"], sm1["scale"],
-                    sm1["vec"], sm1["pos"],
+                    *smArgs, *sm1Args,
                     *endArgs, g_times_l=True)
             elif shaders[tn]['shader'] == "emissive":
                 drawEm.drawSmall(
@@ -650,8 +651,7 @@ class CLDraw:
                     self.LInt, self.LDir,
                     self.TR[tn], self.TG[tn], self.TB[tn],
                     self.texSize[tn],
-                    sm["map"], sm["dim2"], sm["scale"],
-                    sm["vec"], sm["pos"],
+                    *smArgs,
                     *endArgs, g_times_l=True)
             else:
                 drawSh2.drawSmall(
@@ -660,10 +660,7 @@ class CLDraw:
                     self.LInt, self.LDir,
                     self.TR[tn], self.TG[tn], self.TB[tn],
                     self.texSize[tn],
-                    sm["map"], sm["dim2"], sm["scale"],
-                    sm["vec"], sm["pos"],
-                    sm1["map"], sm1["dim2"], sm1["scale"],
-                    sm1["vec"], sm1["pos"],
+                    *smArgs, *sm1Args,
                     *endArgs, g_times_l=True)
 
 
@@ -709,10 +706,7 @@ class CLDraw:
                          self.TR[tn], self.TG[tn], self.TB[tn],
                          self.texSize[tn],
                          self.TA[shaders[tn]["alpha"]],
-                         sm["map"], sm["dim2"], sm["scale"],
-                         sm["vec"], sm["pos"],
-                         sm1["map"], sm1["dim2"], sm1["scale"],
-                         sm1["vec"], sm1["pos"],
+                         *smArgs, *sm1Args,
                          self.W, self.H,
                          g_times_l=True)
             elif "mip" in shaders[tn]:
@@ -722,10 +716,7 @@ class CLDraw:
                          np.float32(shaders[tn]["mip"]),
                          self.TR[tn], self.TG[tn], self.TB[tn],
                          self.texSize[tn],
-                         sm["map"], sm["dim2"], sm["scale"],
-                         sm["vec"], sm["pos"],
-                         sm1["map"], sm1["dim2"], sm1["scale"],
-                         sm1["vec"], sm1["pos"],
+                         *smArgs, *sm1Args,
                          self.W, self.H,
                          g_times_l=True)
             elif "SSR" in shaders[tn]['shader']:
@@ -780,8 +771,7 @@ class CLDraw:
                 drawFog.draw(*baseArgs,
                          self.VIEWPOS, self.VIEWMAT, self.sScale,
                          self.LInt, self.LDir,
-                         sm["map"], sm["dim2"], sm["scale"],
-                         sm["vec"], sm["pos"],
+                         *smArgs,
                          self.W, self.H,
                          g_times_l=True)
             elif "phong" in shaders[tn]:
@@ -791,8 +781,7 @@ class CLDraw:
                          self.LInt, self.LDir,
                          self.TR[tn], self.TG[tn], self.TB[tn],
                          self.texSize[tn],
-                         sm["map"], sm["dim2"], sm["scale"],
-                         sm["vec"], sm["pos"],
+                         *smArgs,
                          self.W, self.H,
                          g_times_l=True)
             else:
@@ -801,10 +790,7 @@ class CLDraw:
                          self.LInt, self.LDir,
                          self.TR[tn], self.TG[tn], self.TB[tn],
                          self.texSize[tn],
-                         sm["map"], sm["dim2"], sm["scale"],
-                         sm["vec"], sm["pos"],
-                         sm1["map"], sm1["dim2"], sm1["scale"],
-                         sm1["vec"], sm1["pos"],
+                         *smArgs, *sm1Args,
                          self.W, self.H,
                          g_times_l=True)
 
@@ -813,40 +799,42 @@ class CLDraw:
 
         for tn in range(len(self.gSize)):
             if mask[tn]: continue
-            if (tn in newSizeAfter) and (newSizeAfter[tn] > 0):
-                if "SSR" in shaders[tn]:
-                    sr = shaders[tn]["SSR"]
-                    drawSSR.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
-                             self.TOA[tn],
-                             self.RO, self.GO, self.BO,
-                             self.DB, self.SP[tn], self.ZZ[tn],
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                                self.VIEWPOS, self.VIEWMAT, self.sScale,
-                             self.TR[tn], self.TG[tn], self.TB[tn],
-                             self.texSize[tn],
-                             self.RRR[sr], self.GRR[sr], self.BRR[sr],
-                             self.reflTexSize[sr],
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
-                elif "add" in shaders[tn]:
-                    drawAdd.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
-                             self.TOA[tn],
-                             self.RO, self.GO, self.BO,
-                             self.DB, self.SP[tn], self.ZZ[tn],
-                             np.float32(shaders[tn]["add"]),
-                             self.UV[tn],
-                             self.TR[tn], self.TG[tn], self.TB[tn],
-                             self.texSize[tn],
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
-                elif "sub" in shaders[tn]:
-                    drawSub.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
-                             self.TOA[tn],
-                             self.RO, self.GO, self.BO,
-                             self.DB, self.SP[tn], self.ZZ[tn],
-                             np.float32(shaders[tn]["sub"]),
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
+            if (tn not in newSizeAfter): continue
+            if newSizeAfter[tn] == 0: continue
+
+            if "SSR" in shaders[tn]['shader']:
+                sr = shaders[tn]["SSR"]
+                drawSSR.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
+                         self.TOA[tn],
+                         self.RO, self.GO, self.BO,
+                         self.DB, self.SP[tn], self.ZZ[tn],
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                            self.VIEWPOS, self.VIEWMAT, self.sScale,
+                         self.TR[tn], self.TG[tn], self.TB[tn],
+                         self.texSize[tn],
+                         self.RRR[sr], self.GRR[sr], self.BRR[sr],
+                         self.reflTexSize[sr],
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
+            elif shaders[tn]['shader'] == "add":
+                drawAdd.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
+                         self.TOA[tn],
+                         self.RO, self.GO, self.BO,
+                         self.DB, self.SP[tn], self.ZZ[tn],
+                         np.float32(shaders[tn]["args"]['emPow']),
+                         self.UV[tn],
+                         self.TR[tn], self.TG[tn], self.TB[tn],
+                         self.texSize[tn],
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
+            elif shaders[tn]['shader'] == "sub":
+                drawSub.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
+                         self.TOA[tn],
+                         self.RO, self.GO, self.BO,
+                         self.DB, self.SP[tn], self.ZZ[tn],
+                         np.float32(shaders[tn]["args"]['emPow']),
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
 
         #print("Pixel:", time.time()-a)
         #a = time.time()
