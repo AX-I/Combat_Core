@@ -720,7 +720,7 @@ class CLDraw:
                          self.W, self.H,
                          g_times_l=True)
             elif "SSR" in shaders[tn]['shader']:
-                sr = shaders[tn]["SSR"]
+                sr = shaders[tn].get("SSR", "0")
                 drawSSR.draw(*baseArgs,
                          self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
                             self.VIEWPOS, self.VIEWMAT, self.sScale,
@@ -803,7 +803,7 @@ class CLDraw:
             if newSizeAfter[tn] == 0: continue
 
             if "SSR" in shaders[tn]['shader']:
-                sr = shaders[tn]["SSR"]
+                sr = shaders[tn].get("SSR", "0")
                 drawSSR.drawSmall(cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
                          self.TOA[tn],
                          self.RO, self.GO, self.BO,
