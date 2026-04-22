@@ -304,7 +304,7 @@ class ThreeDBackend:
         bt = rig.b0.getTransform()
         self.draw.setBoneTransform(name, bt)
         for i in ct:
-            self.draw.boneTransform(vobj.cStart*3, vobj.cEnd*3, i, name, offset)
+            self.draw.boneTransform(vobj.cStart, vobj.cEnd, i, name, offset)
             vobj = vobj.nextMtl
 
     def stepParticles(self):

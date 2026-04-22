@@ -150,6 +150,8 @@ class VertObject:
         self.invertNorms = "invertNorms" in kwargs
 
     def created(self):
+        # cStart, cEnd: location in #vertices; if instanced, in #instances
+
         if self.instanced:
             tn = self.texNum
 
