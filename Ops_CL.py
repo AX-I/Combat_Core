@@ -299,7 +299,7 @@ class CLDraw:
 
         if 'mip' in shader:
             mip = rgb.shape[0]
-            rgb = createMips(rgb)[None,:]
+            rgb = createMips(rgb).astype('uint16')[None,:]
 
         rr = np.array(rgb[:,:,0])
         gg = np.array(rgb[:,:,1])
