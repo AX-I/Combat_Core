@@ -47,6 +47,9 @@ class CubeMap:
             if tex.shape[1] == (6*tex.shape[0]):
                 self.rawtexture = tex
                 self.m = tex.shape[0]
+            elif tex.shape[1] == (2*tex.shape[0]):
+                self.rawtexture = tex
+                self.m = tex.shape[0]
             else:
                 self.rawtexture = numpy.concatenate(tex, axis=1)
                 self.m = self.rawtexture.shape[0]

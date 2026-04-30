@@ -740,6 +740,7 @@ class CLDraw:
                              self.texSize[tn],
                              self.RRR[sr], self.GRR[sr], self.BRR[sr],
                              self.reflTexSize[sr],
+                             np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
                              self.W, self.H,
                              g_times_l=True)
                 elif "sky" in shaders[tn]:
@@ -839,8 +840,6 @@ class CLDraw:
                 #print("Fine:", time.perf_counter()-a)
 
 
-        for tn in range(len(self.gSize)):
-            if mask[tn]: continue
             if (tn in newSizeAfter) and (newSizeAfter[tn] > 0):
                 if shaders[tn]['shader'] == "SSR":
                     sr = shaders[tn].get("SSR", '0')
@@ -854,6 +853,7 @@ class CLDraw:
                              self.texSize[tn],
                              self.RRR[sr], self.GRR[sr], self.BRR[sr],
                              self.reflTexSize[sr],
+                             np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
                              self.W, self.H, np.int32(newSizeAfter[tn]),
                              g_times_l=True)
                 elif shaders[tn]['shader'] == "add":
