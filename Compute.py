@@ -107,6 +107,7 @@ class ThreeDBackend:
         self.vtextures = []
 
         self.instanceData = {}
+        self.supportsInstancing = True
 
         self.renderMask = None
 
