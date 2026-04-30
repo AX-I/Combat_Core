@@ -158,6 +158,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.renderBackend = kwargs["Render"]
 
         if self.renderBackend == 'CL':
+            self.supportsInstancing = False
             ssrLevels = [0, 160, 320, 640]
             rvlLevels = [0, 8, 16, 64]
             absLevel = 0.06

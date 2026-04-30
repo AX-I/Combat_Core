@@ -34,12 +34,14 @@ def rgbToString(rgb):
 class VertObject:    
     def __init__(self, *args, texture=None, texMode="default", gamma=True,
                  maxWedgeDims=1, useShaders={}, instanced=False, **kwargs):
+        self.viewer = args[0]
+
         self.maxWedgeDims = maxWedgeDims
         self.numWedges = 0
         self.estWedges = 0
         self.enabled = kwargs.get("enabled", True)
 
-        self.instanced = instanced
+        self.instanced = instanced and self.viewer.supportsInstancing
 
         self.castShadow = False
         self.receiveShadow = False
@@ -66,7 +68,6 @@ class VertObject:
         self.animated = False
         self.bones = None
         
-        self.viewer = args[0]
         self.coords = numpy.array(args[1], dtype="float")
         self.scale = kwargs.get("scale", 1)
         self.angles = [0.,0.,0.]
