@@ -2463,7 +2463,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.srbs[i].v[:] = 0.
                 self.srbs[i].disable()
             diff = self.srbs[i].pos - lpi[self.lpCount[i]]
-            if sum(diff*diff) > 0:
+            if Phys.eucLen2(diff):
                 if s.texNum not in batch:
                     batch[s.texNum] = []
                 batch[s.texNum].append((diff, s.cStart, s.cEnd))
@@ -2482,9 +2482,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     lpi[self.lpCount[i]] = self.srbs[i].pos
 
                 diff2 = lpi[self.lpCount[i]-4] - lpi[self.lpCount[i]-5]
-                batch[s.texNum].append((diff, s.cStart, s.cStart+2))
-                batch[s.texNum].append((diff2, s.cStart+2, s.cStart+5))
-                batch[s.texNum].append((diff, s.cStart+5, s.cStart+6))
+                if Phys.eucLen2(diff) or Phys.eucLen2(diff2):
+                    batch[s.texNum].append((diff, s.cStart, s.cStart+2))
+                    batch[s.texNum].append((diff2, s.cStart+2, s.cStart+5))
+                    batch[s.texNum].append((diff, s.cStart+5, s.cStart+6))
 
             self.lpCount[i] += 1
             self.lpCount[i] %= self.lp.shape[1]
