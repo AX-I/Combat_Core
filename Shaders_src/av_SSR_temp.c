@@ -23,6 +23,7 @@
 :Texture ushort TR TG TB lenT
 :Texture ushort RR RG RB dimR
 
+const int useEquiEnv, const float rotY,
 !
 
 !shader_setup
@@ -64,7 +65,7 @@
     float3 refl = fast_normalize(a - 2 * nd * norm) * REFL_VSIZE;
 
     int maxRLen = REFL_LENGTH;
-	if (dot(refl, SVd) < -0.1f) maxRLen = 1;
+	//if (dot(refl, SVd) < -0.1f) maxRLen = 1;
     if (refl.y < 0) maxRLen = 1;
 
     float2 rxy = (float2)(ax, cy);
@@ -107,6 +108,8 @@
         sd = fabs(1.f/sz - 1.f/(sz - slopez)) + REFL_DBIAS;
     }
 
+    int lenR = 2*dimR;
+   /*
     int face;
     float m = max(fabs(refl.x), max(fabs(refl.y), fabs(refl.z)));
     if (m == fabs(refl.x)) {
@@ -123,16 +126,26 @@
     }
     rxy = min((rxy + 1) * dimR, (float2)(dimR*2-1));
 
-    int lenR = 2*dimR;
     int side = face+1;
 
     int rex1 = (int)rxy.x + face*lenR;
     int rex2 = (int)rxy.y;
     int rex = rex1 + 6*lenR*rex2;
+   */
 
     float fade = min(1.f, (float)(REFL_LENGTH - rn) / (float)REFL_FADE);
 
-    float cs = (RR[rex] + RG[rex] + RB[rex] >= 3*65535) ? 16 : 1;
+    float cs = 1; //(RR[rex] + RG[rex] + RB[rex] >= 3*65535) ? 16 : 1;
+
+    // Equirect fallback
+    refl = normalize(refl);
+    float2 uvEnv;
+    uvEnv.x = atan2(refl.x, refl.z) / 6.2832 + rotY;
+    uvEnv.y = acos(refl.y) / 3.1416;
+
+    int envWidth = 2*lenR;
+    int envHeight = lenR;
+    int rex = (int)(uvEnv.x * envWidth) + (int)(uvEnv.y * envHeight) * envWidth;
 
     if (hit == 1) {
         ssr_out.x = Ro[wF * ssr_loc.y + ssr_loc.x];
