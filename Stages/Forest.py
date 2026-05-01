@@ -69,6 +69,7 @@ def setupStage(self):
         mat = self.matShaders[self.vtNames[f]]
         if 'Water' in f:
             mat['shader'] = 'SSR'
+            mat['wave'] = 1
             self.vertObjects[self.vtNames[f]].castShadow = False
             self.water = VertWater0(
                 (0,0,0), self, pScale=0.04,

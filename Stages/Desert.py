@@ -5,7 +5,7 @@ from math import pi,sin
 from OpsConv import PATH
 import time
 
-from VertObjects import VertTerrain, VertPlane
+from VertObjects import VertTerrain, VertWater, VertPlane
 from TexObjects import TexSkyBox
 
 import Phys
@@ -27,6 +27,16 @@ def setupStage(self):
         uvspread=20, useShaders={'normal':'sand'})
     self.terrain = self.vertObjects[-1]
 
+    self.addVertObject(
+        VertWater, [-1, 2, -10], size=240,
+        scale=0.22, pScale=0.04,
+        wDir=[(0.4,-0.17), (0.4, 0.2)],
+        wLen=[(10, 4, 3), (7, 5, 2)],
+        wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
+        wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
+        texture=PATH+"../Assets/Blue.png",
+        useShaders={'shader':"SSR"})
+    self.water = self.vertObjects[-1]
 
     nCloth = 19
     self.nCloth = nCloth

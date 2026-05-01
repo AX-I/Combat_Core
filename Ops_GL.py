@@ -524,32 +524,25 @@ class CLDraw:
         self.WAVESPD = np.array(wSpd, 'float32').tobytes()
         self.WNUM = (np.int32(numW), np.int32(wSpd.reshape((-1,)).shape[0] - numW))
 
+        self.waveWritten = {}
+
     def updateWave(self, pScale, stTime, tn):
         d = self.DRAW[tn]
-        try:
-            d['pScale'].write(np.float32(pScale))
-            d['pTime'].write(self.currTime)
-        except KeyError:
-            draw = ctx.program(vertex_shader=trisetupWave,
-                               fragment_shader=drawSSR.replace(
-                                   '{REFL_LENGTH}', self.shaderParams['{REFL_LENGTH}']))
-            try:
-                draw['width'].write(np.float32(self.W))
-                draw['height'].write(np.float32(self.H))
-            except: pass
 
-            self.DRAW[tn] = draw
-            self.writeShArgs(tn)
-            self.VAO[tn] = ctx.vertex_array(draw, self.VBO[tn],
-                                            'in_vert', 'in_norm', 'in_UV')
-            draw['origin'].write(self.WAVEO)
-            draw['wDir1'].write(self.WAVED[0].tobytes())
-            draw['wDir2'].write(self.WAVED[1].tobytes())
-            draw['wLen'].write(self.WAVELEN)
-            draw['wAmp'].write(self.WAVEAMP)
-            draw['wSpd'].write(self.WAVESPD)
-            draw['lenW'].write(self.WNUM[0])
-            draw['lenW2'].write(self.WNUM[1])
+        d['pScale'].write(np.float32(pScale))
+        d['pTime'].write(self.currTime)
+
+        if tn in self.waveWritten: return
+        self.waveWritten[tn] = 1
+
+        d['origin'].write(self.WAVEO)
+        d['wDir1'].write(self.WAVED[0].tobytes())
+        d['wDir2'].write(self.WAVED[1].tobytes())
+        d['wLen'].write(self.WAVELEN)
+        d['wAmp'].write(self.WAVEAMP)
+        d['wSpd'].write(self.WAVESPD)
+        d['lenW'].write(self.WNUM[0])
+        d['lenW2'].write(self.WNUM[1])
 
 
     def drawPS(self, xyz, color, opacity, size, tex=None, shader=1):
@@ -986,6 +979,8 @@ class CLDraw:
             ts = trisetupAnim
         elif '2d' in mtl:
             ts = trisetup2d
+        elif 'wave' in mtl:
+            ts = trisetupWave
         elif mtl.get('calcNorm', 0):
             ts = trisetupNorm
         elif self.VBO[i].extra:

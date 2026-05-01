@@ -319,6 +319,8 @@ class VertWater(VertObject):
                  wSpd=[(0.6, 0.8, 1.1), (1, 1.1, 1.3)], numW=3, **ex):
         super().__init__(*args, **ex)
 
+        self.viewer.matShaders[self.texNum]['wave'] = 1
+
         self.wDir = numpy.array(wDir)
         self.pS = pScale
         self.wLen = numpy.array(wLen)

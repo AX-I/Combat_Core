@@ -56,7 +56,7 @@ import OpsConv
 import AI
 import Anim
 
-from VertObjects import VertWater0, VertRing, extractByUV
+from VertObjects import VertRing, extractByUV
 from ParticleSystem import AttractParticleSystem
 
 from IK import doFullLegIK, doArmIK
@@ -1272,18 +1272,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             self.blackHoles.append({"rb":self.srbs[-1], "ps":ps})
 
-        if self.stage == 0:
-            self.addVertObject(
-                VertWater, [-1, 2, -10], size=240,
-                scale=0.22, pScale=0.04,
-                wDir=[(0.4,-0.17), (0.4, 0.2)],
-                wLen=[(10, 4, 3), (7, 5, 2)],
-                wAmp=np.array([(0.8, 0.5, 0.3), (0.6, 0.35, 0.25)])*1.6,
-                wSpd=np.array([(0.6, 0.8, 1.1), (1, 1.1, 1.3)])*1.8, numW=3,
-                texture=PATH+"../Assets/Blue.png",
-                useShaders={'shader':"SSR"})
-            self.water = self.vertObjects[-1]
-
         for i in range(len(self.players)):
             ps = ContinuousParticleSystem(
                 np.array([0,0,0.]), (0,pi/2),
@@ -2363,9 +2351,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameFiredOld = self.frameFired
         self.frameFired = False
 
-        if self.stage == 0 or self.stage == 4:
+        if hasattr(self, 'water'):
             self.water.update()
-
 
         for a in self.players:
             self.checkEnergy(a)
