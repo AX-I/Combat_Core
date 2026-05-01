@@ -597,6 +597,8 @@ class CLDraw:
             if mask[tn]: continue
             ns = nsn[tn]
 
+            if newSize[tn] == 0: continue
+
             baseArgs = (
                 cq, (ns, 1), (BLOCK_SIZE, 1),
                 self.TOA[tn],
@@ -608,52 +610,51 @@ class CLDraw:
             endArgs = (
                 self.W, self.H, np.int32(newSize[tn]))
 
-            if newSize[tn] > 0:
-                if "alpha" in shaders[tn]:
-                    drawA.drawSmall(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                               self.TA[shaders[tn]["alpha"]],
-                             *smArgs, *sm1Args,
-                             *endArgs,
-                             g_times_l=True)
-                elif "mip" in shaders[tn]:
-                    drawMip.drawSmall(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.LInt, self.LDir,
-                             np.float32(shaders[tn]["mip"]),
-                             *currTexArgs,
-                             *smArgs, *sm1Args,
-                             *endArgs,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "emissive":
-                    drawEm.drawSmall(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.UV[tn],
-                             *currTexArgs,
-                             *endArgs,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] in ("SSR", "add", "sub", "border"):
-                    nAfter[tn] = ns; newSizeAfter[tn] = newSize[tn]
-                elif "phong" in shaders[tn]:
-                    assert False
-                    drawPh.drawSmall(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.VIEWPOS, self.VIEWMAT,
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                             *smArgs,
-                             *endArgs,
-                             g_times_l=True)
-                else:
-                    drawSh2.drawSmall(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                             *smArgs, *sm1Args,
-                             *endArgs,
-                             g_times_l=True)
+            if "alpha" in shaders[tn]:
+                drawA.drawSmall(*baseArgs,
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                         self.LInt, self.LDir,
+                         *currTexArgs,
+                           self.TA[shaders[tn]["alpha"]],
+                         *smArgs, *sm1Args,
+                         *endArgs,
+                         g_times_l=True)
+            elif "mip" in shaders[tn]:
+                drawMip.drawSmall(*baseArgs,
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                         self.LInt, self.LDir,
+                         np.float32(shaders[tn]["mip"]),
+                         *currTexArgs,
+                         *smArgs, *sm1Args,
+                         *endArgs,
+                         g_times_l=True)
+            elif shaders[tn]['shader'] == "emissive":
+                drawEm.drawSmall(*baseArgs,
+                         np.float32(shaders[tn]['args']['emPow']),
+                         self.UV[tn],
+                         *currTexArgs,
+                         *endArgs,
+                         g_times_l=True)
+            elif shaders[tn]['shader'] in ("SSR", "add", "sub", "border"):
+                nAfter[tn] = ns; newSizeAfter[tn] = newSize[tn]
+            elif "phong" in shaders[tn]:
+                assert False
+                drawPh.drawSmall(*baseArgs,
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                         self.VIEWPOS, self.VIEWMAT,
+                         self.LInt, self.LDir,
+                         *currTexArgs,
+                         *smArgs,
+                         *endArgs,
+                         g_times_l=True)
+            else:
+                drawSh2.drawSmall(*baseArgs,
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                         self.LInt, self.LDir,
+                         *currTexArgs,
+                         *smArgs, *sm1Args,
+                         *endArgs,
+                         g_times_l=True)
 
 
         # Large
@@ -787,36 +788,38 @@ class CLDraw:
                 #print("Fine:", time.perf_counter()-a)
 
 
-            if (tn in newSizeAfter) and (newSizeAfter[tn] > 0):
-                baseArgs = (
-                    cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
-                    self.TOA[tn],
-                    self.RO, self.GO, self.BO,
-                    self.DB, self.SP[tn], self.ZZ[tn])
+            if (tn not in newSizeAfter): continue
+            if (newSizeAfter[tn] == 0): continue
 
-                if shaders[tn]['shader'] == "SSR":
-                    sr = shaders[tn].get("SSR", '0')
-                    drawSSR.drawSmall(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                                self.VIEWPOS, self.VIEWMAT, self.sScale,
-                             *currTexArgs,
-                             self.RRR[sr], self.GRR[sr], self.BRR[sr],
-                             self.reflTexSize[sr],
-                             np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "add":
-                    drawAdd.drawSmall(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.UV[tn],
-                             *currTexArgs,
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "sub":
-                    drawSub.drawSmall(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.W, self.H, np.int32(newSizeAfter[tn]),
-                             g_times_l=True)
+            baseArgs = (
+                cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
+                self.TOA[tn],
+                self.RO, self.GO, self.BO,
+                self.DB, self.SP[tn], self.ZZ[tn])
+
+            if shaders[tn]['shader'] == "SSR":
+                sr = shaders[tn].get("SSR", '0')
+                drawSSR.drawSmall(*baseArgs,
+                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                            self.VIEWPOS, self.VIEWMAT, self.sScale,
+                         *currTexArgs,
+                         self.RRR[sr], self.GRR[sr], self.BRR[sr],
+                         self.reflTexSize[sr],
+                         np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
+            elif shaders[tn]['shader'] == "add":
+                drawAdd.drawSmall(*baseArgs,
+                         np.float32(shaders[tn]['args']['emPow']),
+                         self.UV[tn],
+                         *currTexArgs,
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
+            elif shaders[tn]['shader'] == "sub":
+                drawSub.drawSmall(*baseArgs,
+                         np.float32(shaders[tn]['args']['emPow']),
+                         self.W, self.H, np.int32(newSizeAfter[tn]),
+                         g_times_l=True)
 
         #print("Pixel:", time.time()-a)
         #a = time.time()
