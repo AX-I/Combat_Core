@@ -344,7 +344,9 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def tgFxaa(self):
         self.useFxaa = 1 - self.useFxaa
     def pause(self):
+        pauseStart = time.time()
         input('Continue: ')
+        self.statTime += time.time() - pauseStart
 
     def tgBlack1(self):
         self.blackPoint += 0.01
