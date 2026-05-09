@@ -54,8 +54,10 @@ else:
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-def getTexture(fn, cgamma=True, texMul=1):
-    ti = Image.open(fn).convert("RGB")
+def getTexture(fn, cgamma=True, texMul=1, raw=False):
+    ti = Image.open(fn)
+    mode = ti.mode
+    if not raw: ti = ti.convert("RGB")
     if ti.size[0] != ti.size[1]:
         print("Texture is not square")
         n = max(ti.size)
@@ -65,6 +67,8 @@ def getTexture(fn, cgamma=True, texMul=1):
         n = 2**ceil(log2(ti.size[0]))
         ti = ti.resize((n,n))
     ta = np.array(ti.rotate(-90)).astype('float32')
+    if raw: return (ta, mode)
+
     if cgamma:  ta *= ta; ta /= 8.
     else:       ta *= 64
     ta *= texMul
@@ -175,11 +179,12 @@ class ThreeDBackend:
         self.frontend.start()
 
 
-    def loadTexture(self, tex: str, cgamma: bool, texMul: float):
-        if self.texLoadManager:
+    def loadTexture(self, tex: str, cgamma: bool, texMul: float,
+                    raw: bool = False):
+        if self.texLoadManager and not raw:
             return self.texLoadManager.loadTex(len(self.vtextures),
                                                tex, cgamma, texMul)
-        return getTexture(tex, cgamma, texMul)
+        return getTexture(tex, cgamma, texMul, raw=raw)
 
     def enableDOF(self, dofR=24, rad=0.2, di=4):
         pass

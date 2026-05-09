@@ -93,13 +93,13 @@ class VertObject:
             if af in self.viewer.vaNames:
                 pass
             else:
-                ti = Image.open(af).rotate(-90)
-                if ti.mode == "1":
-                    ta = np.array(ti).astype("bool")
-                elif ti.mode == "RGB":
-                    ta = np.floor(np.array(ti, dtype="float32")[:,:,0] / 255 + 0.4).astype("bool")
-                elif ti.mode == "RGBA":
-                    ta = np.array(ti, dtype="float32")[:,:,3]
+                ti, mode = self.viewer.loadTexture(af, False, 1, raw=True)
+                if mode == "1":
+                    ta = ti.astype("bool")
+                elif mode == "RGB":
+                    ta = np.floor(ti[:,:,0] / 255 + 0.4).astype("bool")
+                elif mode == "RGBA":
+                    ta = ti[:,:,3]
                     ta = np.floor(ta / 255 + 0.4).astype("bool")
                 else:
                     print(ti.mode)
