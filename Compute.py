@@ -245,6 +245,7 @@ class ThreeDBackend:
         else:
             import Ops_CL as Ops
             opts['max_uv'] = len(self.vertPoints)
+            opts['max_particles'] = max([ps.N for ps in self.particleSystems])
 
         self.draw = Ops.CLDraw(self.W, self.H, **opts)
 

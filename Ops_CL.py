@@ -225,8 +225,6 @@ class CLDraw:
         self.caX, self.caY = np.float32(cx), np.float32(cy)
 
     def drawPS(self, xyz, color, opacity, size, *args):
-        warnings.warn('drawPS is disabled for CL backend')
-        return
         if xyz.shape[0] == 0: return
         vs = np.int32(xyz.shape[0]//BLOCK_SIZE + 1)
         cl.enqueue_copy(cq, self.PC, align34(xyz.astype("float32")))
@@ -234,7 +232,7 @@ class CLDraw:
         particles.ps(cq, (vs, 1), (BLOCK_SIZE, 1),
                      self.RO, self.GO, self.BO, self.DB,
                      self.PC, self.PO,
-                     np.float32(opacity), np.int32(size),
+                     np.float32(opacity), np.float32(size),
                      self.VIEWPOS, self.VIEWMAT,
                      self.sScale, self.W, self.H,
                      self.caX, self.caY, np.int32(xyz.shape[0]),

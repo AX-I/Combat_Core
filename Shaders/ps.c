@@ -3,7 +3,7 @@
 __kernel void ps(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
                  __global float *F,
                  __global float3 *XYZ, __global ushort3 *I,
-                 const float opacity, const int size,
+                 const float opacity, const float size,
                  __constant float *Vpos, __constant float3 *VV,
                  const float sScale, const int wF, const int hF,
                  const float cAX, const float cAY, const int lenP) {
@@ -31,7 +31,7 @@ __kernel void ps(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
       dy = dy * sScale + hF/2;
       int dix = (int)(dx);
       int diy = (int)(dy);
-      int vsize = max(2.f, min(12.f, size / dd));
+      int vsize = max(2.f, min(12.f, size * sScale / dd));
       float vopacity = opacity; //min(1.f, opacity / dd);
       for (int ay = max(0, diy-vsize); ay < min(hF-1, diy+vsize); ay++) {
         for (int ax = max(0, dix-vsize); ax < min(wF-1, dix+vsize); ax++) {
