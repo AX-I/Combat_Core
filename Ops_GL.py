@@ -895,6 +895,11 @@ class CLDraw:
             if max(tex.size) > 128:
                 tex.anisotropy = a
 
+    def startDrawBatch(self):
+        pass
+    def endDrawBatch(self):
+        pass
+
     def addTextureGroup(self, xyz, uv, vn, rgb,
                         shader=None, mip=None,
                         instances=None):

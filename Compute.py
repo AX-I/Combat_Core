@@ -264,7 +264,9 @@ class ThreeDBackend:
             self.texLoadManager.collectTex(self.vtextures)
             self.texLoadManager.cleanup()
 
-        for i in range(1):
+        self.draw.startDrawBatch()
+
+        for i in range(len(self.vtextures)):
             inst = None
             if i in self.instanceData:
                 inst = self.instanceData[i]
@@ -277,6 +279,8 @@ class ThreeDBackend:
                 tex, shader=self.matShaders[i],
                 instances=inst)
             self.vtextures[i] = np.array([1])
+
+        self.draw.endDrawBatch()
 
         for f in self.matShaders:
             mat = self.matShaders[f]
