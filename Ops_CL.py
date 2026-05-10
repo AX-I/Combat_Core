@@ -251,6 +251,7 @@ class CLDraw:
         self.oldtt[name] = np.tile(np.identity(4), (bn,1)).astype("float32")
 
     def initBoneOrigin(self, o, bn, tn):
+        return
         o = o.astype("float32")
         vs = np.int32(self.gSize[tn]//BLOCK_SIZE + 1)
         skel.offset(cq, (vs, 1), (BLOCK_SIZE, 1),
@@ -266,6 +267,7 @@ class CLDraw:
         self.oldtt[name] = self.invbt(tt)
 
     def boneTransform(self, cStart, cEnd, tn, name, offset=0):
+        return
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         skel.transform(cq, (vs, 1), (BLOCK_SIZE, 1),
                        self.XYZ[tn], self.VN[tn],
@@ -280,6 +282,7 @@ class CLDraw:
         return b
 
     def highlight(self, hc, tn, mult=None):
+        return
         hc = np.array(hc, dtype="float32")
         vs = np.int32(self.gSize[tn]*3//BLOCK_SIZE + 1)
         sct.highlight(cq, (vs, 1), (BLOCK_SIZE, 1),
@@ -428,6 +431,7 @@ class CLDraw:
                 self.translate(*i, tn)
 
     def translate(self, coords, cStart, cEnd, tn):
+        return
         if cEnd is None: cEnd = self.gSize[tn]
         oo = coords.astype("float32")
         vs = (cEnd - cStart)//BLOCK_SIZE + 1
@@ -554,6 +558,8 @@ class CLDraw:
 
         if mask is None:
             mask = [False] * len(shaders)
+        mask[0] = False
+
         gsn = []
 
         sm = self.SHADOWMAP[0]

@@ -346,6 +346,7 @@ class CLDraw:
         self.boneNums[name] = bn
 
     def initBoneOrigin(self, o, bn, tn):
+        return
         if tn not in self.BO:
             self.BO[tn] = np.zeros((32, 3), "float32")
 
@@ -355,6 +356,7 @@ class CLDraw:
         self.BT[name] = bt.astype('float32').tobytes()
 
     def boneTransform(self, cStart, cEnd, tn, name, offset):
+        return
         try:
             self.DRAW[tn]['RR'].write(self.BT[name])
             self.DRAW[tn]['off'] = offset
@@ -970,6 +972,7 @@ class CLDraw:
 
     def setUVOff(self, tn, lo, hi, offset):
         """tn: texNum    lo, hi, offset: float2(u, v)"""
+        return
         self.DRAW[tn]['uv_lo'].write(np.array(lo, 'float32'))
         self.DRAW[tn]['uv_hi'].write(np.array(hi, 'float32'))
         self.DRAW[tn]['uv_offset'].write(np.array(offset, 'float32'))
@@ -1127,6 +1130,7 @@ class CLDraw:
 
         if mask is None:
             mask = [False] * len(shaders)
+        mask[0] = False
 
         for i in range(len(self.VBO)):
             if shaders[i] != self.oldShaders[i]:

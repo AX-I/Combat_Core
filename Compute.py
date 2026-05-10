@@ -235,6 +235,10 @@ class ThreeDBackend:
             del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
 
+        self.vertPoints = [np.concatenate(self.vertPoints)]
+        self.vertNorms = [np.concatenate(self.vertNorms)]
+        self.vertU = [np.concatenate(self.vertU)]
+        self.vertV = [np.concatenate(self.vertV)]
 
         import OpsConv
         settings = OpsConv.getSettings(False)
@@ -260,7 +264,7 @@ class ThreeDBackend:
             self.texLoadManager.collectTex(self.vtextures)
             self.texLoadManager.cleanup()
 
-        for i in range(len(self.vtextures)):
+        for i in range(1):
             inst = None
             if i in self.instanceData:
                 inst = self.instanceData[i]
@@ -465,10 +469,10 @@ class ThreeDBackend:
             self.draw.vertLight(mask, dirI, dirD)
 
     def shadowObjects(self):
-        sobj = np.full((len(self.vertU),), False)
-        for o in self.vertObjects:
-            if o.castShadow:
-                sobj[o.texNum] = True
+        sobj = np.full((len(self.vertU),), True)
+##        for o in self.vertObjects:
+##            if o.castShadow:
+##                sobj[o.texNum] = True
 
         self.castObjs = sobj
 

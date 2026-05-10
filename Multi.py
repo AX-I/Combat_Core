@@ -1804,6 +1804,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         return 1-dmg
 
     def plantPickup(self, pos, t=None):
+        return
         i = self.pickups[0]
         if t is not None:
             if i["t"] == t: return

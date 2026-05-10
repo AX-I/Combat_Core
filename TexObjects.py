@@ -143,7 +143,7 @@ class TexSkyBox:
 
         tn = self.texNum
         self.viewer.vertpoints[tn] = [self.wedgePoints * 4000]
-        self.viewer.vertnorms[tn] = [((1,0,0),)]
+        self.viewer.vertnorms[tn] = [np.zeros_like(self.wedgePoints)]
         self.viewer.vertu[tn] = [np.array(self.u) / 6]
         self.viewer.vertv[tn] = [np.array(self.v)]
         
