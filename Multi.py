@@ -549,6 +549,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.fCam = True
             self.cam1Pframe = self.frameNum
             self.α = -self.players[self.selchar]["cr"] + pi/2
+        else:
+            for tn in self.players[self.selchar]['ctexn']:
+                mtl = self.matShaders[tn]
+                if not mtl.get('orig_cull', False):
+                    del mtl['cull']
 
     def tgTM1(self):
         tm = ('gamma', 'reinhard', 'reinhard2', 'aces')
@@ -2628,8 +2633,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             head = p['b1'].children[0].children[2]
             self.pos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
 
-            for tn in p['ctexn']:
-                self.matShaders[tn]['cull'] = 1
+            if self.frameNum == self.cam1Pframe:
+                for tn in p['ctexn']:
+                    mtl = self.matShaders[tn]
+                    mtl['orig_cull'] = 'cull' in mtl
+                    mtl['cull'] = 1
 
         if self.fCam:
             a = self.players[sc]
