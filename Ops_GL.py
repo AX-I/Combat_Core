@@ -202,6 +202,7 @@ class CLDraw:
         self.stTime = time.time()
 
         self.shaderParams = {'{REFL_LENGTH}':str(self.H),
+                             '{REFL_STEP}':'2',
                              '#define SCR_SHADOW':'',
                              '{DOF_2P2}':'2',
                              '{DOF_P2}':'4',

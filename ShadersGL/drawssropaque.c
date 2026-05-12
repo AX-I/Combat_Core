@@ -5,7 +5,7 @@
 #version 420
 
 
-#define REFL_STEP 2
+#define REFL_STEP {REFL_STEP}
 #define REFL_LENGTH {REFL_LENGTH}
 #define REFL_DEPTH 0.5f
 #define REFL_VSIZE 2.f

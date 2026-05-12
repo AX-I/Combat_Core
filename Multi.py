@@ -1558,6 +1558,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         print(f'Normal maps in {time.time() - self.loadStart:.2f}')
 
+        ssrSteps = (16, 8, 4, 2)
+        self.draw.shaderParams['{REFL_STEP}'] = str(ssrSteps[self.doSSR])
+        self.draw.shaderParams['{REFL_LENGTH}'] = str(self.H * (self.doSSR > 0))
+
     def shadowChar(self):
         sc = self.shadowCams[1]
         sc["dir"] = self.directionalLights[0]["dir"]
