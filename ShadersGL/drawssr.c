@@ -123,37 +123,39 @@ void main() {
     int hit = 0;
 
     float dt = max(abs(rp.x - rxy.x), abs(rp.y - rxy.y));
-    int vx = REFL_STEP;
-    float slopex = (rp.x - rxy.x) / dt * vx;
-	float slopey = (rp.y - rxy.y) / dt * vx;
-	float slopez = (1.f/rpz - 1.f/tz) / dt * vx;
+    vec2 slopexy = (rp - rxy) / dt;
+	float slopez = (1.f/rpz - 1.f/tz) / dt;
 
 	vec3 ssr_out = vec3(0);
     vec2 ssr_loc = vec2(0);
 
-    float sy = cy;
-	float sx = cx;
+    vec2 sxy = rxy;
 	float sz = 1.f/tz;
 	float sd = REFL_DEPTH;
     int rn = 0;
 
+    float dither = 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (int(tc.y) & 1);
+    sxy += int(dither * REFL_STEP) * slopexy;
+    sz += int(dither * REFL_STEP) * slopez;
+    slopexy *= REFL_STEP;
+    slopez *= REFL_STEP;
+
     for (rn = 0; (hit == 0) && (rn < maxRLen) &&
-                 (sx >= 0) && (sx < wF) && (sy >= 0) && (sy < hF) && (sz > 0);
-         rn += vx) {
-	    float currdist = texture(db, vec2(int(sx)+0.5f, int(sy)+0.5f) * wh).r;
+                 (sxy.x >= 0) && (sxy.x < wF) && (sxy.y >= 0) && (sxy.y < hF) && (sz > 0);
+         rn += REFL_STEP) {
+	    float currdist = texture(db, vec2(int(sxy.x)+0.5f, int(sxy.y)+0.5f) * wh).r;
         if ((currdist < 1.f/sz) &&
             (currdist > 1.f/sz - sd)) {
 
-            ssr_loc = vec2(sx, sy);
+            ssr_loc = sxy;
             hit = 1;
         }
-        sx += slopex;
-        sy += slopey;
+        sxy += slopexy;
         sz += slopez;
         sd = abs(1.f/sz - 1.f/(sz - slopez)) + REFL_DBIAS;
 
         if ((1.f/sz > MAXDIST) && (currdist > MAXDIST)) {
-			ssr_loc = vec2(sx, sy);
+			ssr_loc = sxy;
             hit = 1;
 		}
     }
