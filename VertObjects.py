@@ -534,6 +534,8 @@ class VertModel(VertObject):
                             refl = t[1]
                         elif t[0] == 'tex_mul':
                             texMul = float(t[1])
+                        elif t[0] == 'subdiv':
+                            self.subDiv = int(t[1])
 
             if not mc:
                 if cmtl > mtlNum:
