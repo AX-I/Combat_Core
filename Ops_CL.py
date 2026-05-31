@@ -219,6 +219,7 @@ class CLDraw:
         self.doSSAO = False
 
         self.VBO = DummyVBO()
+        self.shaderParams = {}
 
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s * self.H//2)
