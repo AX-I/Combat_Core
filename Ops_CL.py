@@ -853,6 +853,10 @@ class CLDraw:
         clearframe.clearFrame(cq, (s, s), (t, t), self.DB,
                            self.W, self.H,
                            np.int32(t), np.int32(s*t), g_times_l=True)
+        clearframe.clearNBuf(
+            cq, (self.WC, self.HC), (1, 1),
+            self.NBUF, self.WC,
+            g_times_l=True)
 
     def distort(self, x=0.5, y=0.5, z=4, p=20, st=20):
         try: _ = self.dProg
@@ -890,6 +894,7 @@ class CLDraw:
     def gamma(self, ex, *args):
         s = 4; t = 4
         gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
+                self.NBUF,
                 np.float32(ex),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)

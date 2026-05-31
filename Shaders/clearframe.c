@@ -21,3 +21,10 @@ __kernel void clearFrame(__global float *F,
         }
     }
 }
+
+__kernel void clearNBuf(__global float *FN, const int wF) {
+    int bx = get_group_id(0);
+    int by = get_group_id(1);
+
+    FN[wF * by + bx] = 0;
+}

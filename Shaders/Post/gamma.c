@@ -1,4 +1,7 @@
 
+#define TILE_SIZE 16.f
+#define TILE_BUF 128
+
 float3 rtt_and_odt_fit(float3 v) {
   float3 a = v * (v + 0.0245786f) - 0.000090537f;
   float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
@@ -21,7 +24,7 @@ float3 acesMat(float3 px) {
   return j;
 }
 
-__kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+__kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo, __global int *FN,
                 const float exposure,
                 const int wF, const int hF, const int BS,
                 const int stepW, const int stepH) {
@@ -37,8 +40,16 @@ __kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
     int h1 = stepH * cj;
     int h2 = stepH * (cj+1);
 
+    int tilew = wF/TILE_SIZE;
+    int tilex, tiley;
+
     for (int cy = h1; cy < min(h2, hF); cy++) {
         for (int cx = ci; cx < wF; cx += stepW) {
+          tilex = cx/TILE_SIZE;
+          tiley = cy/TILE_SIZE;
+          float fill = (float)FN[tilew * tiley + tilex] / TILE_BUF;
+          fill *= 0.33f;
+
             float3 j = 8 * exposure * (float3)(Ro[wF * cy + cx], Go[wF * cy + cx], Bo[wF * cy + cx]);
 
            /*
@@ -49,6 +60,8 @@ __kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
             }
            */
             j = max((float3)0.f, acesMat(j / 65535.f) * 255.f);
+
+            j = (1-fill) * j + (fill) * (float3)(255.f, 0.f, 0.f);
 
             Ro[wF * cy + cx] = (ushort)min(255.f, j.x);
             Go[wF * cy + cx] = (ushort)min(255.f, j.y);
