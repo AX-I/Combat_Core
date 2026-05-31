@@ -45,6 +45,9 @@ __kernel void draw(__global int *TO,
       y2 = ytemp; x2 = xtemp;
     }
 
+    float bboxL = min(x1, min(x2, x3));
+    float bboxR = max(x1, max(x2, x3));
+
     float x4 = (x1 + ((y2-y1)/(y3-y1)) * (x3-x1));
     float y4 = y2;
 
@@ -74,10 +77,12 @@ __kernel void draw(__global int *TO,
         mx2 = cx2 + sbias * slope2;
         if (slope2 > 0) mx2 -= slope2;
 
-        //mx2 = ((cy == ceil(y2)) && (slope2 < 0)) ? max(mx2, min(x2, x4)) : mx2; // Prevent overdraw
-
         mx1 = min(mx1, (float)wF - 1);
         mx2 = max(mx2, 0.f);
+
+        mx2 = max(mx2, bboxL);
+        mx1 = min(mx1, bboxR);
+
         if ((cy >= 0) && (cy < hF)) {
             for (int ax = floor(mx2); ax <= ceil(mx1); ax++) {
                 int nextI = atomic_inc(&FN[wF * cy + ax]);
@@ -111,10 +116,12 @@ __kernel void draw(__global int *TO,
         mx2 = cx2 - sbias * slope2;
         if (slope2 > 0) mx2 += slope2;
 
-        //mx2 = (cy == floor(y2)) ? min(mx2, max(x2, x4)) : mx2; // Prevent overdraw
-
         mx2 = min(mx2, (float)wF - 1);
         mx1 = max(mx1, 0.f);
+
+        mx1 = max(mx1, bboxL);
+        mx2 = min(mx2, bboxR);
+
         if ((cy >= 0) && (cy < hF)) {
             for (int ax = floor(mx1); ax <= ceil(mx2); ax++) {
                 int nextI = atomic_inc(&FN[wF * cy + ax]);
