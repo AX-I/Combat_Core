@@ -49,16 +49,19 @@ def makeProgram(f, path="Shaders/"):
 
 from Shaders_src.AVSL import compileAll
 
-compileAll()
+PIPE_SHADERS = 'vert trisetup gather coarse'
 
-vert = makeProgram("vert.c", "Pipe/")
-trisetup = makeProgram("trisetup.c", "Pipe/")
+def loadShaders():
+    compileAll()
+
+    for f in PIPE_SHADERS.split(' '):
+        globals()[f] = makeProgram(f+'.c', 'Pipe/')
+
+loadShaders()
+
 trisetupC = makeProgram("trisetup_cull.c", "Pipe/")
 trisetupSky = makeProgram("trisetup_sky.c", "Pipe/")
 trisetup2d = makeProgram("trisetup_2d.c", "Pipe/")
-gather = makeProgram("gather.c", "Pipe/")
-
-coarse = makeProgram("coarse.c", "Pipe/")
 
 draw = makeProgram("drawtexcolsmp.c")
 drawSh = makeProgram("drawtexcolsmshp.c")
@@ -220,6 +223,16 @@ class CLDraw:
 
         self.VBO = DummyVBO()
         self.shaderParams = {}
+
+    def reloadShaders(self, **kwargs):
+        while True:
+            try:
+                loadShaders()
+            except pyopencl._cl.RuntimeError as e:
+                print(e)
+                input('Try again: ')
+            else:
+                break
 
     def setScaleCull(self, s, cx, cy):
         self.sScale = np.float32(s * self.H//2)
