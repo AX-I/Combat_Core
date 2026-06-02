@@ -268,13 +268,14 @@ class CLDraw:
         self.oldtt[name] = np.tile(np.identity(4), (bn,1)).astype("float32")
 
     def initBoneOrigin(self, o, bn, tn):
-        return
+        gSize = self.tnSize[tn]
+
         o = o.astype("float32")
-        vs = np.int32(self.gSize[tn]//BLOCK_SIZE + 1)
+        vs = np.int32(gSize//BLOCK_SIZE + 1)
         skel.offset(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], self.BN[tn],
+                       self.XYZ[0], self.BN[tn],
                        np.int8(bn), o[0], o[1], o[2],
-                       self.gSize[tn],
+                       self.tnStart[tn], gSize,
                        g_times_l=True)
 
     def setBoneTransform(self, name, bt):
@@ -284,11 +285,11 @@ class CLDraw:
         self.oldtt[name] = self.invbt(tt)
 
     def boneTransform(self, cStart, cEnd, tn, name, offset=0):
-        return
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         skel.transform(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], self.VN[tn],
+                       self.XYZ[0], self.VN[0],
                        self.BN[tn], self.oldBT[name], self.BT[name],
+                       self.tnStart[tn],
                        np.int32(cStart), np.int32(cEnd), np.int8(offset),
                        g_times_l=True)
 
