@@ -275,6 +275,7 @@ class AVShader:
 
         
 def compileAll(p="Shaders_src/", q="Shaders/"):
+    return
     with open(PATH + p + "Config.txt") as f:
         for line in f:
             if line == "\n": continue
