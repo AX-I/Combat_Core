@@ -463,7 +463,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.VIEWMAT, v.astype("float32"))
 
     def rotate(self, rotMat, cStart, cEnd, tn):
-        if cEnd is None: cEnd = self.gSize[tn]
+        if cEnd is None: cEnd = self.tnSize[tn]
 
         origin = np.zeros((3,))
         oldRM = np.eye(3)
@@ -478,8 +478,9 @@ class CLDraw:
         cl.enqueue_copy(cq, rr, oRM)
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         vert.transform(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], self.VN[tn],
+                       self.XYZ[0], self.VN[0],
                        rr, r, o,
+                       self.tnStart[tn],
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
@@ -491,23 +492,24 @@ class CLDraw:
                 self.translate(*i, tn)
 
     def translate(self, coords, cStart, cEnd, tn):
-        return
-        if cEnd is None: cEnd = self.gSize[tn]
+        if cEnd is None: cEnd = self.tnSize[tn]
         oo = coords.astype("float32")
         vs = (cEnd - cStart)//BLOCK_SIZE + 1
         vert.Ttranslate(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], *oo,
+                       self.XYZ[0], *oo,
+                       self.tnStart[tn],
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
     def scale(self, origin, scale, cStart, cEnd, tn):
-        if cEnd is None: cEnd = self.gSize[tn]
+        if cEnd is None: cEnd = self.tnSize[tn]
         oo = origin.astype("float32")
         o = makeRBuf(oo.nbytes)
         cl.enqueue_copy(cq, o, oo)
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         vert.Tscale(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], o, np.float32(scale),
+                       self.XYZ[0], o, np.float32(scale),
+                       self.tnStart[tn],
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
