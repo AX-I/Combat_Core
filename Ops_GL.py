@@ -36,7 +36,7 @@ def makeProgram(f, path="ShadersGL/"):
 TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Norm Wave'
 
 def SHADER_DEF(key, shader):
-    return shader.replace(f'//{{{key}}}', '')
+    return shader.replace('//{'+key+'}', '')
 
 
 DRAW_SHADERS = 'Base Sh ShAlpha Sky Sub Border Emissive Min MinAlpha Z ZAlpha'
@@ -78,8 +78,6 @@ ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
 ctx.front_face = 'cw'
 
-def align34(a):
-    return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
 INSTANCE_FORMAT = ('4f 3f 3f 3f /i', 'inst_pos_scale', 'inst_rot_0', 'inst_rot_1', 'inst_rot_2')
 
