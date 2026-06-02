@@ -235,10 +235,14 @@ class ThreeDBackend:
             del self.vertpoints[0], self.vertnorms[0], self.vertu[0], self.vertv[0]
         self.vertLight = [np.ones((i.shape[0], 3)) for i in self.vertPoints]
 
-        self.vertPoints = [np.concatenate(self.vertPoints)]
-        self.vertNorms = [np.concatenate(self.vertNorms)]
-        self.vertU = [np.concatenate(self.vertU)]
-        self.vertV = [np.concatenate(self.vertV)]
+        # False means Compute batch, True means Ops batch
+        self.OPS_BATCH = True
+
+        if not self.OPS_BATCH:
+            self.vertPoints = [np.concatenate(self.vertPoints)]
+            self.vertNorms = [np.concatenate(self.vertNorms)]
+            self.vertU = [np.concatenate(self.vertU)]
+            self.vertV = [np.concatenate(self.vertV)]
 
         import OpsConv
         settings = OpsConv.getSettings(False)
@@ -256,6 +260,8 @@ class ThreeDBackend:
             opts['max_uv'] = len(self.vertPoints)
             opts['max_particles'] = max([ps.N for ps in self.particleSystems])
 
+            opts['batch'] = self.OPS_BATCH
+
         self.draw = Ops.CLDraw(self.W, self.H, **opts)
 
         self.draw.setScaleCull(self.scale, self.cullAngleX, self.cullAngleY)
@@ -266,7 +272,9 @@ class ThreeDBackend:
 
         self.draw.startDrawBatch()
 
-        for i in range(len(self.vtextures)):
+        blen = len(self.vtextures) if self.OPS_BATCH else 1
+
+        for i in range(blen):
             inst = None
             if i in self.instanceData:
                 inst = self.instanceData[i]

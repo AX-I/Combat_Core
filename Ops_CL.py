@@ -226,6 +226,8 @@ class CLDraw:
 
         self.creatingBatch = False
 
+        self.do_batch = kwargs.get('batch', False)
+
     def reloadShaders(self, **kwargs):
         while True:
             try:
@@ -326,32 +328,21 @@ class CLDraw:
     def endDrawBatch(self):
         self.creatingBatch = False
 
+        if not self.do_batch:
+            return
+
+        self.tnSize = np.array([p.shape[0] for p in self.XYZ], dtype='int32')
+        self.tnStart = np.concatenate(([0], np.cumsum(self.tnSize)))
+
         p = np.concatenate(self.XYZ)
         uv = np.concatenate(self.UV)
         n = np.concatenate(self.VN)
 
-        self.XYZ.append(makeRBuf(p.nbytes))
-        self.UV.append(makeRBuf(uv.nbytes))
-        self.VN.append(makeRBuf(p.nbytes))
-        self.LI.append(makeRBuf(uv.nbytes*2))
+        self.XYZ = []
+        self.UV = []
+        self.VN = []
 
-        self.SP.append(makeRBuf(uv.nbytes))
-        self.ZZ.append(makeRBuf(uv.nbytes//2))
-        self.TIA.append(makeRBuf(uv.nbytes//6))
-        self.TIB.append(makeRBuf(uv.nbytes//6))
-
-        gs = int(p.shape[0] / 3 / BLOCK_SIZE)+1
-        ib = np.ones((1,),dtype="int32").nbytes
-        self.TNA.append(makeRBuf(gs*ib))
-        self.TNB.append(makeRBuf(gs*ib))
-        self.TOA.append(makeRBuf(uv.nbytes//6))
-        self.TOB.append(makeRBuf(uv.nbytes//6))
-
-        cl.enqueue_copy(cq, self.XYZ[-1], p, is_blocking=False)
-        cl.enqueue_copy(cq, self.UV[-1], uv, is_blocking=False)
-        cl.enqueue_copy(cq, self.VN[-1], n, is_blocking=False)
-
-        self.gSize.append(np.int32(p.shape[0]))
+        self.addPointsRegular(p, uv, n)
 
 
     def addTextureGroup(self, xyz, uv, vn, rgb,
@@ -377,10 +368,6 @@ class CLDraw:
 
         assert self.creatingBatch, 'Draw data must be batched'
 
-        self.XYZ.append(p)
-        self.UV.append(uv)
-        self.VN.append(n)
-
         self.TR.append(makeRBuf(rr.nbytes))
         self.TG.append(makeRBuf(rr.nbytes))
         self.TB.append(makeRBuf(rr.nbytes))
@@ -393,7 +380,46 @@ class CLDraw:
         else:
             self.texSize.append(np.int32(rr.shape[0]))
 
+        if self.do_batch:
+            self.addPointsBatch(p, uv, n)
+        else:
+            self.addPointsRegular(p, uv, n)
+
         return len(self.TR)-1
+
+
+    def addPointsRegular(self, p, uv, n):
+        print('p', p.shape, p.dtype)
+
+        self.XYZ.append(makeRBuf(p.nbytes))
+        self.UV.append(makeRBuf(uv.nbytes))
+        self.VN.append(makeRBuf(p.nbytes))
+        self.LI.append(makeRBuf(uv.nbytes*2)) # (n,3,4)
+
+        self.SP.append(makeRBuf(uv.nbytes)) # (n,3,2)
+        self.ZZ.append(makeRBuf(uv.nbytes//2)) # (n,3,1)
+        self.TIA.append(makeRBuf(uv.nbytes//6)) # (n,)
+        self.TIB.append(makeRBuf(uv.nbytes//6)) # (n,)
+
+        gs = int(p.shape[0] / 3 / BLOCK_SIZE)+1
+        ib = np.ones((1,),dtype="int32").nbytes
+        self.TNA.append(makeRBuf(gs*ib))
+        self.TNB.append(makeRBuf(gs*ib))
+        self.TOA.append(makeRBuf(uv.nbytes//6))
+        self.TOB.append(makeRBuf(uv.nbytes//6))
+
+        cl.enqueue_copy(cq, self.XYZ[-1], p, is_blocking=False)
+        cl.enqueue_copy(cq, self.UV[-1], uv, is_blocking=False)
+        cl.enqueue_copy(cq, self.VN[-1], n, is_blocking=False)
+
+        self.gSize.append(np.int32(p.shape[0]))
+
+
+    def addPointsBatch(self, p, uv, n):
+        self.XYZ.append(p)
+        self.UV.append(uv)
+        self.VN.append(n)
+
 
     def copyTo(self, tn, vp, vn, cstart=0):
         cl.enqueue_copy(cq, self.XYZ[tn], align34(vp.astype("float32")),
