@@ -27,6 +27,7 @@ template_func = """
 #define TILE_AREA 256
 
 __kernel void draw(__global int *TO, __global int *TN,
+                   const int startP, const int endP,
                    __global ushort *Ro, __global ushort *Go, __global ushort *Bo,
                    __global float *F, __global float2 *P, __global float *Z,
                    [SHADER_ARGS]
@@ -55,7 +56,12 @@ template_setup = """
         }
     }
 
+  int txd = -1;
   if (TN[bx] > tx) {
+    txd = TO[bx * TILE_BUF + tx];
+  }
+
+  if ((startP <= txd) && (txd < endP)) {
 
     int txd = TO[bx * TILE_BUF + tx];
 
@@ -202,13 +208,10 @@ template_draw = """
       }
     }
   
-  } // if (TN[bx] > tx)
+  } // if (TN[bx] > tx) or (startP <= txd < endP)
 """
 
 template_end = """
-  if (tx == 0) TN[bx] = 0;
-  if (tx < TILE_BUF) TO[bx * TILE_BUF + tx] = -1;
-
 } // __kernel void draw()"""
 
 
@@ -224,7 +227,8 @@ __kernel void drawSmall(__global int *TO,
                         __global ushort *Ro, __global ushort *Go, __global ushort *Bo,
                         __global float *F, __global float2 *P, __global float *Z,
                         [SHADER_ARGS]
-                        const int wF, const int hF, const int lenP) {
+                        const int wF, const int hF,
+                        const int lenP, const int startP) {
 """
 
 
@@ -234,7 +238,7 @@ template_setup_small = """
 
   if ((bx * BLOCK_SIZE + tx) < lenP) {
 
-    int txd = TO[bx * BLOCK_SIZE + tx];
+    int txd = TO[startP + bx * BLOCK_SIZE + tx];
 
     int ci = txd * 3;
 

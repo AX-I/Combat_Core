@@ -207,7 +207,8 @@ class CLDraw:
         self.VIEWPOS = cl.Buffer(ctx, mf.READ_ONLY, size=p.nbytes)
         self.VIEWMAT = cl.Buffer(ctx, mf.READ_ONLY, size=4*p.nbytes)
 
-        self.LT = max_uv
+        self.max_uv = np.int32(max_uv)
+        self.LT = self.max_uv
         mn = np.ones((self.LT,), dtype="int32")
         self.AL = cl.Buffer(ctx, mf.READ_WRITE, size=mn.nbytes)
 
@@ -227,6 +228,7 @@ class CLDraw:
         self.creatingBatch = False
 
         self.do_batch = kwargs.get('batch', False)
+        self.TBX = [] # texgroup start block num
 
     def reloadShaders(self, **kwargs):
         while True:
@@ -333,7 +335,13 @@ class CLDraw:
             return
 
         self.tnSize = np.array([p.shape[0] for p in self.XYZ], dtype='int32')
-        self.tnStart = np.concatenate(([0], np.cumsum(self.tnSize)))
+        self.tnEnd = np.cumsum(self.tnSize)
+        self.tnStart = np.concatenate(([0], self.tnEnd[:-1]))
+
+        self.tnBlockSize = self.tnSize // (3*BLOCK_SIZE)
+        self.tnBlockEnd = np.cumsum(self.tnBlockSize)
+        self.TN_BLOCK_END = makeRBuf(self.tnBlockEnd.nbytes)
+        cl.enqueue_copy(cq, self.TN_BLOCK_END, self.tnBlockEnd)
 
         p = np.concatenate(self.XYZ)
         uv = np.concatenate(self.UV)
@@ -351,6 +359,8 @@ class CLDraw:
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
 
+        shader['mip'] = 2
+
         if 'mip' in shader:
             mip = rgb.shape[0]
             rgb = createMips(rgb).astype('uint16')[None,:]
@@ -365,7 +375,7 @@ class CLDraw:
         n = vn.astype("float32")
         n = align34(n)
 
-        uv = uv.astype("float32")
+        uv = uv.reshape(-1, 2).astype("float32")
 
         assert self.creatingBatch, 'Draw data must be batched'
 
@@ -417,9 +427,21 @@ class CLDraw:
 
 
     def addPointsBatch(self, p, uv, n):
-        self.XYZ.append(p)
-        self.UV.append(uv)
-        self.VN.append(n)
+        if (p.shape[0] % (3*BLOCK_SIZE)) == 0:
+            self.XYZ.append(p)
+            self.UV.append(uv)
+            self.VN.append(n)
+            return
+
+        padSize = 3*BLOCK_SIZE - (p.shape[0] % (3*BLOCK_SIZE))
+        pad2 = np.zeros((padSize, 2), 'float32')
+        pad4 = np.zeros((padSize, 4), 'float32')
+##        print(p.shape, uv.shape)
+        newp = np.concatenate((p, pad4))
+##        print(newp.shape)
+        self.XYZ.append(newp)
+        self.UV.append(np.concatenate((uv, pad2)))
+        self.VN.append(np.concatenate((n, pad4)))
 
 
     def copyTo(self, tn, vp, vn, cstart=0):
@@ -660,18 +682,27 @@ class CLDraw:
             gs = gsn[tn]
             gather.setup(cq, (gs, 1), (BLOCK_SIZE, 1),
                          self.TIA[tn], self.TNA[tn],
-                         self.TOA[tn], self.AL, np.int32(tn),
+                         self.TOA[tn], self.AL,
+                         self.TN_BLOCK_END,
+                         self.max_uv,
                          gs, g_times_l=True)
 
-        newSize = np.zeros((self.LT,), dtype="int32")
-        cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
+        tnEnd = np.zeros((self.LT,), dtype="int32")
+        cl.enqueue_copy(cq, tnEnd, self.AL, is_blocking=True)
+
+        tnStart = np.concatenate(([0], tnEnd[:-1]))
+        newSize = tnEnd - tnStart
+
         nsn = newSize // BLOCK_SIZE + 1
 
         #print("Small", newSize)
         nAfter = {}
         newSizeAfter = {}
 
-        for tn in range(len(self.gSize)):
+        # gn: geometry num
+        # tn: texture num
+        gn = 0
+        for tn in range(len(self.tnSize)):
             if mask[tn]: continue
             ns = nsn[tn]
 
@@ -679,18 +710,18 @@ class CLDraw:
 
             baseArgs = (
                 cq, (ns, 1), (BLOCK_SIZE, 1),
-                self.TOA[tn],
+                self.TOA[gn],
                 self.RO, self.GO, self.BO,
-                self.DB, self.SP[tn], self.ZZ[tn])
+                self.DB, self.SP[gn], self.ZZ[gn])
             currTexArgs = (
                 self.TR[tn], self.TG[tn], self.TB[tn],
                 self.texSize[tn])
             endArgs = (
-                self.W, self.H, np.int32(newSize[tn]))
+                self.W, self.H, np.int32(newSize[tn]), tnStart[tn])
 
             if "alpha" in shaders[tn]:
                 drawA.drawSmall(*baseArgs,
-                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                    self.UV[gn], self.LI[gn], self.VN[gn], self.XYZ[gn],
                     self.LInt, self.LDir,
                     *currTexArgs,
                     self.TA[shaders[tn]["alpha"]],
@@ -699,7 +730,7 @@ class CLDraw:
                     g_times_l=True)
             elif "mip" in shaders[tn]:
                 drawMip.drawSmall(*baseArgs,
-                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                    self.UV[gn], self.LI[gn], self.VN[gn], self.XYZ[gn],
                     self.LInt, self.LDir,
                     np.float32(shaders[tn]["mip"]),
                     *currTexArgs,
@@ -709,31 +740,30 @@ class CLDraw:
             elif shaders[tn]['shader'] == "emissive":
                 drawEm.drawSmall(*baseArgs,
                     np.float32(shaders[tn]['args']['emPow']),
-                    self.UV[tn],
+                    self.UV[gn],
                     *currTexArgs,
                     *endArgs,
                     g_times_l=True)
-            elif shaders[tn]['shader'] in ("SSR", "add", "sub", "border"):
-                nAfter[tn] = ns; newSizeAfter[tn] = newSize[tn]
-            elif "phong" in shaders[tn]:
-                assert False
-                drawPh.drawSmall(*baseArgs,
-                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                    self.VIEWPOS, self.VIEWMAT,
-                    self.LInt, self.LDir,
-                    *currTexArgs,
-                    *smArgs,
-                    *endArgs,
-                    g_times_l=True)
+##            elif shaders[tn]['shader'] in ("SSR", "add", "sub", "border"):
+##                nAfter[tn] = ns; newSizeAfter[tn] = newSize[tn]
+##            elif "phong" in shaders[tn]:
+##                assert False
+##                drawPh.drawSmall(*baseArgs,
+##                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+##                    self.VIEWPOS, self.VIEWMAT,
+##                    self.LInt, self.LDir,
+##                    *currTexArgs,
+##                    *smArgs,
+##                    *endArgs,
+##                    g_times_l=True)
             else:
                 drawSh2.drawSmall(*baseArgs,
-                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                    self.UV[gn], self.LI[gn], self.VN[gn], self.XYZ[gn],
                     self.LInt, self.LDir,
                     *currTexArgs,
                     *smArgs, *sm1Args,
                     *endArgs,
                     g_times_l=True)
-
 
         # Large
         for tn in range(len(self.gSize)):
@@ -741,24 +771,38 @@ class CLDraw:
             gs = gsn[tn]
             gather.setup(cq, (gs, 1), (BLOCK_SIZE, 1),
                          self.TIB[tn], self.TNB[tn],
-                         self.TOB[tn], self.AL, np.int32(tn),
+                         self.TOB[tn], self.AL,
+                         self.TN_BLOCK_END,
+                         self.max_uv,
                          gs, g_times_l=True)
 
-        newSize = np.zeros((self.LT,), dtype="int32")
-        cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
+        tnEnd = np.zeros((self.LT,), dtype="int32")
+        cl.enqueue_copy(cq, tnEnd, self.AL, is_blocking=True)
+
+        tnStart = np.concatenate(([0], tnEnd[:-1]))
+        newSize = tnEnd - tnStart
         nsn = newSize // BLOCK_SIZE + 1
 
         #print("Large", newSize)
 
-        for tn in range(len(self.gSize)):
+        coarse.draw(
+            cq, (tnEnd[-1] // BLOCK_SIZE + 1, 1), (BLOCK_SIZE, 1),
+            self.TOB[gn],
+            self.IBUF, self.NBUF, self.SP[gn],
+            self.WC, self.HC,
+            tnEnd[-1],
+            g_times_l=True).wait()
+
+        for tn in range(len(self.tnSize)):
             if mask[tn]: continue
             ns = nsn[tn]
 
             baseArgs = (
                 cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
                 self.IBUF, self.NBUF,
+                self.tnStart[tn]//3, self.tnEnd[tn]//3,
                 self.RO, self.GO, self.BO,
-                self.DB, self.SP[tn], self.ZZ[tn])
+                self.DB, self.SP[gn], self.ZZ[gn])
             currTexArgs = (
                 self.TR[tn], self.TG[tn], self.TB[tn],
                 self.texSize[tn])
@@ -766,108 +810,105 @@ class CLDraw:
             if newSize[tn] > 0:
 
                 #a = time.perf_counter()
-                coarse.draw(cq, (ns, 1), (BLOCK_SIZE, 1),
-                            self.TOB[tn],
-                            self.IBUF, self.NBUF, self.SP[tn],
-                            self.WC, self.HC, np.int32(newSize[tn]),
-                            g_times_l=True).wait()
 
                 #print("Coarse:", time.perf_counter()-a)
                 #a = time.perf_counter()
-                if "alpha" in shaders[tn]:
-                    drawA.draw(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                             self.TA[shaders[tn]["alpha"]],
-                             *smArgs, *sm1Args,
-                             self.W, self.H,
-                             g_times_l=True)
-                elif "mip" in shaders[tn]:
+##                if "alpha" in shaders[tn]:
+##                    drawA.draw(*baseArgs,
+##                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+##                             self.LInt, self.LDir,
+##                             *currTexArgs,
+##                             self.TA[shaders[tn]["alpha"]],
+##                             *smArgs, *sm1Args,
+##                             self.W, self.H,
+##                             g_times_l=True)
+                if "mip" in shaders[tn]:
                     drawMip.draw(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+                             self.UV[gn], self.LI[gn], self.VN[gn], self.XYZ[gn],
                              self.LInt, self.LDir,
                              np.float32(shaders[tn]["mip"]),
                              *currTexArgs,
                              *smArgs, *sm1Args,
                              self.W, self.H,
                              g_times_l=True)
-                elif shaders[tn]['shader'] == "SSR":
-                    sr = shaders[tn].get("SSR", '0')
-                    drawSSR.draw(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                                self.VIEWPOS, self.VIEWMAT, self.sScale,
-                             *currTexArgs,
-                             self.RRR[sr], self.GRR[sr], self.BRR[sr],
-                             self.reflTexSize[sr],
-                             np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
-                             self.W, self.H,
-                             g_times_l=True)
-                elif "sky" in shaders[tn]:
-                    drawSky.draw(*baseArgs,
-                             self.UV[tn],
-                             self.RSI, self.GSI, self.BSI, self.skyTexSize,
-                             self.W, self.H,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "emissive":
-                    drawEm.draw(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.UV[tn],
-                             *currTexArgs,
-                             self.W, self.H,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "add":
-                    drawAdd.draw(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.UV[tn],
-                             *currTexArgs,
-                             self.W, self.H,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "sub":
-                    drawSub.draw(*baseArgs,
-                             np.float32(shaders[tn]['args']['emPow']),
-                             self.W, self.H,
-                             g_times_l=True)
-                elif shaders[tn]['shader'] == "border":
-                    drawBorder.draw(*baseArgs,
-                             np.float32(1.0),
-                             self.VIEWPOS, self.VIEWMAT,
-                             self.UV[tn], self.XYZ[tn],
-                             *currTexArgs,
-                             self.W, self.H,
-                             g_times_l=True)
+                else: assert False, 'only mip supported'
 
-                elif shaders[tn]['shader'] == "fog":
-                    drawFog.draw(*baseArgs,
-                             self.VIEWPOS, self.VIEWMAT, self.sScale,
-                             self.LInt, self.LDir,
-                             *smArgs,
-                             self.W, self.H,
-                             g_times_l=True)
-                elif "phong" in shaders[tn]:
-                    assert False
-                    drawPh.draw(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.VIEWPOS, self.VIEWMAT,
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                             *smArgs,
-                             self.W, self.H,
-                             g_times_l=True)
-                else:
-                    drawSh2.draw(*baseArgs,
-                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                             self.LInt, self.LDir,
-                             *currTexArgs,
-                             *smArgs, *sm1Args,
-                             self.W, self.H,
-                             g_times_l=True)
+##                elif shaders[tn]['shader'] == "SSR":
+##                    sr = shaders[tn].get("SSR", '0')
+##                    drawSSR.draw(*baseArgs,
+##                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+##                                self.VIEWPOS, self.VIEWMAT, self.sScale,
+##                             *currTexArgs,
+##                             self.RRR[sr], self.GRR[sr], self.BRR[sr],
+##                             self.reflTexSize[sr],
+##                             np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif "sky" in shaders[tn]:
+##                    drawSky.draw(*baseArgs,
+##                             self.UV[tn],
+##                             self.RSI, self.GSI, self.BSI, self.skyTexSize,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif shaders[tn]['shader'] == "emissive":
+##                    drawEm.draw(*baseArgs,
+##                             np.float32(shaders[tn]['args']['emPow']),
+##                             self.UV[tn],
+##                             *currTexArgs,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif shaders[tn]['shader'] == "add":
+##                    drawAdd.draw(*baseArgs,
+##                             np.float32(shaders[tn]['args']['emPow']),
+##                             self.UV[tn],
+##                             *currTexArgs,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif shaders[tn]['shader'] == "sub":
+##                    drawSub.draw(*baseArgs,
+##                             np.float32(shaders[tn]['args']['emPow']),
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif shaders[tn]['shader'] == "border":
+##                    drawBorder.draw(*baseArgs,
+##                             np.float32(1.0),
+##                             self.VIEWPOS, self.VIEWMAT,
+##                             self.UV[tn], self.XYZ[tn],
+##                             *currTexArgs,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##
+##                elif shaders[tn]['shader'] == "fog":
+##                    drawFog.draw(*baseArgs,
+##                             self.VIEWPOS, self.VIEWMAT, self.sScale,
+##                             self.LInt, self.LDir,
+##                             *smArgs,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                elif "phong" in shaders[tn]:
+##                    assert False
+##                    drawPh.draw(*baseArgs,
+##                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+##                             self.VIEWPOS, self.VIEWMAT,
+##                             self.LInt, self.LDir,
+##                             *currTexArgs,
+##                             *smArgs,
+##                             self.W, self.H,
+##                             g_times_l=True)
+##                else:
+##                    drawSh2.draw(*baseArgs,
+##                             self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
+##                             self.LInt, self.LDir,
+##                             *currTexArgs,
+##                             *smArgs, *sm1Args,
+##                             self.W, self.H,
+##                             g_times_l=True)
 
                 #print("Fine:", time.perf_counter()-a)
 
-
-            if (tn not in newSizeAfter): continue
-            if (newSizeAfter[tn] == 0): continue
+        if False:
+##            if (tn not in newSizeAfter): continue
+##            if (newSizeAfter[tn] == 0): continue
 
             baseArgs = (
                 cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
@@ -1041,6 +1082,7 @@ class CLDraw:
             self.ambLight = np.float32(ambLight)
 
     def shadowMap(self, i, whichCast, shaders, bias):
+        return
         shBias = np.float32(bias)
         tsn = []
         gsn = []
