@@ -90,6 +90,8 @@ skel = makeProgram("bone1.c", "VertShaders/")
 
 sct = makeProgram("highlight.c", "VertShaders/")
 
+drawZ = makeProgram('drawz.c')
+
 trisetupOrtho = makeProgram("trisetupOrtho.c", "Pipe/")
 sh = makeProgram("drawmin.c")
 shA = makeProgram("drawminalpha.c")
@@ -701,6 +703,23 @@ class CLDraw:
         # gn: geometry num
         # tn: texture num
         gn = 0
+
+        # early Z
+        baseArgsZ = (
+            cq, (tnEnd[-1] // BLOCK_SIZE + 1, 1), (BLOCK_SIZE, 1),
+            self.TOA[gn],
+            self.RO, self.GO, self.BO,
+            self.DB, self.SP[gn], self.ZZ[gn])
+        endArgsZ = (
+            self.W, self.H, tnEnd[-1], np.int32(0))
+
+        drawZ.drawSmall(
+            *baseArgsZ,
+            self.UV[gn],
+            *endArgsZ,
+            g_times_l=True)
+
+
         for tn in range(len(self.tnSize)):
             if mask[tn]: continue
             ns = nsn[tn]
@@ -791,6 +810,16 @@ class CLDraw:
             self.WC, self.HC,
             tnEnd[-1],
             g_times_l=True).wait()
+
+        drawZ.draw(
+            cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
+            self.IBUF, self.NBUF,
+            self.tnStart[0]//3, self.tnEnd[-1]//3,
+            self.RO, self.GO, self.BO,
+            self.DB, self.SP[gn], self.ZZ[gn],
+            self.UV[gn],
+            self.W, self.H,
+            g_times_l=True)
 
         for tn in range(len(self.tnSize)):
             if mask[tn]: continue

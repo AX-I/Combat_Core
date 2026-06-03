@@ -47,6 +47,9 @@ def compile_file(fn, fo):
 def compile_AVSL(s, tiled):
     global a
     a = {"h":"", "a":"", "t":"", "c":""}
+
+    writeZ = False
+
     g = None
     cstart = 0
     for line in s:
@@ -57,13 +60,14 @@ def compile_AVSL(s, tiled):
         elif line == "!shader_args\n": g = "a"
         elif line == "!shader_setup\n": g = "t"
         elif line == "!shader_core\n": g = "c"
+        elif line == '!writeZ\n': writeZ = True
         elif line[0] == "!": g = None
         elif g is not None: a[g] += line
 
     c = "".join(s[cstart:])
 
     out = a["h"]
-    shader = AVShader(tiled)
+    shader = AVShader(tiled, writeZ=writeZ)
     shader.shader_args(a["a"])
     shader.shader_setup(a["t"])
     shader.shader_draw()
@@ -74,7 +78,7 @@ def compile_AVSL(s, tiled):
     return out
 
 class AVShader:
-    def __init__(self, tiled):
+    def __init__(self, tiled, writeZ=False):
         """Compiles AXI Visualizer Shaders, tiled or direct rasterization"""
         self.tiled = tiled
         self.Vargs = {}
@@ -84,6 +88,8 @@ class AVShader:
         self.END = ""
         self.depth_compare = False
         self.depth_test = False
+
+        self.writeZ = writeZ
         
     def shader_args(self, s):
         # Screen XY and Z are always provided
@@ -264,11 +270,16 @@ class AVShader:
         c = s
 
         db = "ZBuf[localCoord]" if self.tiled else "F[wF * cy + ax]"
-        c = c.replace(":IF_DEPTH_TEST", "if (" + db + " >= tz)")
+        comp = " >= tz)" if self.writeZ else " == tz)"
+        c = c.replace(":IF_DEPTH_TEST", "if (" + db + comp)
+
+        if not self.writeZ:
+            c = c.replace('F[wF * cy + ax] = tz;', '')
 
         d = template_depth_compare if self.tiled else "\n"
+        if not self.writeZ: d = ''
         c = c.replace(":DEPTH_COMPARE", d)
-            
+
         self.DRAW_OUT = self.DRAW_OUT.replace("[SHADER_CORE]", c)
 
         self.END = template_end if self.tiled else template_end_small
