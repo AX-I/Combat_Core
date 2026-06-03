@@ -361,6 +361,9 @@ class CLDraw:
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
 
+        if 'alpha' in shader or shader['shader'] == 'emissive':
+            if 'mip' in shader: del shader['mip']
+
         if 'mip' in shader:
             mip = rgb.shape[0]
             rgb = createMips(rgb).astype('uint16')[None,:]
