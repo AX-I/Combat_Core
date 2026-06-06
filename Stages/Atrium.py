@@ -16,7 +16,7 @@ def getHeight(self, pos):
 def setupStage(self):
     self.addVertObject(
         VertModel, [13.32,0,20.4], rot=(0,0,0),
-        filename=PATH+"../Atrium/Atrium8AtlasOpt.obj",
+        filename=PATH+"../Atrium/AtriumExport.obj",
         scale=1.2, mip=2,
         subDiv=1, shadow="CR")
 
