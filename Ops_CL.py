@@ -579,7 +579,7 @@ class CLDraw:
             gs = np.int32(int(self.gSize[tn] / 3 / BLOCK_SIZE)+1)
             gsn.append(gs)
             if "cull" in shaders[tn]: ts = trisetupC
-            elif "sky" in shaders[tn]: ts = trisetupSky
+            elif shaders[tn]['shader'] == "sky": ts = trisetupSky
             elif "2d" in shaders[tn]: ts = trisetup2d
             else: ts = trisetup
             ts.setup(cq, (gs, 1), (BLOCK_SIZE, 1),
@@ -741,10 +741,12 @@ class CLDraw:
                              np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
                              self.W, self.H,
                              g_times_l=True)
-                elif "sky" in shaders[tn]:
+                elif shaders[tn]['shader'] == "sky":
                     drawSky.draw(*baseArgs,
-                             self.UV[tn],
-                             self.RSI, self.GSI, self.BSI, self.skyTexSize,
+                             self.UV[tn], self.XYZ[tn],
+                             *currTexArgs,
+                             np.int32(shaders[tn]['args'].get('isEqui', 0)),
+                             np.float32(shaders[tn]['args'].get('rotY', 0)),
                              self.W, self.H,
                              g_times_l=True)
                 elif shaders[tn]['shader'] == "emissive":
