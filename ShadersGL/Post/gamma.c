@@ -116,7 +116,7 @@ void main() {
     j = j * acesOut;
     j = sqrt(j);
   }
-  float dither = 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1));
+  float dither = 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (int(tc.y) & 1);
 
   #ifdef DIB
     f_color = (j + dither / 256.f).bgr;

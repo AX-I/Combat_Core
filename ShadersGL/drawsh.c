@@ -218,7 +218,7 @@ void main() {
     float sd = RAYCAST_SURFACE_DEPTH;
     int rn = 0;
 
-    int dither = int(RAYCAST_STEP * 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (1-(int(tc.y) & 1)));
+    int dither = int(RAYCAST_STEP * 0.5f * ((int(tc.x)^int(tc.y)) & 1) + 0.25f * (int(tc.y) & 1));
     sx += slopex * dither / vx;
     sy += slopey * dither / vx;
     sz += slopez * dither / vx;

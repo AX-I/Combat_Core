@@ -108,7 +108,7 @@ void main() {
 
   stepDist *= 1 + stepFac * (R[rid1]-0.5f) * (1 - 1/stepFac);
   stepDist *= 1.5;
-	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.125f * float(int(cx) & 1) + 0.0625f * float(1-(int(cy) & 1)));
+	vec3 pos = vpos + rayDir * stepDist * (R[rid1] + 0.125f * float((int(cx)^int(cy)) & 1) + 0.0625f * float(int(cy) & 1));
 
 	vec3 light = vec3(0);
 	float rn = 0;

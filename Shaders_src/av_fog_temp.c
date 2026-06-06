@@ -49,7 +49,7 @@ const float fogScatter,
 float maxZ = F[wF * cy + ax];
 
 	float3 rayDir = fast_normalize(VVd + (-VVx * (ax - wF/2) + VVy * (cy - hF/2)) / vScale);
-	float3 pos = VP + rayDir * (0.5f + 0.25f * (ax & 1) + 0.125f * (!(cy & 1)));
+	float3 pos = VP + rayDir * (0.5f + 0.25f * ((ax^cy) & 1) + 0.125f * (cy & 1));
 
   float stepDist = 1.f;
   if (fogDist != 0) {
