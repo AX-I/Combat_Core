@@ -19,7 +19,7 @@
 # ======== ========
 
 # AXI Visualizer Shading Language
-# v0.2
+# v0.3
 
 try:
     from .Templates import *
@@ -49,6 +49,7 @@ def compile_AVSL(s, tiled):
     a = {"h":"", "a":"", "t":"", "c":""}
 
     writeZ = False
+    checkSkip = False
 
     g = None
     cstart = 0
@@ -61,13 +62,14 @@ def compile_AVSL(s, tiled):
         elif line == "!shader_setup\n": g = "t"
         elif line == "!shader_core\n": g = "c"
         elif line == '!writeZ\n': writeZ = True
+        elif line == '!checkSkip\n': checkSkip = True
         elif line[0] == "!": g = None
         elif g is not None: a[g] += line
 
     c = "".join(s[cstart:])
 
     out = a["h"]
-    shader = AVShader(tiled, writeZ=writeZ)
+    shader = AVShader(tiled, writeZ=writeZ, checkSkip=checkSkip)
     shader.shader_args(a["a"])
     shader.shader_setup(a["t"])
     shader.shader_draw()
@@ -78,7 +80,7 @@ def compile_AVSL(s, tiled):
     return out
 
 class AVShader:
-    def __init__(self, tiled, writeZ=False):
+    def __init__(self, tiled, writeZ=False, checkSkip=False):
         """Compiles AXI Visualizer Shaders, tiled or direct rasterization"""
         self.tiled = tiled
         self.Vargs = {}
@@ -90,6 +92,7 @@ class AVShader:
         self.depth_test = False
 
         self.writeZ = writeZ
+        self.checkSkip = checkSkip
         
     def shader_args(self, s):
         # Screen XY and Z are always provided
@@ -112,6 +115,8 @@ class AVShader:
                     self.ARG_OUT += "const int " + self.tex[4] + ",\n"
             else:
                 self.ARG_OUT += a + "\n"
+        if self.checkSkip:
+            self.ARG_OUT += '__global int *SKIP, const int numSkip,\n'
 
         temp_func = template_func if self.tiled else template_func_small
         
@@ -175,6 +180,11 @@ class AVShader:
         out = out.replace("[SHADER_SETUP_TEMP]", temp)
         out = out.replace("[SHADER_SETUP_SORT]", sort)
         out = out.replace("[SHADER_SETUP_4TH]", vert4)
+
+        skip = ''
+        if self.checkSkip:
+            skip = template_skip if self.tiled else template_skip_small
+        out = out.replace('[SHADER_CHECK_SKIP]', skip)
 
         out += s
         

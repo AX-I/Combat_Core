@@ -1,5 +1,6 @@
 // For early Z
 !writeZ
+!checkSkip
 
 !shader_args
 :Vertex float2 UV

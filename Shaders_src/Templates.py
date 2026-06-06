@@ -19,7 +19,7 @@
 # ======== ========
 
 # AXI Visualizer Shader Templates
-# v0.2
+# v0.3
 
 template_func = """
 #define TILE_SIZE 16.f
@@ -33,6 +33,15 @@ __kernel void draw(__global int *TO, __global int *TN,
                    [SHADER_ARGS]
                    const int wF, const int hF) {
 """
+
+template_skip = '''
+  for (int i = 0; i < 2*numSkip; i += 2) {
+    if ((txd >= SKIP[i]) && (txd < (SKIP[i]+SKIP[i+1]))) {
+      txd = startP - 1;
+      break;
+    }
+  }
+'''
 
 template_setup = """
     int bx = get_group_id(0);
@@ -60,6 +69,8 @@ template_setup = """
   if (TN[bx] > tx) {
     txd = TO[bx * TILE_BUF + tx];
   }
+
+  [SHADER_CHECK_SKIP]
 
   if ((startP <= txd) && (txd < endP)) {
 
@@ -231,14 +242,23 @@ __kernel void drawSmall(__global int *TO,
                         const int lenP, const int startP) {
 """
 
+template_skip_small = '''
+    for (int i = 0; i < 2*numSkip; i += 2) {
+      if (cid < SKIP[i]) break;
+      cid += SKIP[i+1];
+    }
+'''
 
 template_setup_small = """
     int bx = get_group_id(0);
     int tx = get_local_id(0);
+    int cid = bx * BLOCK_SIZE + tx;
 
-  if ((bx * BLOCK_SIZE + tx) < lenP) {
+  if (cid < lenP) {
 
-    int txd = TO[startP + bx * BLOCK_SIZE + tx];
+    [SHADER_CHECK_SKIP]
+
+    int txd = TO[startP + cid];
 
     int ci = txd * 3;
 

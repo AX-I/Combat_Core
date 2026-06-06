@@ -59,6 +59,9 @@ def loadShaders():
 
 loadShaders()
 
+TRANSPARENT_SHADERS = set(
+    'alpha add border special SSR SSRopaque SSRglass sub fog lens'.split(' '))
+
 trisetupC = makeProgram("trisetup_cull.c", "Pipe/")
 trisetupSky = makeProgram("trisetup_sky.c", "Pipe/")
 trisetup2d = makeProgram("trisetup_2d.c", "Pipe/")
@@ -354,6 +357,9 @@ class CLDraw:
         self.VN = []
 
         self.addPointsRegular(p, uv, n)
+
+        tmpSkipRanges = np.ones((2*self.LT,), dtype="int32")
+        self.SKIP_RANGES = makeRBuf(tmpSkipRanges.nbytes)
 
 
     def addTextureGroup(self, xyz, uv, vn, rgb,
@@ -707,6 +713,26 @@ class CLDraw:
         # tn: texture num
         gn = 0
 
+        totalDraw = 0
+        skipRanges = [0, 0] # pairs of (start, size)
+
+        def skipEarlyZA(tn):
+            return newSize[tn] > 0 and (mask[tn] or \
+                shaders[tn]['shader'] in TRANSPARENT_SHADERS)
+        for tn in range(len(shaders)):
+            if skipEarlyZA(tn):
+                #print('skipping', tn, shaders[tn])
+                if tn > 0 and skipEarlyZA(tn-1):
+                    skipRanges[-1] += newSize[tn]
+                else:
+                    skipRanges.append(tnStartA[tn])
+                    skipRanges.append(newSize[tn])
+            else:
+                totalDraw += newSize[tn]
+        #print('skipRanges', skipRanges)
+
+        cl.enqueue_copy(cq, self.SKIP_RANGES, np.array(skipRanges, 'int32'))
+
         # early Z
         baseArgsZ = (
             cq, (tnEnd[-1] // BLOCK_SIZE + 1, 1), (BLOCK_SIZE, 1),
@@ -714,11 +740,12 @@ class CLDraw:
             self.RO, self.GO, self.BO,
             self.DB, self.SP[gn], self.ZZ[gn])
         endArgsZ = (
-            self.W, self.H, tnEnd[-1], np.int32(0))
+            self.W, self.H, totalDraw, np.int32(0))
 
         drawZ.drawSmall(
             *baseArgsZ,
             self.UV[gn],
+            self.SKIP_RANGES, np.int32(len(skipRanges)),
             *endArgsZ,
             g_times_l=True)
 
@@ -802,7 +829,6 @@ class CLDraw:
 
         tnStart = np.concatenate(([0], tnEnd[:-1]))
         newSize = tnEnd - tnStart
-        nsn = newSize // BLOCK_SIZE + 1
 
         #print("Large", newSize)
 
@@ -814,6 +840,26 @@ class CLDraw:
             tnEnd[-1],
             g_times_l=True).wait()
 
+
+        def skipEarlyZ(tn):
+            return newSize[tn] > 0 and (mask[tn] or \
+                shaders[tn]['shader'] in TRANSPARENT_SHADERS)
+        totalDraw = 0
+        skipRanges = [0, 0] # pairs of (start, size)
+##        for tn in range(len(shaders)):
+##            if skipEarlyZ(tn):
+##                #print('skipping', tn, shaders[tn])
+##                if tn > 0 and skipEarlyZ(tn-1):
+##                    skipRanges[-1] += newSize[tn]
+##                else:
+##                    skipRanges.append(tnStart[tn])
+##                    skipRanges.append(newSize[tn])
+##            else:
+##                totalDraw += newSize[tn]
+        #print('skipRanges', skipRanges)
+        cl.enqueue_copy(cq, self.SKIP_RANGES, np.array(skipRanges, 'int32'))
+
+
         drawZ.draw(
             cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
             self.IBUF, self.NBUF,
@@ -821,12 +867,12 @@ class CLDraw:
             self.RO, self.GO, self.BO,
             self.DB, self.SP[gn], self.ZZ[gn],
             self.UV[gn],
+            self.SKIP_RANGES, np.int32(len(skipRanges)),
             self.W, self.H,
             g_times_l=True)
 
         for tn in range(len(self.tnSize)):
             if mask[tn]: continue
-            ns = nsn[tn]
 
             baseArgs = (
                 cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),

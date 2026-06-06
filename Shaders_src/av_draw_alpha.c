@@ -1,5 +1,6 @@
 // Alpha test
 // 2 shadow maps
+!writeZ
 
 !shader_args
 
