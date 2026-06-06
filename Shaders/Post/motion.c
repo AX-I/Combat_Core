@@ -1,5 +1,6 @@
 #define EXPOSURE 0.25f
-#define SAMPLES 8.f
+#define SAMPLES 16.f
+#define SSKIP 4.f
 
 __kernel void blur(
 	__global ushort *Ro, __global ushort *Go, __global ushort *Bo, __global float *F,
@@ -40,23 +41,29 @@ __kernel void blur(
 	        float oldX = (dot(worldPos, oldVX) / oldZ) * -sScale + wF/2;
 	        float oldY = (dot(worldPos, oldVY) / oldZ) * sScale + hF/2;
 
-	        float outR = 0;
-	        float outG = 0;
-	        float outB = 0;
+	        float outR = Ro[wF * cy + cx] * 0.0001f;
+	        float outG = Go[wF * cy + cx] * 0.0001f;
+	        float outB = Bo[wF * cy + cx] * 0.0001f;
+	        float accum = 1.f * 0.0001;
+
 	        float dy = oldY - cy;
 	        float dx = oldX - cx;
-	        for (float i=0; i <= SAMPLES; i+= 1) {
+
+          float offset = ((cx&1)^(cy&1))*0.5f + (cx&1) * 0.25f;
+
+			for (float i=offset*SSKIP; i <= SAMPLES; i+= SSKIP) {
 			    int sy = clamp(cy + i/SAMPLES*EXPOSURE * dy, 0.f, (float)hF-1);
 			    int sx = clamp(cx + i/SAMPLES*EXPOSURE * dx, 0.f, (float)wF-1);
 			    outR += Ro[wF * sy + sx];
 			    outG += Go[wF * sy + sx];
 			    outB += Bo[wF * sy + sx];
+          accum += 1.f;
 
 			}
 
-			R2[wF * cy + cx] = outR / SAMPLES;
-			G2[wF * cy + cx] = outG / SAMPLES;
-			B2[wF * cy + cx] = outB / SAMPLES;
+			R2[wF * cy + cx] = outR / accum;
+			G2[wF * cy + cx] = outG / accum;
+			B2[wF * cy + cx] = outB / accum;
 
             //R2[wF * cy + cx] = Ro[wF * targY + targX];
             //G2[wF * cy + cx] = Go[wF * targY + targX];

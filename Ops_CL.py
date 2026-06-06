@@ -780,6 +780,10 @@ class CLDraw:
                              self.VIEWPOS, self.VIEWMAT, self.sScale,
                              self.LInt, self.LDir,
                              *smArgs,
+                             np.float32(shaders[tn]['args'].get('fogAbsorb', 0)),
+                             np.float32(shaders[tn]['args'].get('fogLight', 0)),
+                             np.float32(shaders[tn]['args'].get('fogDist', 0)),
+                             np.float32(shaders[tn]['args'].get('fogScatter', 0)),
                              self.W, self.H,
                              g_times_l=True)
                 elif "phong" in shaders[tn]:

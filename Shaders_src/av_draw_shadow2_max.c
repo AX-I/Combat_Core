@@ -95,11 +95,11 @@ __constant float3 *SV2, __constant float *SPos2,
 	float3 norm = fast_normalize(((1-t)*currvertN2 + t*currvertN1) * tz);
 	float3 dirCol = max(0.f, dot(norm, LDir[0])) * LInt[0];
 
-	Ro[wF * cy + ax] = convert_ushort((texi1*texi2*TR[tex] + texr1*texi2*TR[tex10] +
+	Ro[wF * cy + ax] = convert_ushort_sat((texi1*texi2*TR[tex] + texr1*texi2*TR[tex10] +
 					   texi1*texr2*TR[tex01] + texr1*texr2*TR[tex11]) * (light * dirCol.x + col.x));
-	Go[wF * cy + ax] = convert_ushort((texi1*texi2*TG[tex] + texr1*texi2*TG[tex10] +
+	Go[wF * cy + ax] = convert_ushort_sat((texi1*texi2*TG[tex] + texr1*texi2*TG[tex10] +
 					   texi1*texr2*TG[tex01] + texr1*texr2*TG[tex11]) * (light * dirCol.y + col.y));
-	Bo[wF * cy + ax] = convert_ushort((texi1*texi2*TB[tex] + texr1*texi2*TB[tex10] +
+	Bo[wF * cy + ax] = convert_ushort_sat((texi1*texi2*TB[tex] + texr1*texi2*TB[tex10] +
 					   texi1*texr2*TB[tex01] + texr1*texr2*TB[tex11]) * (light * dirCol.z + col.z));
 }
 !
