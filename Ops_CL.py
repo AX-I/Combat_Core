@@ -51,6 +51,9 @@ from Shaders_src.AVSL import compileAll
 
 compileAll()
 
+NON_MIP_SHADERS = set(
+    'shAlpha emissive add border SSR sub'.split(' '))
+
 vert = makeProgram("vert.c", "Pipe/")
 trisetup = makeProgram("trisetup.c", "Pipe/")
 trisetupC = makeProgram("trisetup_cull.c", "Pipe/")
@@ -306,6 +309,9 @@ class CLDraw:
                         shader=None, mip=False, **kwargs):
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
+
+        if shader['shader'] in NON_MIP_SHADERS:
+            if 'mip' in shader: del shader['mip']
 
         if 'mip' in shader:
             mip = rgb.shape[0]
