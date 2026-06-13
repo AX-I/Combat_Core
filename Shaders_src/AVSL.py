@@ -101,9 +101,9 @@ class AVShader:
                 # :Texture ushort TR TG TB lenT
                 elif b[0] == ":Texture": 
                     self.tex = b[1:]
-                    for t in self.tex[1:4]:
+                    for t in self.tex[1:-1]:
                         self.ARG_OUT += "__global " + self.tex[0] + " *" + t + ", "
-                    self.ARG_OUT += "const int " + self.tex[4] + ",\n"
+                    self.ARG_OUT += "const int " + self.tex[-1] + ",\n"
             else:
                 self.ARG_OUT += a + "\n"
 

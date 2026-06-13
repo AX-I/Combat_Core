@@ -14,7 +14,7 @@ __constant float3 *LDir,
 
 const float mipBias,
 
-:Texture ushort TR TG TB numMip
+:Texture ushort3 TR numMip
 
 __global float *SD, const int wS, const float sScale,
 __constant float3 *SV, __constant float *SPos,
@@ -74,12 +74,11 @@ __constant float3 *SV2, __constant float *SPos2,
 	float texr1 = texr12.x; float texr2 = texr12.y;
 	float texi1 = 1-texr1; float texi2 = 1-texr2;
 
-	float outR = texi1*texi2*TR[tex] + texr1*texi2*TR[tex10] +
-					 texi1*texr2*TR[tex01] + texr1*texr2*TR[tex11];
-	float outG = texi1*texi2*TG[tex] + texr1*texi2*TG[tex10] +
-	    			 texi1*texr2*TG[tex01] + texr1*texr2*TG[tex11];
-	float outB = texi1*texi2*TB[tex] + texr1*texi2*TB[tex10] +
-	                 texi1*texr2*TB[tex01] + texr1*texr2*TB[tex11];
+	float3 outR =
+           texi1*texi2*convert_float3(TR[tex]) +
+           texr1*texi2*convert_float3(TR[tex10]) +
+           texi1*texr2*convert_float3(TR[tex01]) +
+           texr1*texr2*convert_float3(TR[tex11]);
 
 	texr12 = ((1-t)*currvertUV2 + t*currvertUV1) * tz * lenMip2;
 	tex1 = (int)texr12.x;
@@ -96,13 +95,11 @@ __constant float3 *SV2, __constant float *SPos2,
 	texr1 = texr12.x; texr2 = texr12.y;
 	texi1 = 1-texr1; texi2 = 1-texr2;
 
-	outR = (1-fmip) * outR + fmip * (texi1*texi2*TR[tex] + texr1*texi2*TR[tex10] +
-					 texi1*texr2*TR[tex01] + texr1*texr2*TR[tex11]);
-	outG = (1-fmip) * outG + fmip * (texi1*texi2*TG[tex] + texr1*texi2*TG[tex10] +
-					 texi1*texr2*TG[tex01] + texr1*texr2*TG[tex11]);
-	outB = (1-fmip) * outB + fmip * (texi1*texi2*TB[tex] + texr1*texi2*TB[tex10] +
-					 texi1*texr2*TB[tex01] + texr1*texr2*TB[tex11]);
-
+	outR = (1-fmip) * outR + fmip * (
+           texi1*texi2*convert_float3(TR[tex]) +
+           texr1*texi2*convert_float3(TR[tex10]) +
+           texi1*texr2*convert_float3(TR[tex01]) +
+           texr1*texr2*convert_float3(TR[tex11]));
 
 	float3 pos = ((1-t)*currvertPXYZ2 + t*currvertPXYZ1) * tz - SP;
 	float depth = dot(pos, SVd);
@@ -147,8 +144,8 @@ __constant float3 *SV2, __constant float *SPos2,
 	float3 dirCol = max(0.f, dot(norm, LDir[0])) * LInt[0];
 
 
-	Ro[wF * cy + ax] = convert_ushort_sat(outR * (light * dirCol.x + col.x));
-	Go[wF * cy + ax] = convert_ushort_sat(outG * (light * dirCol.y + col.y));
-	Bo[wF * cy + ax] = convert_ushort_sat(outB * (light * dirCol.z + col.z));
+	Ro[wF * cy + ax] = convert_ushort_sat(outR.x * (light * dirCol.x + col.x));
+	Go[wF * cy + ax] = convert_ushort_sat(outR.y * (light * dirCol.y + col.y));
+	Bo[wF * cy + ax] = convert_ushort_sat(outR.z * (light * dirCol.z + col.z));
 }
 !

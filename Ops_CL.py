@@ -191,8 +191,6 @@ class CLDraw:
         self.TOB = []
 
         self.TR = []
-        self.TG = []
-        self.TB = []
         self.TA = []
         self.texSize = []
 
@@ -319,9 +317,7 @@ class CLDraw:
             mip = rgb.shape[0]
             rgb = createMips(rgb).astype('uint16')[None,:]
 
-        rr = np.array(rgb[:,:,0])
-        gg = np.array(rgb[:,:,1])
-        bb = np.array(rgb[:,:,2])
+        rr = align34(rgb.reshape((-1, 3)))
 
         p = xyz.astype("float32")
         p = align34(p)
@@ -348,20 +344,16 @@ class CLDraw:
         self.TOB.append(makeRBuf(uv.nbytes//6))
 
         self.TR.append(makeRBuf(rr.nbytes))
-        self.TG.append(makeRBuf(rr.nbytes))
-        self.TB.append(makeRBuf(rr.nbytes))
 
         cl.enqueue_copy(cq, self.XYZ[-1], p, is_blocking=False)
         cl.enqueue_copy(cq, self.UV[-1], uv, is_blocking=False)
         cl.enqueue_copy(cq, self.VN[-1], n, is_blocking=False)
 
         cl.enqueue_copy(cq, self.TR[-1], rr, is_blocking=False)
-        cl.enqueue_copy(cq, self.TG[-1], gg, is_blocking=False)
-        cl.enqueue_copy(cq, self.TB[-1], bb, is_blocking=False)
         if mip:
             self.texSize.append(np.int32(np.log2(mip)))
         else:
-            self.texSize.append(np.int32(rr.shape[0]))
+            self.texSize.append(np.int32(rgb.shape[0]))
         self.gSize.append(np.int32(p.shape[0]))
         self.useCompound.append(False)
 
@@ -623,7 +615,7 @@ class CLDraw:
                 self.RO, self.GO, self.BO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
-                self.TR[tn], self.TG[tn], self.TB[tn],
+                self.TR[tn],
                 self.texSize[tn])
             endArgs = (
                 self.W, self.H, np.int32(newSize[tn]))
@@ -700,7 +692,7 @@ class CLDraw:
                 self.RO, self.GO, self.BO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
-                self.TR[tn], self.TG[tn], self.TB[tn],
+                self.TR[tn],
                 self.texSize[tn])
 
             if newSize[tn] > 0:
