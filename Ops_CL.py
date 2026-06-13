@@ -52,7 +52,7 @@ from Shaders_src.AVSL import compileAll
 compileAll()
 
 NON_MIP_SHADERS = set(
-    'shAlpha'.split(' '))
+    'shAlpha emissive add border sub'.split(' '))
 
 vert = makeProgram("vert.c", "Pipe/")
 trisetup = makeProgram("trisetup.c", "Pipe/")
@@ -65,20 +65,20 @@ coarse = makeProgram("coarse.c", "Pipe/")
 
 ##draw = makeProgram("drawtexcolsmp.c")
 ##drawSh = makeProgram("drawtexcolsmshp.c")
-##drawSh2 = makeProgram("drawtexcolsmshp2.c")
+drawSh2 = makeProgram("drawtexcolsmshp2.c")
 drawMip = makeProgram("drawtexmipsh.c")
 drawA = makeProgram("drawtexcolsmpalpha.c")
-##drawEm = makeProgram("drawemissive.c")
+drawEm = makeProgram("drawemissive.c")
 ##drawPh = makeProgram("drawphong.c")
-##
-##drawFog = makeProgram("drawfog.c")
-##
-##drawAdd = makeProgram("drawadd.c")
-##drawSub = makeProgram("drawsub.c")
-##drawBorder = makeProgram("drawborder.c")
-##
-##drawSky = makeProgram("drawskylerp.c")
-##
+
+drawFog = makeProgram("drawfog.c")
+
+drawAdd = makeProgram("drawadd.c")
+drawSub = makeProgram("drawsub.c")
+drawBorder = makeProgram("drawborder.c")
+
+drawSky = makeProgram("drawskylerp.c")
+
 ##drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
 
 

@@ -3,7 +3,7 @@
 
 float emPow,
 :Vertex float2 UV
-:Texture ushort TR TG TB lenT
+:Texture ushort3 TR lenT
 
 !
 
@@ -27,10 +27,9 @@ float emPow,
 
     int tex = tex1 + lenT*tex2;
 
-    Ro[wF * cy + ax] = convert_ushort_sat(Ro[wF * cy + ax] + TR[tex] * emPow);
-    Go[wF * cy + ax] = convert_ushort_sat(Go[wF * cy + ax] + TG[tex] * emPow);
-    Bo[wF * cy + ax] = convert_ushort_sat(Bo[wF * cy + ax] + TB[tex] * emPow);
-
+    Ro[wF * cy + ax] = convert_ushort3_sat(
+      convert_float3(Ro[wF * cy + ax]) +
+      convert_float3(TR[tex]) * emPow);
 }
 
 !

@@ -3,7 +3,7 @@
 
 const float EMPOW,
 :Vertex float2 UV
-:Texture ushort TR TG TB lenT
+:Texture ushort3 TR lenT
 
 !
 
@@ -31,9 +31,8 @@ const float EMPOW,
 
         F[wF * cy + ax] = tz;
 
-        Ro[wF * cy + ax] = convert_ushort_sat(TR[tex] * light);
-        Go[wF * cy + ax] = convert_ushort_sat(TG[tex] * light);
-        Bo[wF * cy + ax] = convert_ushort_sat(TB[tex] * light);
+        Ro[wF * cy + ax] = convert_ushort3_sat(
+          convert_float3(TR[tex]) * light);
 
 }
 
