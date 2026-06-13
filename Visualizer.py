@@ -187,6 +187,12 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
 
         self.UItexts = {}
 
+        self.root.protocol('WM_DELETE_WINDOW', self.doQuit)
+
+    def doQuit(self):
+        self.evtQ.put(None)
+        self.root.destroy()
+
     def runGame(self, *args):
         self.evtQ.put({"Run":args})
 
