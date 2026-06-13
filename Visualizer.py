@@ -42,6 +42,10 @@ if PLATFORM == "win32":
     from PIL.ImageWin import Dib, HWND
     from ctypes import windll, byref, c_int, sizeof
 
+    import OpsConv
+    dpiA = OpsConv.getSettings(False)['WinDPI']
+    windll.shcore.SetProcessDpiAwareness(dpiA)
+
 from Utils import _ARIAL, _ARIALBD
 
 if PLATFORM == "linux":
