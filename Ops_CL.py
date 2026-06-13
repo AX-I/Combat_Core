@@ -52,7 +52,7 @@ from Shaders_src.AVSL import compileAll
 compileAll()
 
 NON_MIP_SHADERS = set(
-    'shAlpha emissive add border sub'.split(' '))
+    'shAlpha emissive add border SSR sub'.split(' '))
 
 vert = makeProgram("vert.c", "Pipe/")
 trisetup = makeProgram("trisetup.c", "Pipe/")
@@ -79,7 +79,7 @@ drawBorder = makeProgram("drawborder.c")
 
 drawSky = makeProgram("drawskylerp.c")
 
-##drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
+drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
 
 
 blur1 = makeProgram("Post/blur.c")
@@ -189,8 +189,6 @@ class CLDraw:
         self.SHADOWMAP = {}
 
         self.RRR = {}
-        self.GRR = {}
-        self.BRR = {}
         self.reflTexSize = {}
 
         p = np.ones((3,), dtype="float32")
@@ -298,7 +296,6 @@ class CLDraw:
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
 
-        shader['mip'] = 1
         if shader['shader'] in NON_MIP_SHADERS:
             if 'mip' in shader: del shader['mip']
 
@@ -366,13 +363,11 @@ class CLDraw:
         pass
 
     def setReflTex(self, name, r, g, b, size):
-        rr = r.astype("uint16")
+        rgb = np.stack((r, g, b), axis=-1, dtype="uint16")
+        rr = align34(rgb.reshape((-1, 3)))
+
         self.RRR[name] = makeRBuf(rr.nbytes)
-        self.GRR[name] = makeRBuf(rr.nbytes)
-        self.BRR[name] = makeRBuf(rr.nbytes)
         cl.enqueue_copy(cq, self.RRR[name], rr, is_blocking=False)
-        cl.enqueue_copy(cq, self.GRR[name], g.astype("uint16"), is_blocking=False)
-        cl.enqueue_copy(cq, self.BRR[name], b.astype("uint16"), is_blocking=False)
         self.reflTexSize[name] = np.int32(size/2)
         return len(self.reflTexSize) - 1
 
@@ -719,7 +714,7 @@ class CLDraw:
                              self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
                                 self.VIEWPOS, self.VIEWMAT, self.sScale,
                              *currTexArgs,
-                             self.RRR[sr], self.GRR[sr], self.BRR[sr],
+                             self.RRR[sr],
                              self.reflTexSize[sr],
                              np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
                              self.W, self.H,
@@ -808,7 +803,7 @@ class CLDraw:
                     self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
                     self.VIEWPOS, self.VIEWMAT, self.sScale,
                     *currTexArgs,
-                    self.RRR[sr], self.GRR[sr], self.BRR[sr],
+                    self.RRR[sr],
                     self.reflTexSize[sr],
                     np.int32(1), np.float32(shaders[tn]['args'].get('rotY', 0)),
                     self.W, self.H, np.int32(newSizeAfter[tn]),

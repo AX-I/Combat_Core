@@ -20,8 +20,8 @@
     __constant float *Vpos, __constant float3 *VV,
     const float sScale,
 
-:Texture ushort TR TG TB lenT
-:Texture ushort RR RG RB dimR
+:Texture ushort3 TR lenT
+:Texture ushort3 RR dimR
 
 const int useEquiEnv, const float rotY,
 !
@@ -56,9 +56,8 @@ const int useEquiEnv, const float rotY,
     float scatter = exp(ABSORB * (tz - F[wF * cy + ax]));
     // is actually transmittance
 
-    float tsr = scatter * Ro[wF*cy+ax] + (1-scatter) * TR[tex];
-    float tsg = scatter * Go[wF*cy+ax] + (1-scatter) * TG[tex];
-    float tsb = scatter * Bo[wF*cy+ax] + (1-scatter) * TB[tex];
+    float3 tsr = scatter * convert_float3(Ro[wF*cy+ax]) +
+                 (1-scatter) * convert_float3(TR[tex]);
 
     float3 a = pos - vp;
     float nd = dot(a, norm);
@@ -148,19 +147,13 @@ const int useEquiEnv, const float rotY,
     int rex = (int)(uvEnv.x * envWidth) + (int)(uvEnv.y * envHeight) * envWidth;
 
     if (hit == 1) {
-        ssr_out.x = Ro[wF * ssr_loc.y + ssr_loc.x];
-        ssr_out.y = Go[wF * ssr_loc.y + ssr_loc.x];
-        ssr_out.z = Bo[wF * ssr_loc.y + ssr_loc.x];
+        ssr_out = convert_float3(Ro[wF * ssr_loc.y + ssr_loc.x]);
 
-        Ro[wF * cy + ax] = (1-fr) * tsr + fr * (fade * ssr_out.x + (1-fade) * RR[rex] * cs);
-        Go[wF * cy + ax] = (1-fr) * tsg + fr * (fade * ssr_out.y + (1-fade) * RG[rex] * cs);
-        Bo[wF * cy + ax] = (1-fr) * tsb + fr * (fade * ssr_out.z + (1-fade) * RB[rex] * cs);
+        Ro[wF * cy + ax] = convert_ushort3((1-fr) * tsr + fr * (fade * ssr_out + (1-fade) * convert_float3(RR[rex]) * cs));
         F[wF * cy + ax] = tz;
     }
     else {
-		Ro[wF * cy + ax] = (1-fr) * tsr + fr * RR[rex] * cs;
-        Go[wF * cy + ax] = (1-fr) * tsg + fr * RG[rex] * cs;
-        Bo[wF * cy + ax] = (1-fr) * tsb + fr * RB[rex] * cs;
+		Ro[wF * cy + ax] = convert_ushort3((1-fr) * tsr + fr * convert_float3(RR[rex]) * cs);
         F[wF * cy + ax] = tz;
     }
 }
