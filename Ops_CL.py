@@ -222,7 +222,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.PC, align34(xyz.astype("float32")))
         cl.enqueue_copy(cq, self.PO, align34(color.astype("uint16")))
         particles.ps(cq, (vs, 1), (BLOCK_SIZE, 1),
-                     self.RO, self.GO, self.BO, self.DB,
+                     self.RO, self.DB,
                      self.PC, self.PO,
                      np.float32(opacity), np.float32(size),
                      self.VIEWPOS, self.VIEWMAT,

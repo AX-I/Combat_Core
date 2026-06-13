@@ -1,6 +1,6 @@
 // Particles
 
-__kernel void ps(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+__kernel void ps(__global ushort3 *Ro,
                  __global float *F,
                  __global float3 *XYZ, __global ushort3 *I,
                  const float opacity, const float size,
@@ -37,11 +37,8 @@ __kernel void ps(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
         for (int ax = max(0, dix-vsize); ax < min(wF-1, dix+vsize); ax++) {
           if (F[wF * ay + ax] > dd) {
             //Ro[wF * ay + ax] = convert_ushort_sat(Ro[wF * ay + ax] + 256 * vopacity * col.x);
-            //Go[wF * ay + ax] = convert_ushort_sat(Go[wF * ay + ax] + 256 * vopacity * col.y);
-            //Bo[wF * ay + ax] = convert_ushort_sat(Bo[wF * ay + ax] + 256 * vopacity * col.z);
-            Ro[wF * ay + ax] *= (1.f-vopacity);
-            Go[wF * ay + ax] *= (1.f-vopacity);
-            Bo[wF * ay + ax] *= (1.f-vopacity);
+            Ro[wF * ay + ax] = convert_ushort3_sat(
+              convert_float3(Ro[wF * ay + ax]) * (1.f-vopacity));
           }
         }
       }
