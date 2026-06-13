@@ -52,7 +52,7 @@ from Shaders_src.AVSL import compileAll
 compileAll()
 
 NON_MIP_SHADERS = set(
-    'shAlpha emissive add border SSR sub'.split(' '))
+    'shAlpha'.split(' '))
 
 vert = makeProgram("vert.c", "Pipe/")
 trisetup = makeProgram("trisetup.c", "Pipe/")
@@ -67,7 +67,7 @@ coarse = makeProgram("coarse.c", "Pipe/")
 ##drawSh = makeProgram("drawtexcolsmshp.c")
 ##drawSh2 = makeProgram("drawtexcolsmshp2.c")
 drawMip = makeProgram("drawtexmipsh.c")
-##drawA = makeProgram("drawtexcolsmpalpha.c")
+drawA = makeProgram("drawtexcolsmpalpha.c")
 ##drawEm = makeProgram("drawemissive.c")
 ##drawPh = makeProgram("drawphong.c")
 ##
@@ -299,8 +299,8 @@ class CLDraw:
             rgb = np.round(rgb * 65535).astype('uint16')
 
         shader['mip'] = 1
-##        if shader['shader'] in NON_MIP_SHADERS:
-##            if 'mip' in shader: del shader['mip']
+        if shader['shader'] in NON_MIP_SHADERS:
+            if 'mip' in shader: del shader['mip']
 
         if 'mip' in shader:
             mip = rgb.shape[0]
@@ -609,7 +609,7 @@ class CLDraw:
             endArgs = (
                 self.W, self.H, np.int32(newSize[tn]))
 
-            if False:#"alpha" in shaders[tn]:
+            if "alpha" in shaders[tn]:
                 drawA.drawSmall(*baseArgs,
                     self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
                     self.LInt, self.LDir,
