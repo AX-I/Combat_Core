@@ -310,8 +310,9 @@ class CLDraw:
         if rgb.dtype == 'float16':
             rgb = np.round(rgb * 65535).astype('uint16')
 
-        if shader['shader'] in NON_MIP_SHADERS:
-            if 'mip' in shader: del shader['mip']
+        shader['mip'] = 1
+##        if shader['shader'] in NON_MIP_SHADERS:
+##            if 'mip' in shader: del shader['mip']
 
         if 'mip' in shader:
             mip = rgb.shape[0]
@@ -626,7 +627,7 @@ class CLDraw:
             endArgs = (
                 self.W, self.H, np.int32(newSize[tn]))
 
-            if "alpha" in shaders[tn]:
+            if False:#"alpha" in shaders[tn]:
                 drawA.drawSmall(*baseArgs,
                     self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
                     self.LInt, self.LDir,
