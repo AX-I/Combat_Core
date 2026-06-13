@@ -1104,15 +1104,15 @@ class CLDraw:
             draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZAlpha)
             draw['TA'] = 2
             vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
-        elif 'dissolve' in shader:
-            if 'dissolve' in self.oldShaders[i]:
+        elif shader.get('shader') == 'dissolve':
+            if self.oldShaders[i]['shader'] == 'dissolve':
                 draw = self.DRAWZ[i][1]
                 vao = self.DRAWZ[i][0]
             else:
                 draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZDissolve)
                 vao = ctx.vertex_array(draw, [(p, '3f4 3x4 2f4 /v', 'in_vert', 'in_UV')])
-            draw['fadeOrigin'].write(np.array(shader['dissolve']['origin'], 'float32'))
-            draw['fadeFact'].write(shader['dissolve']['fact'])
+            draw['fadeOrigin'].write(np.array(shader['args']['fadeOrigin'], 'float32'))
+            draw['fadeFact'] = shader['args']['fadeFact']
         else:
             draw = ctx.program(vertex_shader=trisetup, fragment_shader=drawZ)
             vao = ctx.vertex_array(draw, [(p, '3f4 5x4 /v', 'in_vert')])
