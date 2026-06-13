@@ -832,7 +832,7 @@ class CLDraw:
         if self.doSSAO:
             s = 16
             ssao.ao(cq, (self.H//s, self.W//s), (s, s),
-                    self.RO, self.GO, self.BO,
+                    self.RO,
                     self.DB, self.sScale, self.RAND,
                     self.W, self.H, np.int32(s), g_times_l=True)
 
@@ -848,16 +848,14 @@ class CLDraw:
         except: self.dProg = makeProgram("Post/distort.c")
         s = 4; t = 4
         self.dProg.distort(cq, (s, s), (t, t),
-                self.RO, self.GO, self.BO, self.DB,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO, self.DB,
+                self.SSRO,
                 np.float32(x), np.float32(y), np.float32(z),
                 np.float32(p), np.float32(st),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
 
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def motionBlur(self, oldPos, oldVMat):
         try: _ = self.mProg
