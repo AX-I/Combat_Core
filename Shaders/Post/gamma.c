@@ -21,7 +21,7 @@ float3 acesMat(float3 px) {
   return j;
 }
 
-__kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+__kernel void g(__global ushort3 *Ro,
                 const float exposure,
                 const int wF, const int hF, const int BS,
                 const int stepW, const int stepH) {
@@ -39,7 +39,7 @@ __kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
 
     for (int cy = h1; cy < min(h2, hF); cy++) {
         for (int cx = ci; cx < wF; cx += stepW) {
-            float3 j = 8 * exposure * (float3)(Ro[wF * cy + cx], Go[wF * cy + cx], Bo[wF * cy + cx]);
+            float3 j = 8 * exposure * convert_float3(Ro[wF * cy + cx]);
 
            /*
             j = sqrt(j) / 1.1f;
@@ -50,9 +50,7 @@ __kernel void g(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
            */
             j = max((float3)0.f, acesMat(j / 65535.f) * 255.f);
 
-            Ro[wF * cy + cx] = (ushort)min(255.f, j.x);
-            Go[wF * cy + cx] = (ushort)min(255.f, j.y);
-            Bo[wF * cy + cx] = (ushort)min(255.f, j.z);
+            Ro[wF * cy + cx] = convert_ushort3(min(255.f, j));
         }
     }
 }

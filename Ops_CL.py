@@ -63,23 +63,23 @@ gather = makeProgram("gather.c", "Pipe/")
 
 coarse = makeProgram("coarse.c", "Pipe/")
 
-draw = makeProgram("drawtexcolsmp.c")
-drawSh = makeProgram("drawtexcolsmshp.c")
-drawSh2 = makeProgram("drawtexcolsmshp2.c")
+##draw = makeProgram("drawtexcolsmp.c")
+##drawSh = makeProgram("drawtexcolsmshp.c")
+##drawSh2 = makeProgram("drawtexcolsmshp2.c")
 drawMip = makeProgram("drawtexmipsh.c")
-drawA = makeProgram("drawtexcolsmpalpha.c")
-drawEm = makeProgram("drawemissive.c")
-drawPh = makeProgram("drawphong.c")
-
-drawFog = makeProgram("drawfog.c")
-
-drawAdd = makeProgram("drawadd.c")
-drawSub = makeProgram("drawsub.c")
-drawBorder = makeProgram("drawborder.c")
-
-drawSky = makeProgram("drawskylerp.c")
-
-drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
+##drawA = makeProgram("drawtexcolsmpalpha.c")
+##drawEm = makeProgram("drawemissive.c")
+##drawPh = makeProgram("drawphong.c")
+##
+##drawFog = makeProgram("drawfog.c")
+##
+##drawAdd = makeProgram("drawadd.c")
+##drawSub = makeProgram("drawsub.c")
+##drawBorder = makeProgram("drawborder.c")
+##
+##drawSky = makeProgram("drawskylerp.c")
+##
+##drawSSR = makeProgram("drawtexcolsmshplerp_SSR_water.c")
 
 
 blur1 = makeProgram("Post/blur.c")
@@ -150,9 +150,7 @@ class CLDraw:
         self.GSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
         self.BSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
 
-        self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
-        self.GO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
-        self.BO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
+        self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes*4)
 
         self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
         self.SSGO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
@@ -209,9 +207,7 @@ class CLDraw:
         mn = np.ones((self.LT,), dtype="int32")
         self.AL = cl.Buffer(ctx, mf.READ_WRITE, size=mn.nbytes)
 
-        self.hro = np.ones((h, w), dtype="uint16")
-        self.hgo = np.ones((h, w), dtype="uint16")
-        self.hbo = np.ones((h, w), dtype="uint16")
+        self.hro = np.ones((h, w, 4), dtype="uint16")
         self.hdb = np.ones((h, w), dtype="float32")
 
         self.useCompound = []
@@ -612,7 +608,7 @@ class CLDraw:
             baseArgs = (
                 cq, (ns, 1), (BLOCK_SIZE, 1),
                 self.TOA[tn],
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
                 self.TR[tn],
@@ -689,7 +685,7 @@ class CLDraw:
             baseArgs = (
                 cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
                 self.IBUF, self.NBUF,
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
                 self.TR[tn],
@@ -810,7 +806,7 @@ class CLDraw:
             baseArgs = (
                 cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
                 self.TOA[tn],
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
 
             if shaders[tn]['shader'] == "SSR":
@@ -890,7 +886,7 @@ class CLDraw:
 
     def gamma(self, ex, *args):
         s = 4; t = 4
-        gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
+        gamma.g(cq, (s, s), (t, t), self.RO,
                 np.float32(ex),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
@@ -1125,10 +1121,8 @@ class CLDraw:
 
     def getFrame(self):
         cl.enqueue_copy(cq, self.hro, self.RO, is_blocking=False)
-        cl.enqueue_copy(cq, self.hgo, self.GO, is_blocking=False)
-        cl.enqueue_copy(cq, self.hbo, self.BO, is_blocking=False)
 
-        return np.stack((self.hro, self.hgo, self.hbo), axis=2)
+        return self.hro[:,:,:3]
 
     def getDB(self):
         cl.enqueue_copy(cq, self.hdb, self.DB)

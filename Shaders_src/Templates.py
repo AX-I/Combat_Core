@@ -27,7 +27,7 @@ template_func = """
 #define TILE_AREA 256
 
 __kernel void draw(__global int *TO, __global int *TN,
-                   __global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+                   __global ushort3 *Ro,
                    __global float *F, __global float2 *P, __global float *Z,
                    [SHADER_ARGS]
                    const int wF, const int hF) {
@@ -221,7 +221,7 @@ template_end = """
 template_func_small = """
 
 __kernel void drawSmall(__global int *TO,
-                        __global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+                        __global ushort3 *Ro,
                         __global float *F, __global float2 *P, __global float *Z,
                         [SHADER_ARGS]
                         const int wF, const int hF, const int lenP) {

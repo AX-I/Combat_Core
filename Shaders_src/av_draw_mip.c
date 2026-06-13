@@ -144,8 +144,7 @@ __constant float3 *SV2, __constant float *SPos2,
 	float3 dirCol = max(0.f, dot(norm, LDir[0])) * LInt[0];
 
 
-	Ro[wF * cy + ax] = convert_ushort_sat(outR.x * (light * dirCol.x + col.x));
-	Go[wF * cy + ax] = convert_ushort_sat(outR.y * (light * dirCol.y + col.y));
-	Bo[wF * cy + ax] = convert_ushort_sat(outR.z * (light * dirCol.z + col.z));
+	Ro[wF * cy + ax] = convert_ushort3_sat(
+    outR * (light * dirCol + col));
 }
 !
