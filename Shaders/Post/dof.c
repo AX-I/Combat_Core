@@ -1,8 +1,8 @@
 // DoF
 #define MAXCOC 4.f
 
-__kernel void dof(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
-				  __global ushort *R2, __global ushort *G2, __global ushort *B2,
+__kernel void dof(__global ushort3 *Ro,
+				  __global ushort3 *R2,
 			      __global float *F, const float focus,
                   const int wF, const int hF, const int BS) {
 
@@ -24,9 +24,7 @@ __kernel void dof(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
 	float coc = apeture * fabs(d-focus) / focus / d;
 	//float coc = apeture * fpoint * fabs(d - focus) / d / (focus - fpoint);
 
-	float dofR = 0;
-	float dofG = 0;
-	float dofB = 0;
+	float3 dofR = 0;
 
 	float nsamples = 0;
 	float cover;
@@ -47,9 +45,7 @@ __kernel void dof(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
 			if (radius > ecoc) cover *= ecoc / radius;
 			//if (F[wF*sy + sx] < focus*min(coc-0.2f, 1.f)) cover = 0;
 
-			dofR += Ro[wF*sy + sx] * cover;
-			dofG += Go[wF*sy + sx] * cover;
-			dofB += Bo[wF*sy + sx] * cover;
+			dofR += convert_float3(Ro[wF*sy + sx]) * cover;
 			nsamples += cover;
 			}
 		}
@@ -58,11 +54,7 @@ __kernel void dof(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
 
 	//float nsamples = (radius*2+1)*(radius*2+1);
 	dofR /= nsamples;
-	dofG /= nsamples;
-	dofB /= nsamples;
 
-	R2[wF*(int)cy + (int)cx] = dofR;
-	G2[wF*(int)cy + (int)cx] = dofG;
-	B2[wF*(int)cy + (int)cx] = dofB;
+	R2[wF*(int)cy + (int)cx] = convert_ushort3(dofR);
 
 }

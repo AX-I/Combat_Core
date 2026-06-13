@@ -152,17 +152,11 @@ class CLDraw:
 
         self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes*4)
 
-        self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
-        self.SSGO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
-        self.SSBO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
+        self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes*4)
 
-        self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.g2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.b2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
+        self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
-        self.r3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.g3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.b3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
+        self.r3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
         self.PC = makeRBuf(np.zeros((max_particles, 4), dtype="float32").nbytes)
         self.PO = makeRBuf(np.zeros((max_particles, 4), dtype="uint16").nbytes)
@@ -223,7 +217,6 @@ class CLDraw:
         self.caX, self.caY = np.float32(cx), np.float32(cy)
 
     def drawPS(self, xyz, color, opacity, size, *args):
-        return
         if xyz.shape[0] == 0: return
         vs = np.int32(xyz.shape[0]//BLOCK_SIZE + 1)
         cl.enqueue_copy(cq, self.PC, align34(xyz.astype("float32")))
@@ -867,13 +860,12 @@ class CLDraw:
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def motionBlur(self, oldPos, oldVMat):
-        return
         try: _ = self.mProg
         except: self.mProg = makeProgram("Post/motion.c")
         s = 4; t = 4
         self.mProg.blur(cq, (s, s), (t, t),
-                self.RO, self.GO, self.BO, self.DB,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO, self.DB,
+                self.SSRO,
                 self.VIEWPOS, self.VIEWMAT, self.sScale,
                 np.array([*oldPos, 0]).astype("float32"),
                 *align34(oldVMat).astype("float32"),
@@ -881,8 +873,6 @@ class CLDraw:
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
         
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def gamma(self, ex, *args):
         s = 4; t = 4
@@ -900,31 +890,27 @@ class CLDraw:
         self.doSSAO = doSSAO
 
     def dof(self, focus, aperture=None):
-        return
         s = 16
         dof.dof(cq, (self.H//s, self.W//s), (s, s),
-                self.RO, self.GO, self.BO,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO,
+                self.SSRO,
                 self.DB, np.float32(focus),
                 self.W, self.H, np.int32(s), g_times_l=True)
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def applyDoF(self):
         pass
 
     def blur(self, ex):
-        return
         s = 4; t = 4
-        e = blur1.blurH(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
-                    self.r2, self.g2, self.b2,
-                    self.r3, self.g3, self.b3,
+        e = blur1.blurH(cq, (s, s), (t, t), self.RO,
+                    self.r2,
+                    self.r3,
                     self.W, self.H, np.int32(t), np.int32(s*t),
                     np.float32(np.ceil(self.H/(s*t))), g_times_l=True)
-        blur2.blurV(cq, (s, s), (t, t), self.r2, self.g2, self.b2,
-                    self.r3, self.g3, self.b3,
-                    self.RO, self.GO, self.BO,
+        blur2.blurV(cq, (s, s), (t, t), self.r2,
+                    self.r3,
+                    self.RO,
                     self.W, self.H, np.int32(t), np.int32(s*t),
                     np.float32(np.ceil(self.H/(s*t))), g_times_l=True,
                     wait_for=[e])
