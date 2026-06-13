@@ -229,6 +229,7 @@ class CLDraw:
         self.caX, self.caY = np.float32(cx), np.float32(cy)
 
     def drawPS(self, xyz, color, opacity, size, *args):
+        return
         if xyz.shape[0] == 0: return
         vs = np.int32(xyz.shape[0]//BLOCK_SIZE + 1)
         cl.enqueue_copy(cq, self.PC, align34(xyz.astype("float32")))
@@ -878,6 +879,7 @@ class CLDraw:
         cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def motionBlur(self, oldPos, oldVMat):
+        return
         try: _ = self.mProg
         except: self.mProg = makeProgram("Post/motion.c")
         s = 4; t = 4
@@ -910,6 +912,7 @@ class CLDraw:
         self.doSSAO = doSSAO
 
     def dof(self, focus, aperture=None):
+        return
         s = 16
         dof.dof(cq, (self.H//s, self.W//s), (s, s),
                 self.RO, self.GO, self.BO,
@@ -924,6 +927,7 @@ class CLDraw:
         pass
 
     def blur(self, ex):
+        return
         s = 4; t = 4
         e = blur1.blurH(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
                     self.r2, self.g2, self.b2,
