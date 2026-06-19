@@ -1467,7 +1467,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a = self.cubeMap.texture.reshape((-1, 3))
         self.draw.setReflTex("1a", a[:,0], a[:,1], a[:,2], self.cubeMap.m)
         self.draw.setReflTex("0", a[:,0], a[:,1], a[:,2], self.cubeMap.m)
-        self.draw.setHostSkyTex(self.cubeMap.rawtexture)
 
         p = PATH+"../Poses/"
         if self.stage == 2:
