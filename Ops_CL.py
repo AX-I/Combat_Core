@@ -139,16 +139,10 @@ class CLDraw:
         self.NBUF = cl.Buffer(ctx, mf.READ_WRITE, size=n.nbytes)
         cl.enqueue_copy(cq, self.NBUF, n)
 
-        rsi = np.ones((size_sky*size_sky*6,), dtype="uint16")
-
         ro = np.ones((h, w), dtype="uint16")
         db = np.full((h, w), 255, dtype="float32")
 
         self.DB = cl.Buffer(ctx, mf.READ_WRITE, size=db.nbytes)
-
-        self.RSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
-        self.GSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
-        self.BSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
 
         self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes*4)
 
@@ -275,22 +269,6 @@ class CLDraw:
                    self.LI[tn], *hc, self.gSize[tn],
                    g_times_l=True)
 
-    def addTexture(self, r, g, b, mip=False):
-        rr = r.astype("uint16")
-        gg = g.astype("uint16")
-        bb = b.astype("uint16")
-
-        self.TR.append(makeRBuf(rr.nbytes))
-        self.TG.append(makeRBuf(rr.nbytes))
-        self.TB.append(makeRBuf(rr.nbytes))
-        cl.enqueue_copy(cq, self.TR[-1], rr, is_blocking=False)
-        cl.enqueue_copy(cq, self.TG[-1], gg, is_blocking=False)
-        cl.enqueue_copy(cq, self.TB[-1], bb, is_blocking=False)
-
-        if mip: self.texSize.append(np.int32(np.log2(mip)))
-        else: self.texSize.append(np.int32(rr.shape[0]))
-        return len(self.TR) - 1
-
     def addTextureGroup(self, xyz, uv, vn, rgb,
                         shader=None, mip=False, **kwargs):
         if rgb.dtype == 'float16':
@@ -370,12 +348,6 @@ class CLDraw:
         cl.enqueue_copy(cq, self.RRR[name], rr, is_blocking=False)
         self.reflTexSize[name] = np.int32(size/2)
         return len(self.reflTexSize) - 1
-
-    def setSkyTex(self, r, g, b, size):
-        cl.enqueue_copy(cq, self.RSI, r.T.astype("uint16"), is_blocking=False)
-        cl.enqueue_copy(cq, self.GSI, g.T.astype("uint16"), is_blocking=False)
-        cl.enqueue_copy(cq, self.BSI, b.T.astype("uint16"), is_blocking=False)
-        self.skyTexSize = np.int32(size)
 
     def setPos(self, vc):
         cl.enqueue_copy(cq, self.VIEWPOS, vc.astype("float32"))
@@ -517,10 +489,6 @@ class CLDraw:
                            self.ambLight,
                            self.numDirs, self.numPoints, self.numSpots,
                            self.gSize[tn], g_times_l=True)
-
-    def setHostSkyTex(self, tex):
-        self.hostSTex = tex.astype("uint16")
-        self.stSize = tex.shape[0]
 
     def setUVOff(self, tn, lo, hi, offset):
         pass

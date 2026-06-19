@@ -78,8 +78,6 @@ ctx.enable(moderngl.DEPTH_TEST)
 ctx.enable(moderngl.BLEND)
 ctx.front_face = 'cw'
 
-def align34(a):
-    return np.stack((a[:,0], a[:,1], a[:,2], np.zeros_like(a[:,0])), axis=1)
 
 INSTANCE_FORMAT = ('4f 3f 3f 3f /i', 'inst_pos_scale', 'inst_rot_0', 'inst_rot_1', 'inst_rot_2')
 
@@ -135,7 +133,6 @@ class CLDraw:
         self.XYZ = []
         self.UV = []
         self.VN = []
-        self.LI = []
 
         self.BN = {}
         self.BT = {}
@@ -313,9 +310,6 @@ class CLDraw:
         self.blue_tex = ctx.texture(
             a.shape[1::-1], 1, np.array(a, order='C', dtype='uint8'), dtype='f1'
         )
-
-    def setHostSkyTex(self, tex):
-        pass
 
     def setReflTex(self, name, r, g, b, size):
         pass
