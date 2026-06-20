@@ -17,8 +17,6 @@ __constant float *Vpos, __constant float3 *VV,
 
 !shader_core
 
-:DEPTH_COMPARE
-
 :IF_DEPTH_TEST {
 
 

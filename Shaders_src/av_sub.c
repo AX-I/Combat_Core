@@ -10,8 +10,6 @@ float emPow,
 
 !shader_core
 
-:DEPTH_COMPARE
-
 :IF_DEPTH_TEST {
 
     Ro[wF * cy + ax] = convert_ushort3_sat(
