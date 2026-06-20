@@ -12,8 +12,6 @@ float emPow,
 
 !shader_core
 
-:DEPTH_COMPARE
-
 :IF_DEPTH_TEST {
 
 

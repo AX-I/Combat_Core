@@ -35,8 +35,6 @@ const int useEquiEnv, const float rotY,
 
 !shader_core
 
-:DEPTH_COMPARE
-
 :IF_DEPTH_TEST {
     float3 pos = ((1-t)*currvertPXYZ2 + t*currvertPXYZ1) * tz;
     float3 norm = fast_normalize(((1-t)*currvertN2 + t*currvertN1) * tz);
