@@ -179,6 +179,7 @@ class CLDraw:
         self.TR = []
         self.TA = []
         self.texSize = []
+        self.texType = []
 
         self.SHADOWMAP = {}
 
@@ -318,6 +319,7 @@ class CLDraw:
             self.texSize.append(np.int32(np.log2(mip)))
         else:
             self.texSize.append(np.int32(rgb.shape[0]))
+        self.texType.append('mip' if mip else '')
         self.gSize.append(np.int32(p.shape[0]))
         self.useCompound.append(False)
 
@@ -494,9 +496,10 @@ class CLDraw:
         pass
 
     def changeShaderZ(self, tn, shader):
-        pass
+        self.changeShader(tn, shader)
     def changeShader(self, tn, shader, **kwargs):
-        pass
+        if ('mip' not in shader) and (self.texType[tn] == 'mip'):
+            shader['mip'] = 2
 
     def drawAll(self, shaders,
                 mask=None, shadowIds=[0,1],
