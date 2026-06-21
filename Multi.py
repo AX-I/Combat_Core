@@ -380,6 +380,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
               'charpos', self.players[self.selchar]['b1'].offset[:3])
         print('a', self.α, 'b', self.β)
 
+    def tgGrab(self):
+        a = self.players[self.selchar]
+        a['grab'] = not a['grab']
+        if a['grab']:
+            a['grabSphere'] = -1
+
     # ==== Temple interactivity ====
     def lightTest(self):
         self.transStart = time.time()
@@ -941,7 +947,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
              'throwAnim':False, 'animFired':False,
              'poseThrow':0, 'poseIdle':0,
-             'vh':0}
+             'vh':0,
+             'grab':False}
 
         self.NPLAYERS += 1
         self.players.append(a)

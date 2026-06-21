@@ -1,7 +1,7 @@
 # New Stage
 
 import numpy as np
-from math import pi
+from math import pi, sin, cos
 from OpsConv import PATH
 
 from VertObjects import VertWater0, VertTerrain0, VertModel, VertPlane
@@ -12,6 +12,7 @@ import time
 import Anim
 import Phys
 from Utils import viewVec
+from IK import doArmIK
 
 def getHeight(self, pos):
     return self.terrain.getHeight(*pos[::2])
@@ -318,3 +319,45 @@ def frameUpdate(self):
         self.addNrmMap(tpath + '096.png', '096')
         self.addNrmMap(tpath + 'Grass004_1K_NormalGL-l80c.webp', 'Grass', mip=True, mipLvl=4)
         self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4
+
+def frameUpdateAfter(self):
+
+    a = self.players[self.selchar]
+    if not a['grab']: return
+
+    armU = a['b1'].children[0].children[0]
+    armU.rotate((0,0,0))
+    armU.children[0].rotate((0,0,0))
+
+    a["rig"].b0.getTransform()
+
+    head = a['b1'].children[0].children[2]
+    hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
+    d = np.array([cos(a["cr"]), self.vv[1], sin(a["cr"])])
+    shoulder = armU.TM[3,:3]
+    targPos = shoulder + d
+
+    handLen = 0.7 if a['id'] == 1 else 0.1
+    doArmIK(a['b1'].children[0].children[0],
+            targPos, handLen)
+    hand = armU.children[0].children[0]
+    hand.rotate((-pi/6,0,0))
+
+    self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
+
+    if a['grabSphere'] < 0:
+        for i in range(len(self.srbs)):
+            rb = self.srbs[i]
+            if rb.disabled: continue
+            if Phys.eucDist(rb.pos, targPos) < 0.5:
+                rb.v *= 0
+                rb.pos = targPos
+                a['grabSphere'] = i
+                break
+
+    if a['grabSphere'] >= 0:
+        rb = self.srbs[a['grabSphere']]
+        if rb.disabled:
+            a['grabSphere'] = -1
+        else:
+            rb.pos = targPos
