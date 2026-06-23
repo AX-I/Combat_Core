@@ -2741,16 +2741,21 @@ def runApp(app):
     print("Running")
     app.runBackend()
     if hasattr(app, 'statTime'):
+        import datetime as dt
         games = 1
         tim = time.time() - app.statTime
+        stat = {}
         try:
-            with open(PATH+"lib/Stat2.txt") as f:
-                games += int(f.readline().split(': ')[1])
-                tim += float(f.readline().split(': ')[1])
+            with open(PATH+"lib/Stat.json") as f:
+                stat = json.load(f)
         except: pass
-        with open(PATH+"lib/Stat2.txt", "w") as f:
-            text = 'Games Played: {}\nTime Spent (secs): {}'
-            f.write(text.format(games, round(tim, 2)))
+        m = dt.date.today().strftime('%Y-%U')
+        if m not in stat: stat[m] = {'games':0, 'time':0}
+        stat[m]['games'] += 1
+        stat[m]['time'] = round(stat[m]['time'] + tim, 1)
+
+        with open(PATH+"lib/Stat.json", "w") as f:
+            json.dump(stat, f)
 
     if hasattr(app, "WIN"):
         state = 0
