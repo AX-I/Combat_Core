@@ -364,21 +364,13 @@ class CLDraw:
     def rotate(self, rotMat, cStart, cEnd, tn):
         if cEnd is None: cEnd = self.gSize[tn]
 
-        origin = np.zeros((3,))
-        oldRM = np.eye(3)
-        oo = origin.astype("float32")
-        o = makeRBuf(oo.nbytes)
-        cl.enqueue_copy(cq, o, oo)
         rM = align34(rotMat.astype("float32").T)
-        oRM = align34(oldRM.astype("float32"))
         r = makeRBuf(rM.nbytes)
-        rr = makeRBuf(oRM.nbytes)
         cl.enqueue_copy(cq, r, rM)
-        cl.enqueue_copy(cq, rr, oRM)
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         vert.transform(cq, (vs, 1), (BLOCK_SIZE, 1),
                        self.XYZ[tn], self.VN[tn],
-                       rr, r, o,
+                       r,
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
@@ -401,11 +393,9 @@ class CLDraw:
     def scale(self, origin, scale, cStart, cEnd, tn):
         if cEnd is None: cEnd = self.gSize[tn]
         oo = origin.astype("float32")
-        o = makeRBuf(oo.nbytes)
-        cl.enqueue_copy(cq, o, oo)
         vs = np.int32((cEnd - cStart)//BLOCK_SIZE + 1)
         vert.Tscale(cq, (vs, 1), (BLOCK_SIZE, 1),
-                       self.XYZ[tn], o, np.float32(scale),
+                       self.XYZ[tn], *oo, np.float32(scale),
                        np.int32(cStart), np.int32(cEnd),
                        g_times_l=True)
 
