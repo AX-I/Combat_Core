@@ -33,7 +33,7 @@ def makeProgram(f, path="ShadersGL/"):
     return t
 
 
-TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Norm Wave'
+TRISETUP_SHADERS = ' Anim Ortho OrthoAnim 2d Wave'
 
 def SHADER_DEF(key, shader):
     return shader.replace(f'//{{{key}}}', '')
@@ -977,8 +977,6 @@ class CLDraw:
             ts = trisetup2d
         elif 'wave' in mtl:
             ts = trisetupWave
-        elif mtl.get('calcNorm', 0):
-            ts = trisetupNorm
         elif self.VBO[i].extra:
             ts = SHADER_DEF('INST', trisetup)
         else:
@@ -1003,11 +1001,6 @@ class CLDraw:
                 prog = prog.replace(sp, self.shaderParams[sp])
 
             progKwargs = {}
-
-            if mtl.get('calcNorm', 0):
-                progKwargs['geometry_shader'] = makeProgram('calcNormal.c', 'PipeGL/')
-                prog = prog.replace('vec3 norm = normalize(v_norm',
-                                    'vec3 norm = normalize(v_gs_norm')
 
             draw = ctx.program(
                 vertex_shader=ts,

@@ -58,7 +58,6 @@ uniform vec3 highMult;
 out vec4 f_color;
 
 in vec3 v_norm;
-flat in vec3 v_gs_norm;
 
 in float depth;
 in vec2 v_UV;
