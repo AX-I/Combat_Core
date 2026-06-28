@@ -46,7 +46,6 @@ def setupStage(self):
         texture=PATH+'../Assets/Preview_Forest.jpg',
         shadow="R",
         useShaders={
-            'calcNorm': 0,
             'args':{'translucent':1,'NMmipBias':0.1},
             'normal':'Clothes', 'shadowDynamic':1})
     self.cloth = self.vertObjects[-1]
