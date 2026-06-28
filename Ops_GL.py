@@ -1322,7 +1322,7 @@ class CLDraw:
         s['sm_baked'] = t
         s['sm_baked_size'] = tex.shape[0]
 
-    def addShadowMap(self, i, size, scale, ambLight=None, gi=None):
+    def addShadowMap(self, i, size, scale, ambLight=None):
         c = ctx.texture((size,size), 1, dtype='f4')
         d = ctx.depth_texture((size,size))
         s = {}
