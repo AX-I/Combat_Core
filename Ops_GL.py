@@ -258,6 +258,7 @@ class CLDraw:
                 self.setupBlur()
                 self.setupSSAO()
                 self.setupDoF()
+                self.waveWritten = {}
             except moderngl.Error as e:
                 print(e)
                 input('Try again: ')

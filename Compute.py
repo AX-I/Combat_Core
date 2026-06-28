@@ -153,11 +153,6 @@ class ThreeDBackend:
         self.shadowCams = []
         self.ambLight = 0.2
 
-        self.drawAxes = True
-        self.axPoints = np.array([[0,0,0],[1,0,0],[0,1,0],[0,0,1]],
-                                 dtype="float")*0.25
-        self.baseAxPoints = np.array(self.axPoints)
-
         self.maxFPS = 66
 
         self.VRMode = False
@@ -280,7 +275,7 @@ class ThreeDBackend:
             tex = self.texAlphas[mat['alpha']]
             self.draw.addTexAlpha(
                 tex, name=mat['alpha'],
-                mipLvl=mat['alphaMip'] if 'alphaMip' in mat else 8)
+                mipLvl=mat.get('alphaMip', 8))
 
         del self.texAlphas
 
