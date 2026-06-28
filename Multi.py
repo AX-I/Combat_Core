@@ -1360,6 +1360,19 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         try: self.draw.applyLens(self.draw.lensTn)
         except AttributeError: pass
 
+        for i in range(len(self.blackHoles)):
+            b = self.blackHoles[i]
+            if "dstrength" in b and b["dstrength"] > 0:
+                tr = (b["lastPos"] - self.pos) @ self.vMat.T
+                if tr[0] < 0: continue
+                sc = (self.scale * self.H//2) / tr[0]
+                bx = -tr[1] * sc + self.W//2
+                by = tr[2] * sc + self.H//2
+                portal = 0.3 * sc
+                strength = (self.H / 400) * 300 * b["dstrength"] / tr[0]
+                self.draw.distort(bx/self.W, by/self.H, tr[0],
+                                  portal, strength)
+
         if self.frameNum > 1:
             if self.doMB:
                 self.draw.motionBlur(self.oldVPos, self.oldVMat)
@@ -1381,18 +1394,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.oldVMat = np.array(self.vMat)
         self.oldVPos = np.array(self.tempPos)
 
-        for i in range(len(self.blackHoles)):
-            b = self.blackHoles[i]
-            if "dstrength" in b and b["dstrength"] > 0:
-                tr = (b["lastPos"] - self.pos) @ self.vMat.T
-                if tr[0] < 0: continue
-                sc = (self.scale * self.H//2) / tr[0]
-                bx = -tr[1] * sc + self.W//2
-                by = tr[2] * sc + self.H//2
-                portal = 0.3 * sc
-                strength = (self.H / 400) * 300 * b["dstrength"] / tr[0]
-                self.draw.distort(bx/self.W, by/self.H, tr[0],
-                                  portal, strength)
 
         self.draw.gamma(self.exposure, self.tonemap, self.blackPoint, self.useFxaa)
 
