@@ -73,7 +73,6 @@ drawSh2 = makeProgram("drawtexcolsmshp2.c")
 drawMip = makeProgram("drawtexmipsh.c")
 drawA = makeProgram("drawtexcolsmpalpha.c")
 drawEm = makeProgram("drawemissive.c")
-##drawPh = makeProgram("drawphong.c")
 
 drawFog = makeProgram("drawfog.c")
 
@@ -600,16 +599,6 @@ class CLDraw:
                     *currTexArgs,
                     *endArgs,
                     g_times_l=True)
-            elif "phong" in shaders[tn]:
-                assert False
-                drawPh.drawSmall(*baseArgs,
-                    self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                    self.VIEWPOS, self.VIEWMAT,
-                    self.LInt, self.LDir,
-                    *currTexArgs,
-                    *smArgs,
-                    *endArgs,
-                    g_times_l=True)
             else:
                 drawSh2.drawSmall(*baseArgs,
                     self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
@@ -699,16 +688,6 @@ class CLDraw:
                          np.float32(shaders[tn]['args']['emPow']),
                          self.UV[tn],
                          *currTexArgs,
-                         self.W, self.H,
-                         g_times_l=True)
-            elif "phong" in shaders[tn]:
-                assert False
-                drawPh.draw(*baseArgs,
-                         self.UV[tn], self.LI[tn], self.VN[tn], self.XYZ[tn],
-                         self.VIEWPOS, self.VIEWMAT,
-                         self.LInt, self.LDir,
-                         *currTexArgs,
-                         *smArgs,
                          self.W, self.H,
                          g_times_l=True)
             else:
