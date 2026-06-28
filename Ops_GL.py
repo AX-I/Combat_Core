@@ -612,7 +612,7 @@ class CLDraw:
         self.dProg['x'].write(np.float32(x))
         self.dProg['y'].write(np.float32(y))
         self.dProg['z'].write(np.float32(z))
-        self.dProg['portal'].write(np.float32(p))
+        self.dProg['portal'].write(np.float32(p * self.IRES))
         self.dProg['strength'].write(np.float32(st))
         self.dProg['tex1'] = 0
         self.dProg['texd'] = 1
