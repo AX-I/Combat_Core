@@ -6,7 +6,6 @@ av_draw_mip.c drawtexmipsh.c
 av_draw_alpha.c drawtexcolsmpalpha.c
 av_SSR.c drawtexcolsmshplerp_SSR_water.c
 av_draw_sky.c drawskylerp.c
-av_draw_phong.c drawphong.c
 
 av_emissive.c drawemissive.c
 av_add.c drawadd.c
