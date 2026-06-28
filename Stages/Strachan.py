@@ -233,6 +233,10 @@ def setupStage(self):
     self.trackTime = -1
     self.pillarTrackTime = -1
 
+    # restore materials after dissolve in
+    self.platMats = {i:dict(self.matShaders[i]) for i in self.platTexn}
+    self.platFullyAppeared = False
+
 def setupPostprocess(self):
     # Sun glare
     self.addVertObject(
@@ -287,10 +291,6 @@ def showPlatforms(self):
         self.stagePlatformPS.append(ps)
 
     self.showPlatforms = time.time()
-
-    # restore materials after dissolve in
-    self.platMats = {i:dict(self.matShaders[i]) for i in self.platTexn}
-    self.platFullyAppeared = False
 
 def toggleLights(self):
     self.matShaders[self.chandelierMat].update(shader='emissive', args={'emPow':0.1})
