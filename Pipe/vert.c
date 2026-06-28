@@ -2,9 +2,7 @@
 
 __kernel void transform(__global float3 *XYZ,
                         __global float3 *VN,
-                        __constant float3 *OldR,
                         __constant float3 *RR,
-                        __constant float *O,
                         const int lStart, const int lEnd) {
     // Block index
     int ix = get_global_id(0);
@@ -13,17 +11,12 @@ __kernel void transform(__global float3 *XYZ,
      float3 p = XYZ[ix+lStart];
      float3 n = VN[ix+lStart];
 
-     float3 origin = (float3)(O[0], O[1], O[2]);
-     p -= origin;
-     float3 q = (float3)(dot(p, OldR[0]), dot(p, OldR[1]), dot(p, OldR[2]));
-     float3 r = (float3)(dot(q, RR[0]), dot(q, RR[1]), dot(q, RR[2]));
-     r += origin;
+     float3 q = (float3)(dot(p, RR[0]), dot(p, RR[1]), dot(p, RR[2]));
 
-     float3 m = (float3)(dot(n, OldR[0]), dot(n, OldR[1]), dot(n, OldR[2]));
-     float3 l = (float3)(dot(m, RR[0]), dot(m, RR[1]), dot(m, RR[2]));
+     float3 m = (float3)(dot(n, RR[0]), dot(n, RR[1]), dot(n, RR[2]));
 
-     XYZ[ix+lStart] = r;
-     VN[ix+lStart] = l;
+     XYZ[ix+lStart] = q;
+     VN[ix+lStart] = m;
     }
 }
 __kernel void Ttranslate(__global float3 *XYZ,
@@ -36,10 +29,12 @@ __kernel void Ttranslate(__global float3 *XYZ,
     }
 }
 
-__kernel void Tscale(__global float3 *XYZ, __constant float *O, const float scale,
+__kernel void Tscale(__global float3 *XYZ,
+                     const float ox, const float oy, const float oz,
+                     const float scale,
                         const int lStart, const int lEnd) {
     int ix = get_global_id(0);
-    float3 origin = (float3)(O[0], O[1], O[2]);
+    float3 origin = (float3)(ox, oy, oz);
     if (ix < (lEnd-lStart)) {
      float3 p = XYZ[ix+lStart] - origin;
      XYZ[ix+lStart] = scale * p + origin;
