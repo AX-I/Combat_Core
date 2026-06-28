@@ -915,7 +915,7 @@ class CLDraw:
                            sm["dim"], sm["dim"],
                            np.int32(t), np.int32(s*t), g_times_l=True)
 
-    def addShadowMap(self, i, size, scale, ambLight=None, useGI=False):
+    def addShadowMap(self, i, size, scale, ambLight=None):
         a = np.full((size, size), 256*256-1, dtype="float32")
         b = np.ones((3, 4), dtype="float32")
         s = {}
@@ -931,12 +931,6 @@ class CLDraw:
 
         if ambLight is not None:
             self.ambLight = np.float32(ambLight)
-
-        if useGI:
-            s["normbuf"] = cl.Buffer(ctx, mf.WRITE_ONLY, size=a.nbytes*4)
-            s["Ro"] = cl.Buffer(ctx, mf.WRITE_ONLY, size=a.nbytes//2)
-            s["Go"] = cl.Buffer(ctx, mf.WRITE_ONLY, size=a.nbytes//2)
-            s["Bo"] = cl.Buffer(ctx, mf.WRITE_ONLY, size=a.nbytes//2)
 
         self.SHADOWMAP[i] = s
 
@@ -1016,81 +1010,6 @@ class CLDraw:
         self.LDir = makeRBuf(d.nbytes)
         cl.enqueue_copy(cq, self.LInt, i)
         cl.enqueue_copy(cq, self.LDir, d)
-
-    def drawDirectional(self, i, whichCast, useAlpha=[1], shBias=np.float32(0.1)):
-        tsn = []
-        gsn = []
-        sm = self.SHADOWMAP[i]
-        for tn in range(len(self.gSize)):
-            if whichCast[tn]:
-                tsn.append(tn)
-                gs = np.int32(int(self.gSize[tn] / 3 / BLOCK_SIZE)+1)
-                gsn.append(gs)
-                trisetupOrtho.setup(cq, (gs, 1), (BLOCK_SIZE, 1),
-                               self.XYZ[tn], self.TI[tn], self.TN[tn],
-                               self.SP[tn], self.ZZ[tn],
-                               sm["pos"], sm["vec"],
-                               shBias,
-                               sm["scale"],
-                               sm["dim"], sm["dim"],
-                               self.caX, self.caY, np.int32(self.gSize[tn]//3),
-                               g_times_l=True)
-
-        for i in range(len(tsn)):
-            gs = gsn[i]
-            tn = tsn[i]
-            gather.setup(cq, (gs, 1), (BLOCK_SIZE, 1),
-                         self.TI[tn], self.TN[tn],
-                         self.TO[tn], self.AL, np.int32(tn),
-                         gs, g_times_l=True)
-
-        newSize = np.zeros((self.LT,), dtype="int32")
-        cl.enqueue_copy(cq, newSize, self.AL, is_blocking=True)
-        nsn = newSize // BLOCK_SIZE + 1
-
-        for i in range(len(tsn)):
-            tn = tsn[i]
-            ns = nsn[tn]
-            if newSize[tn] > 0:
-                if not useAlpha[tn]:
-                    drawNorm.draw(cq, (ns, 1), (BLOCK_SIZE, 1),
-                             self.TO[tn],
-                             sm["Ro"], sm["Go"], sm["Bo"],
-                             sm["normbuf"],
-                             sm["map"], self.SP[tn], self.ZZ[tn],
-                             self.UV[tn], self.VN[tn],
-                             self.TR[tn], self.TG[tn], self.TB[tn],
-                             sm["dim"], sm["dim"], np.int32(newSize[tn]),
-                             self.texSize[tn], g_times_l=True)
-                else:
-                    drawNormA.draw(cq, (ns, 1), (BLOCK_SIZE, 1),
-                             self.TO[tn],
-                             sm["Ro"], sm["Go"], sm["Bo"],
-                             sm["normbuf"],
-                             sm["map"], self.SP[tn], self.ZZ[tn],
-                             self.UV[tn], self.VN[tn],
-                             self.TR[tn], self.TG[tn], self.TB[tn],
-                             self.TA[1],#self.TA[useAlpha[tn] - 1],
-                             sm["dim"], sm["dim"], np.int32(newSize[tn]),
-                             self.texSize[tn], g_times_l=True)
-
-    def getGIM(self, i):
-        sm = self.SHADOWMAP[i]
-        size = sm["dim"]
-        hr = np.zeros((size,size), dtype="uint16")
-        hg = np.zeros((size,size), dtype="uint16")
-        hb = np.zeros((size,size), dtype="uint16")
-        hz = np.zeros((size,size), dtype="float32")
-        hn = np.zeros((size,size,4), dtype="float32")
-        cq.flush()
-        cl.enqueue_copy(cq, hr, sm["Ro"])
-        cl.enqueue_copy(cq, hg, sm["Go"])
-        cl.enqueue_copy(cq, hb, sm["Bo"])
-        cl.enqueue_copy(cq, hz, sm["map"])
-        cl.enqueue_copy(cq, hn, sm["normbuf"])
-
-        out = [np.stack((hr,hg,hb),axis=2), hz, hn]
-        return out
 
     def getSHM(self, i):
         sm = self.SHADOWMAP[i]

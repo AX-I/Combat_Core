@@ -470,9 +470,8 @@ class ThreeDBackend:
     def setupShadowCams(self):
         for i in range(len(self.shadowCams)):
             s = self.shadowCams[i]
-            g = "gi" in s
             self.draw.addShadowMap(i, s["size"], s["scale"],
-                                   self.ambLight, g)
+                                   self.ambLight)
 
     def updateShadowCam(self, i, **kwargs):
         s = self.shadowCams[i]
