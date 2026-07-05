@@ -198,12 +198,14 @@ class CLDraw:
 
         self.stTime = time.time()
 
-        self.shaderParams = {'{REFL_LENGTH}':str(self.H),
-                             '{REFL_STEP}':'2',
-                             '#define SCR_SHADOW':'',
-                             '{DOF_2P2}':'2',
-                             '{DOF_P2}':'4',
-                             '{DOF_SAMPLES}':'16'}
+        self.shaderParams = {
+            '{REFL_LENGTH}':str(self.H),
+            '{REFL_STEP}':'2',
+            '#define SCR_SHADOW':'',
+            '{DOF_2P2}':'2',
+            '{DOF_P2}':'4',
+            '{DOF_SAMPLES}':'16'
+        }
 
         self.batchCache = {}
         self.TINFO = TransformInfo()
@@ -368,12 +370,6 @@ class CLDraw:
             self.DRAWZ[tn][1]['bOrigin'].write(self.BO[tn].tobytes())
         except KeyError:
             pass
-
-    def invbt(self, b, tt=-1):
-        for i in range(b.shape[0]//4):
-            b[4*i:4*i+3,:3] = np.transpose(b[4*i:4*i+3,:3])
-            b[4*i+3] *= tt
-        return b
 
     def setupLights(self):
         self.primaryLight = np.zeros((2,4), 'float32')
