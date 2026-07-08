@@ -16,9 +16,9 @@ __kernel void wave(__global float3 *XYZ,
     if (ix < lenP) {
      float3 origin = (float3)(ox, oy, oz);
      float3 coords = XYZ[ix];
-     coords -= origin;
-     coords /= pScale;
      float2 wxz = (float2)(coords.x, coords.z);
+     wxz -= origin.xz;
+     wxz /= pScale;
      float2 wdr = (float2)(wDirx, wDirz);
      float2 wdr2 = (float2)(wDirx2, wDirz2);
 
@@ -46,6 +46,7 @@ __kernel void wave(__global float3 *XYZ,
 
      p *= pScale;
      p += origin;
+     p.y += (oy == 0) ? coords.y : 0;
 
      //printf("coords x %f z %f \n dist %f \n final %f %f %f \n",
      //        coords.x, coords.z, dist, p.x, p.y, p.z);
