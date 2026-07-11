@@ -11,7 +11,7 @@ uint rand_xorshift(uint rng_state) {
     return rng_state;
 }
 
-__kernel void ao(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
+__kernel void ao(__global ushort3 *Ro,
 			     __global float *F, const float sScale,
 			     __constant float *R,
                  const int wF, const int hF, const int BS) {
@@ -102,11 +102,8 @@ __kernel void ao(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
 
 	ao = clamp(ao*1.25f, 0.f, 1.f);
 
-	/*Ro[wF * cy + cx] = (1-ao) * 8192;
-	Go[wF * cy + cx] = (1-ao) * 8192;
-	Bo[wF * cy + cx] = (1-ao) * 8192;*/
-	Ro[wF * cy + cx] = (1-ao) * Ro[wF * cy + cx];
-	Go[wF * cy + cx] = (1-ao) * Go[wF * cy + cx];
-	Bo[wF * cy + cx] = (1-ao) * Bo[wF * cy + cx];
+	//Ro[wF * cy + cx] = (1-ao) * 8192;
+	Ro[wF * cy + cx] = convert_ushort3(
+    (1-ao) * convert_float3(Ro[wF * cy + cx]));
 
 }

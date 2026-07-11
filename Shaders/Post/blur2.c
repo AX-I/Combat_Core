@@ -1,6 +1,6 @@
-__kernel void blurV(__global ushort *Ro, __global ushort *Go, __global ushort *Bo,
-                    __global ushort *Rt, __global ushort *Gt, __global ushort *Bt,
-                    __global ushort *r2, __global ushort *g2, __global ushort *b2,
+__kernel void blurV(__global ushort3 *Ro,
+                    __global ushort3 *Rt,
+                    __global ushort3 *r2,
                     int wF, int hF, const int BS,
                     int stepW, float stepH) {
 
@@ -22,30 +22,28 @@ __kernel void blurV(__global ushort *Ro, __global ushort *Go, __global ushort *B
     for (int cy = h1; cy < min(h2, hF-1); cy++) {
         for (int cx = ci; cx < wF; cx += stepW) {
             float3 a = (float3)0;
-              a = (cy<=8) ? a : a + 0.00816f*(float3)(Ro[wF * (cy-9) + cx], Go[wF * (cy-9) + cx], Bo[wF * (cy-9) + cx]);
-              a = (cy<=7) ? a : a + 0.01384f*(float3)(Ro[wF * (cy-8) + cx], Go[wF * (cy-8) + cx], Bo[wF * (cy-8) + cx]);
-              a = (cy<=6) ? a : a + 0.02207f*(float3)(Ro[wF * (cy-7) + cx], Go[wF * (cy-7) + cx], Bo[wF * (cy-7) + cx]);
-              a = (cy<=5) ? a : a + 0.03306f*(float3)(Ro[wF * (cy-6) + cx], Go[wF * (cy-6) + cx], Bo[wF * (cy-6) + cx]);
-              a = (cy<=4) ? a : a + 0.04654f*(float3)(Ro[wF * (cy-5) + cx], Go[wF * (cy-5) + cx], Bo[wF * (cy-5) + cx]);
-              a = (cy<=3) ? a : a + 0.06157f*(float3)(Ro[wF * (cy-4) + cx], Go[wF * (cy-4) + cx], Bo[wF * (cy-4) + cx]);
-              a = (cy<=2) ? a : a + 0.07654f*(float3)(Ro[wF * (cy-3) + cx], Go[wF * (cy-3) + cx], Bo[wF * (cy-3) + cx]);
-              a = (cy<=1) ? a : a + 0.08941f*(float3)(Ro[wF * (cy-2) + cx], Go[wF * (cy-2) + cx], Bo[wF * (cy-2) + cx]);
-              a = (cy<=0) ? a : a + 0.09815f*(float3)(Ro[wF * (cy-1) + cx], Go[wF * (cy-1) + cx], Bo[wF * (cy-1) + cx]);
-              a += 0.10125f*(float3)(Ro[wF * cy + cx], Go[wF * cy + cx], Bo[wF * cy + cx]);
-              a = (cy>=(wF-1)) ? a : a + 0.09815f*(float3)(Ro[wF * (cy+1) + cx], Go[wF * (cy+1) + cx], Bo[wF * (cy+1) + cx]);
-              a = (cy>=(wF-2)) ? a : a + 0.08941f*(float3)(Ro[wF * (cy+2) + cx], Go[wF * (cy+2) + cx], Bo[wF * (cy+2) + cx]);
-              a = (cy>=(wF-3)) ? a : a + 0.07654f*(float3)(Ro[wF * (cy+3) + cx], Go[wF * (cy+3) + cx], Bo[wF * (cy+3) + cx]);
-              a = (cy>=(wF-4)) ? a : a + 0.06157f*(float3)(Ro[wF * (cy+4) + cx], Go[wF * (cy+4) + cx], Bo[wF * (cy+4) + cx]);
-              a = (cy>=(wF-5)) ? a : a + 0.04654f*(float3)(Ro[wF * (cy+5) + cx], Go[wF * (cy+5) + cx], Bo[wF * (cy+5) + cx]);
-              a = (cy>=(wF-6)) ? a : a + 0.03306f*(float3)(Ro[wF * (cy+6) + cx], Go[wF * (cy+6) + cx], Bo[wF * (cy+6) + cx]);
-              a = (cy>=(wF-7)) ? a : a + 0.02207f*(float3)(Ro[wF * (cy+7) + cx], Go[wF * (cy+7) + cx], Bo[wF * (cy+7) + cx]);
-              a = (cy>=(wF-8)) ? a : a + 0.01384f*(float3)(Ro[wF * (cy+8) + cx], Go[wF * (cy+8) + cx], Bo[wF * (cy+8) + cx]);
-              a = (cy>=(wF-9)) ? a : a + 0.00816f*(float3)(Ro[wF * (cy+9) + cx], Go[wF * (cy+9) + cx], Bo[wF * (cy+9) + cx]);
+              a = (cy<=8) ? a : a + 0.00816f*convert_float3(Ro[wF * (cy-9) + cx]);
+              a = (cy<=7) ? a : a + 0.01384f*convert_float3(Ro[wF * (cy-8) + cx]);
+              a = (cy<=6) ? a : a + 0.02207f*convert_float3(Ro[wF * (cy-7) + cx]);
+              a = (cy<=5) ? a : a + 0.03306f*convert_float3(Ro[wF * (cy-6) + cx]);
+              a = (cy<=4) ? a : a + 0.04654f*convert_float3(Ro[wF * (cy-5) + cx]);
+              a = (cy<=3) ? a : a + 0.06157f*convert_float3(Ro[wF * (cy-4) + cx]);
+              a = (cy<=2) ? a : a + 0.07654f*convert_float3(Ro[wF * (cy-3) + cx]);
+              a = (cy<=1) ? a : a + 0.08941f*convert_float3(Ro[wF * (cy-2) + cx]);
+              a = (cy<=0) ? a : a + 0.09815f*convert_float3(Ro[wF * (cy-1) + cx]);
+              a += 0.10125f*convert_float3(Ro[wF * cy + cx]);
+              a = (cy>=(wF-1)) ? a : a + 0.09815f*convert_float3(Ro[wF * (cy+1) + cx]);
+              a = (cy>=(wF-2)) ? a : a + 0.08941f*convert_float3(Ro[wF * (cy+2) + cx]);
+              a = (cy>=(wF-3)) ? a : a + 0.07654f*convert_float3(Ro[wF * (cy+3) + cx]);
+              a = (cy>=(wF-4)) ? a : a + 0.06157f*convert_float3(Ro[wF * (cy+4) + cx]);
+              a = (cy>=(wF-5)) ? a : a + 0.04654f*convert_float3(Ro[wF * (cy+5) + cx]);
+              a = (cy>=(wF-6)) ? a : a + 0.03306f*convert_float3(Ro[wF * (cy+6) + cx]);
+              a = (cy>=(wF-7)) ? a : a + 0.02207f*convert_float3(Ro[wF * (cy+7) + cx]);
+              a = (cy>=(wF-8)) ? a : a + 0.01384f*convert_float3(Ro[wF * (cy+8) + cx]);
+              a = (cy>=(wF-9)) ? a : a + 0.00816f*convert_float3(Ro[wF * (cy+9) + cx]);
               a /= 0.9f;
 
-              Rt[wF * cy + cx] = convert_ushort_sat(a.x);
-              Gt[wF * cy + cx] = convert_ushort_sat(a.y);
-              Bt[wF * cy + cx] = convert_ushort_sat(a.z);
+              Rt[wF * cy + cx] = convert_ushort3_sat(a);
         }
     }
 
@@ -72,9 +70,13 @@ __kernel void blurV(__global ushort *Ro, __global ushort *Go, __global ushort *B
                 float texi1 = 1-texr1;
                 float texi2 = 1-texr2;
 
-          r2[wF * cy + cx] = convert_ushort_sat(r2[wF * cy + cx] + (texi1*texi2*Rt[tex] + texr1*texi2*Rt[tex10] + texi1*texr2*Rt[tex01] + texr1*texr2*Rt[tex11]));
-          g2[wF * cy + cx] = convert_ushort_sat(g2[wF * cy + cx] + (texi1*texi2*Gt[tex] + texr1*texi2*Gt[tex10] + texi1*texr2*Gt[tex01] + texr1*texr2*Gt[tex11]));
-          b2[wF * cy + cx] = convert_ushort_sat(b2[wF * cy + cx] + (texi1*texi2*Bt[tex] + texr1*texi2*Bt[tex10] + texi1*texr2*Bt[tex01] + texr1*texr2*Bt[tex11]));
+          r2[wF * cy + cx] = convert_ushort3_sat(
+            convert_float3(r2[wF * cy + cx]) + (
+              texi1*texi2*convert_float3(Rt[tex]) +
+              texr1*texi2*convert_float3(Rt[tex10]) +
+              texi1*texr2*convert_float3(Rt[tex01]) +
+              texr1*texr2*convert_float3(Rt[tex11]))
+          );
         }
     }
 }

@@ -3,8 +3,8 @@
 #define fadeZ 4.f
 
 __kernel void distort(
-	__global ushort *Ro, __global ushort *Go, __global ushort *Bo, __global float *F,
-    __global ushort *R2, __global ushort *G2, __global ushort *B2,
+	__global ushort3 *Ro, __global float *F,
+    __global ushort3 *R2,
     const float x, const float y, const float z, const float portal, const float strength,
     const int wF, const int hF, const int BS,
     const int stepW, const int stepH) {
@@ -48,8 +48,6 @@ __kernel void distort(
 			int targY = max(0.f, min(hF-1.f, cy + factor * offset.y));
 
             R2[wF * cy + cx] = Ro[wF * targY + targX];
-            G2[wF * cy + cx] = Go[wF * targY + targX];
-            B2[wF * cy + cx] = Bo[wF * targY + targX];
 
         }
     }
