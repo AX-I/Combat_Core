@@ -6,7 +6,7 @@ __constant float *Vpos, __constant float3 *VV,
 
 :Vertex float2 UV
 :Vertex float3 PXYZ
-:Texture ushort TR TG TB lenT
+:Texture ushort3 TR lenT
 
 !
 
@@ -36,9 +36,9 @@ __constant float *Vpos, __constant float3 *VV,
 	float d = fast_length(pos - (vp + 4 * SVd));
     float vPow = min(0.5f, emPow / (d*d*0.6f));
 
-    Ro[wF * cy + ax] = convert_ushort_sat(Ro[wF * cy + ax] + TR[tex] * vPow);
-    Go[wF * cy + ax] = convert_ushort_sat(Go[wF * cy + ax] + TG[tex] * vPow);
-    Bo[wF * cy + ax] = convert_ushort_sat(Bo[wF * cy + ax] + TB[tex] * vPow);
+    Ro[wF * cy + ax] = convert_ushort3_sat(
+      convert_float3(Ro[wF * cy + ax]) +
+      convert_float3(TR[tex]) * vPow);
 
 }
 

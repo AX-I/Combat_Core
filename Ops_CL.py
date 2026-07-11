@@ -63,13 +63,13 @@ gather = makeProgram("gather.c", "Pipe/")
 
 coarse = makeProgram("coarse.c", "Pipe/")
 
-draw = makeProgram("drawtexcolsmp.c")
-drawSh = makeProgram("drawtexcolsmshp.c")
+#draw = makeProgram("drawtexcolsmp.c")
+#drawSh = makeProgram("drawtexcolsmshp.c")
 drawSh2 = makeProgram("drawtexcolsmshp2.c")
 drawMip = makeProgram("drawtexmipsh.c")
 drawA = makeProgram("drawtexcolsmpalpha.c")
 drawEm = makeProgram("drawemissive.c")
-drawPh = makeProgram("drawphong.c")
+#drawPh = makeProgram("drawphong.c")
 
 drawFog = makeProgram("drawfog.c")
 

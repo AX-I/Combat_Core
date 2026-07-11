@@ -4,7 +4,7 @@
 
 :Vertex float2 UV
 :Vertex float3 PXYZ
-:Texture ushort TR TG TB lT
+:Texture ushort3 TR lT
 
 const int isEqui,
 const float rotY,
@@ -47,11 +47,10 @@ if (isEqui == 1) wT = lT * 2;
 	float texi1 = 1-texr1;
 	float texi2 = 1-texr2;
 
-	Ro[wF * cy + ax] = convert_ushort(texi1*texi2*TR[tex] + texr1*texi2*TR[tex10] +
-					   texi1*texr2*TR[tex01] + texr1*texr2*TR[tex11]);
-	Go[wF * cy + ax] = convert_ushort(texi1*texi2*TG[tex] + texr1*texi2*TG[tex10] +
-					   texi1*texr2*TG[tex01] + texr1*texr2*TG[tex11]);
-	Bo[wF * cy + ax] = convert_ushort(texi1*texi2*TB[tex] + texr1*texi2*TB[tex10] +
-					   texi1*texr2*TB[tex01] + texr1*texr2*TB[tex11]);
+	Ro[wF * cy + ax] = convert_ushort3(
+    texi1*texi2*convert_float3(TR[tex]) +
+    texr1*texi2*convert_float3(TR[tex10]) +
+    texi1*texr2*convert_float3(TR[tex01]) +
+    texr1*texr2*convert_float3(TR[tex11]));
 }
 !

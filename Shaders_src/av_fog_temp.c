@@ -88,8 +88,7 @@ float maxZ = F[wF * cy + ax];
 
 	float3 dl = LInt[0];
 
-	Ro[wF * cy + ax] = light * dl.x + transmit * Ro[wF * cy + ax];
-	Go[wF * cy + ax] = light * dl.y + transmit * Go[wF * cy + ax];
-	Bo[wF * cy + ax] = light * dl.z + transmit * Bo[wF * cy + ax];
+	Ro[wF * cy + ax] = convert_ushort3(
+    light * dl + transmit * convert_float3(Ro[wF * cy + ax]));
 
 !
