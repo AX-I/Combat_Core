@@ -154,6 +154,7 @@ class CLDraw:
         self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
         self.r3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
+        self.OLD_RO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes*4)
 
         self.PC = makeRBuf(np.zeros((max_particles, 4), dtype="float32").nbytes)
         self.PO = makeRBuf(np.zeros((max_particles, 4), dtype="uint16").nbytes)
@@ -836,14 +837,16 @@ class CLDraw:
         except: self.mProg = makeProgram("Post/motion.c")
         s = 4; t = 4
         self.mProg.blur(cq, (s, s), (t, t),
-                self.RO, self.DB,
+                self.OLD_RO, self.DB,
                 self.SSRO,
                 self.VIEWPOS, self.VIEWMAT, self.sScale,
                 np.array([*oldPos, 0]).astype("float32"),
                 *align34(oldVMat).astype("float32"),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
-        
+
+        cl.enqueue_copy(cq, self.OLD_RO, self.RO)
+
         cl.enqueue_copy(cq, self.RO, self.SSRO)
 
     def gamma(self, ex, *args):
