@@ -150,21 +150,13 @@ class CLDraw:
         self.GSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
         self.BSI = cl.Buffer(ctx, mf.READ_ONLY, size=rsi.nbytes)
 
-        self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
-        self.GO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
-        self.BO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
+        self.RO = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes*4)
 
-        self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
-        self.SSGO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
-        self.SSBO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes)
+        self.SSRO = cl.Buffer(ctx, mf.READ_WRITE, size=ro.nbytes*4)
 
-        self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.g2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.b2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
+        self.r2 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
-        self.r3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.g3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
-        self.b3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes//4)
+        self.r3 = cl.Buffer(ctx, mf.WRITE_ONLY, size=ro.nbytes)
 
         self.PC = makeRBuf(np.zeros((max_particles, 4), dtype="float32").nbytes)
         self.PO = makeRBuf(np.zeros((max_particles, 4), dtype="uint16").nbytes)
@@ -191,8 +183,6 @@ class CLDraw:
         self.TOB = []
 
         self.TR = []
-        self.TG = []
-        self.TB = []
         self.TA = []
         self.texSize = []
 
@@ -211,9 +201,7 @@ class CLDraw:
         mn = np.ones((self.LT,), dtype="int32")
         self.AL = cl.Buffer(ctx, mf.READ_WRITE, size=mn.nbytes)
 
-        self.hro = np.ones((h, w), dtype="uint16")
-        self.hgo = np.ones((h, w), dtype="uint16")
-        self.hbo = np.ones((h, w), dtype="uint16")
+        self.hro = np.ones((h, w, 4), dtype="uint16")
         self.hdb = np.ones((h, w), dtype="float32")
 
         self.useCompound = []
@@ -317,9 +305,7 @@ class CLDraw:
             mip = rgb.shape[0]
             rgb = createMips(rgb).astype('uint16')[None,:]
 
-        rr = np.array(rgb[:,:,0])
-        gg = np.array(rgb[:,:,1])
-        bb = np.array(rgb[:,:,2])
+        rr = align34(rgb.reshape((-1, 3)))
 
         p = xyz.astype("float32")
         p = align34(p)
@@ -346,20 +332,16 @@ class CLDraw:
         self.TOB.append(makeRBuf(uv.nbytes//6))
 
         self.TR.append(makeRBuf(rr.nbytes))
-        self.TG.append(makeRBuf(rr.nbytes))
-        self.TB.append(makeRBuf(rr.nbytes))
 
         cl.enqueue_copy(cq, self.XYZ[-1], p, is_blocking=False)
         cl.enqueue_copy(cq, self.UV[-1], uv, is_blocking=False)
         cl.enqueue_copy(cq, self.VN[-1], n, is_blocking=False)
 
         cl.enqueue_copy(cq, self.TR[-1], rr, is_blocking=False)
-        cl.enqueue_copy(cq, self.TG[-1], gg, is_blocking=False)
-        cl.enqueue_copy(cq, self.TB[-1], bb, is_blocking=False)
         if mip:
             self.texSize.append(np.int32(np.log2(mip)))
         else:
-            self.texSize.append(np.int32(rr.shape[0]))
+            self.texSize.append(np.int32(rgb.shape[0]))
         self.gSize.append(np.int32(p.shape[0]))
         self.useCompound.append(False)
 
@@ -618,10 +600,10 @@ class CLDraw:
             baseArgs = (
                 cq, (ns, 1), (BLOCK_SIZE, 1),
                 self.TOA[tn],
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
-                self.TR[tn], self.TG[tn], self.TB[tn],
+                self.TR[tn],
                 self.texSize[tn])
             endArgs = (
                 self.W, self.H, np.int32(newSize[tn]))
@@ -695,10 +677,10 @@ class CLDraw:
             baseArgs = (
                 cq, (self.WC * self.HC, 1), (BLOCK_SIZE, 1),
                 self.IBUF, self.NBUF,
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
             currTexArgs = (
-                self.TR[tn], self.TG[tn], self.TB[tn],
+                self.TR[tn],
                 self.texSize[tn])
 
             if newSize[tn] > 0:
@@ -816,7 +798,7 @@ class CLDraw:
             baseArgs = (
                 cq, (nAfter[tn], 1), (BLOCK_SIZE, 1),
                 self.TOA[tn],
-                self.RO, self.GO, self.BO,
+                self.RO,
                 self.DB, self.SP[tn], self.ZZ[tn])
 
             if shaders[tn]['shader'] == "SSR":
@@ -849,7 +831,7 @@ class CLDraw:
         if self.doSSAO:
             s = 16
             ssao.ao(cq, (self.H//s, self.W//s), (s, s),
-                    self.RO, self.GO, self.BO,
+                    self.RO,
                     self.DB, self.sScale, self.RAND,
                     self.W, self.H, np.int32(s), g_times_l=True)
 
@@ -865,24 +847,22 @@ class CLDraw:
         except: self.dProg = makeProgram("Post/distort.c")
         s = 4; t = 4
         self.dProg.distort(cq, (s, s), (t, t),
-                self.RO, self.GO, self.BO, self.DB,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO, self.DB,
+                self.SSRO,
                 np.float32(x), np.float32(y), np.float32(z),
                 np.float32(p), np.float32(st),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
 
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def motionBlur(self, oldPos, oldVMat):
         try: _ = self.mProg
         except: self.mProg = makeProgram("Post/motion.c")
         s = 4; t = 4
         self.mProg.blur(cq, (s, s), (t, t),
-                self.RO, self.GO, self.BO, self.DB,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO, self.DB,
+                self.SSRO,
                 self.VIEWPOS, self.VIEWMAT, self.sScale,
                 np.array([*oldPos, 0]).astype("float32"),
                 *align34(oldVMat).astype("float32"),
@@ -890,12 +870,10 @@ class CLDraw:
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
         
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def gamma(self, ex, *args):
         s = 4; t = 4
-        gamma.g(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
+        gamma.g(cq, (s, s), (t, t), self.RO,
                 np.float32(ex),
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
@@ -911,27 +889,25 @@ class CLDraw:
     def dof(self, focus, aperture=None):
         s = 16
         dof.dof(cq, (self.H//s, self.W//s), (s, s),
-                self.RO, self.GO, self.BO,
-                self.SSRO, self.SSGO, self.SSBO,
+                self.RO,
+                self.SSRO,
                 self.DB, np.float32(focus),
                 self.W, self.H, np.int32(s), g_times_l=True)
         cl.enqueue_copy(cq, self.RO, self.SSRO)
-        cl.enqueue_copy(cq, self.GO, self.SSGO)
-        cl.enqueue_copy(cq, self.BO, self.SSBO)
 
     def applyDoF(self):
         pass
 
     def blur(self, ex):
         s = 4; t = 4
-        e = blur1.blurH(cq, (s, s), (t, t), self.RO, self.GO, self.BO,
-                    self.r2, self.g2, self.b2,
-                    self.r3, self.g3, self.b3,
+        e = blur1.blurH(cq, (s, s), (t, t), self.RO,
+                    self.r2,
+                    self.r3,
                     self.W, self.H, np.int32(t), np.int32(s*t),
                     np.float32(np.ceil(self.H/(s*t))), g_times_l=True)
-        blur2.blurV(cq, (s, s), (t, t), self.r2, self.g2, self.b2,
-                    self.r3, self.g3, self.b3,
-                    self.RO, self.GO, self.BO,
+        blur2.blurV(cq, (s, s), (t, t), self.r2,
+                    self.r3,
+                    self.RO,
                     self.W, self.H, np.int32(t), np.int32(s*t),
                     np.float32(np.ceil(self.H/(s*t))), g_times_l=True,
                     wait_for=[e])
@@ -1128,10 +1104,8 @@ class CLDraw:
 
     def getFrame(self):
         cl.enqueue_copy(cq, self.hro, self.RO, is_blocking=False)
-        cl.enqueue_copy(cq, self.hgo, self.GO, is_blocking=False)
-        cl.enqueue_copy(cq, self.hbo, self.BO, is_blocking=False)
 
-        return np.stack((self.hro, self.hgo, self.hbo), axis=2)
+        return self.hro[:,:,:3]
 
     def getDB(self):
         cl.enqueue_copy(cq, self.hdb, self.DB)
