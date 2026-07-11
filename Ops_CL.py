@@ -830,7 +830,9 @@ class CLDraw:
                 self.W, self.H, np.int32(t), np.int32(s*t),
                 np.int32(np.ceil(self.H/(s*t))), g_times_l=True)
 
-        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        tmp = self.SSRO
+        self.SSRO = self.RO
+        self.RO = tmp
 
     def motionBlur(self, oldPos, oldVMat):
         try: _ = self.mProg
@@ -847,7 +849,9 @@ class CLDraw:
 
         cl.enqueue_copy(cq, self.OLD_RO, self.RO)
 
-        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        tmp = self.SSRO
+        self.SSRO = self.RO
+        self.RO = tmp
 
     def gamma(self, ex, *args):
         s = 4; t = 4
@@ -871,7 +875,9 @@ class CLDraw:
                 self.SSRO,
                 self.DB, np.float32(focus),
                 self.W, self.H, np.int32(s), g_times_l=True)
-        cl.enqueue_copy(cq, self.RO, self.SSRO)
+        tmp = self.SSRO
+        self.SSRO = self.RO
+        self.RO = tmp
 
     def applyDoF(self):
         pass
