@@ -30,7 +30,7 @@ PLATFORM = sys.platform
 
 import traceback
 
-from PIL import Image, ImageTk, ImageDraw, ImageFont, PngImagePlugin
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 from Menu import CombatMenu
 
@@ -73,7 +73,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
     def __init__(self, pipe, eq, infQ,
                  width, height,
                  mouseSensitivity=20,
-                 downSample=1, record=False):
+                 downSample=1):
 
         self.P = pipe
         self.evtQ = eq
@@ -107,7 +107,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.timfps = np.zeros(6)
         self.numfps = 0
 
-        self.xyselect = np.array((0,0))
         self._textImg = Image.new("RGB", (1,1))
         self.textSize = ImageDraw.Draw(self._textImg)
         self.UItexts = {}
@@ -119,8 +118,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         except: pass
         
         self.activeFS = True
-
-        self.recVideo = False
         
         self.frameKeys = {}
 
@@ -181,9 +178,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.timeStart = time.time()
         self.totTime = 0
         self.frameNum = 0
-
-        self.recVideo = bool(self.lSet["Record"])
-        self.recVideo = False
 
         if PLATFORM == "win32":
             self.DC = win32gui.GetDC(self.d.winfo_id())
@@ -429,24 +423,19 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
                          quality=91, subsampling='4:4:4')
 
     def sendKey(self, key):
-        try: self.evtQ.put_nowait(("eventk", key))
+        try: self.evtQ.put_nowait(("eventK", key))
         except Full: self.full += 1
     def sendRot(self, r1, r2):
-        try: self.evtQ.put_nowait(("event", r1, r2))
-        except Full: self.full += 1
-    def sendPan(self, r):
-        try: self.evtQ.put_nowait(("eventp", r))
+        try: self.evtQ.put_nowait(("eventR", r1, r2))
         except Full: self.full += 1
 
     def render(self, data):
         self.frameKeys = {}
 
-        rgb = data[0]
-        ax = data[1]
-        select = data[2]
-        self.pos, self.vv = data[3]
-        try: uInfo = data[4]
-        except IndexError: uInfo = None
+        rgb = data['rgb']
+        self.pos, self.vv = data['camData']
+        try: uInfo = data['uInfo']
+        except KeyError: uInfo = None
         
         fr = rgb
         
@@ -546,9 +535,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             self.drawTextNP(fr, "Zoom", (0,0,0), self.cFont,
                           (self.H2-45, self.W2-55), blur=0)
 
-        if self.recVideo:
-            self.VIDOUT.write(fr.astype("uint8")[:,:,::-1])
-
         self._render(fr)
 
     def _render(self, fr, dibfmt=False):
@@ -590,19 +576,8 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         fr[y1:y2, x1:x2] = fr[y1:y2, x1:x2] * (1-opacity)
 
     
-    def drawSelect(self, e):
-        self.xyselect = np.array((e.x, e.y))
-        try: self.evtQ.put_nowait(("select", (0, self.xyselect)))
-        except Full: pass
-
-    def sendSelect(self, e):
-        self.xyselect = np.array((e.x, e.y))
-        try: self.evtQ.put_nowait(("select", (1, self.xyselect)))
-        except Full: pass
     
     def finish(self):
-        if self.recVideo:
-            self.VIDOUT.release()
         try:
             while not self.P.empty():
                 self.P.get(True, 0.5)

@@ -126,13 +126,7 @@ class ThreeDBackend:
 
         self.matShaders = {}
 
-        self.skyTex = None
-        self.skyHemiLight = [0.1,0.2,0.4]
-
-        self.useOpSM = False
-
         self.uInfo = None
-        self.recVideo = False
 
         self.particleSystems = []
 
@@ -140,10 +134,7 @@ class ThreeDBackend:
         self.H2 = int(self.H/2)
 
         self.pos = np.array([0., 0., 0.])
-        self.vc = self.viewCoords()
 
-        self.camSpeed = 0.3
-        self.speed = np.array([0., 0., 0.])
         self.svert = 0
         self.shorz = 0
         self.mouseSensitivity = 20
@@ -161,18 +152,14 @@ class ThreeDBackend:
 
         self.VRMode = False
 
-        self.selecting = False
-        self.genNewBones = False
-
         if not os.path.isdir(PATH + "Screenshots"):
             os.mkdir(PATH + "Screenshots")
 
-        self.record = record
         self.batchKB = None
 
         bargs = (self.recP, self.evtQ, self.infQ,
                  self.W, self.H, self.mouseSensitivity,
-                 self.downSample, self.recVideo)
+                 self.downSample)
         self.frontend = mp.Process(target=VS.runGUI, args=bargs, name="UI")
 
         self.frontend.start()
@@ -184,12 +171,6 @@ class ThreeDBackend:
             return self.texLoadManager.loadTex(len(self.vtextures),
                                                tex, cgamma, texMul)
         return getTexture(tex, cgamma, texMul, raw=raw)
-
-    def enableDOF(self, dofR=24, rad=0.2, di=4):
-        pass
-
-    def dofScreenshot(self):
-        pass
 
     def setFOV(self, fovx, scale=None):
         if fovx is not None:
@@ -283,11 +264,6 @@ class ThreeDBackend:
 
         del self.texAlphas
 
-        if self.genNewBones:
-            self.vertBones = []
-            for i in self.vertLight:
-                self.vertBones.append(np.zeros((i.shape[0], 3), dtype="int"))
-
         for i in range(len(self.vertBones)):
             if 'genBone' in self.matShaders[i]:
                 self.vertBones[i] = np.ones((self.vertLight[i].shape[0], 3),
@@ -362,12 +338,11 @@ class ThreeDBackend:
 
     def startRender(self):
 
-        self.vc = self.viewCoords()
         if not self.VRMode:
             self.vMat = np.stack((self.vv,self.vVhorz(),self.vVvert()))
 
         if self.frameNum > 0:
-            self.draw.setPos(self.vc)
+            self.draw.setPos(self.pos)
             self.draw.setVM(self.vMat)
 
         self.draw.clearZBuffer()
@@ -377,7 +352,6 @@ class ThreeDBackend:
             self.matShaders,
             mask=self.renderMask,
             shadowIds=s,
-            useOpacitySM=self.useOpSM,
             stage=self.stage)
 
         cc = []
@@ -413,7 +387,8 @@ class ThreeDBackend:
         if self.VRMode:
             self.submitVR()
 
-        return [self.rgb, None, self.selecting, (self.pos, self.vv), self.uInfo]
+        return {'rgb':self.rgb, 'camData': (self.pos, self.vv),
+                'uInfo':self.uInfo}
 
     def submitVR(self):
         if self.GL:
@@ -490,9 +465,6 @@ class ThreeDBackend:
         self.draw.clearShadowMap(i)
         self.draw.shadowMap(i, castObjs, self.matShaders, bias)
 
-    def viewCoords(self):
-        return self.pos
-
     def viewVec(self):
         v = np.array([sin(self.α) * cos(self.β),
                       -sin(self.β),
@@ -509,7 +481,7 @@ class ThreeDBackend:
         v = np.array([sin(a2), 0, cos(a2)])
         return -v
 
-    def doEvent(self, action):
+    def rotateView(self, action):
         self.α += action[1]
         self.β += action[2]
 
@@ -520,14 +492,6 @@ class ThreeDBackend:
         elif key == "l": self.shorz = -1
         elif key == "ZV": self.svert = 0
         elif key == "ZH": self.shorz = 0
-
-    def pan(self, d):
-        dx = d[0]
-        dy = d[1]
-        self.pos += np.array([
-            -(dx * cos(self.α) - dy * sin(self.β) * sin(self.α)),
-            dy * cos(self.β),
-            dx * sin(self.α) + dy * sin(self.β) * cos(self.α)])
 
     @profile(stdout=profileRenderTxt, filename='profile/render.pstats')
     def renderMethod(self):
@@ -541,7 +505,7 @@ class ThreeDBackend:
         self.frameUpdate()
 
         r = self.finishRender()
-        data = ("render", np.array(r, dtype="object"))
+        data = ("render", r)
         try:
             self.P.put_nowait(data)
         except Full:
@@ -549,7 +513,6 @@ class ThreeDBackend:
 
     def runBackend(self):
         self.doQuit = False
-        self.pendingShader = True
         frontReady = False
 
         print("waiting for frontend", end="")
@@ -602,9 +565,9 @@ class ThreeDBackend:
 
         if action is None:
             self.doQuit = True
-        elif action[0] == "event":
-            self.doEvent(action)
-        elif action[0] == "eventk":
+        elif action[0] == "eventR":
+            self.rotateView(action)
+        elif action[0] == "eventK":
             self.moveKey(action[1])
         elif action in self.handles:
             self.handles[action]()
