@@ -254,8 +254,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.bindKey("c", lambda: self.fireAnim("red"))
         self.bindKey("v", lambda: self.fireAnim("black"))
 
-        self.enableDOF(dofR=16, rad=0.04)
-
         self.gestures = []
         p = PATH + "../Poses/"
         for g in ["Armcross.pose", "Bow.pose", "Hi.pose", "Hold.pose"]:

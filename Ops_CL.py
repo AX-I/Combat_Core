@@ -497,7 +497,7 @@ class CLDraw:
 
     def drawAll(self, shaders,
                 mask=None, shadowIds=[0,1],
-                useOpacitySM=False, stage=None):
+                stage=None):
 
         # Shaders are alpha shadow mip refl sky ortho cull etc.
 
