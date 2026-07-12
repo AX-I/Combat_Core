@@ -47,9 +47,13 @@ DO_PROFILE = False
 if DO_PROFILE and (thisprocess == 'MainProcess'):
     print('\033[46m Profiling! \033[0m')
     from profilehooks import profile
+    profileStartTxt = open('profile/start.txt', 'w')
+    profileRenderTxt = open('profile/render.txt', 'w')
 else:
     def profile(**kwargs):
         return lambda f: f
+    profileStartTxt = None
+    profileRenderTxt = None
 
 if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
@@ -212,7 +216,7 @@ class ThreeDBackend:
         self.H2 = h//2
         self.setFOV(self.fovX, self.scale)
 
-    @profile(stdout=open('profile/start.txt', 'w'), filename='profile/start.pstats')
+    @profile(stdout=profileStartTxt, filename='profile/start.pstats')
     def start(self):
         self.loadStart = time.time()
 
@@ -531,7 +535,7 @@ class ThreeDBackend:
             dy * cos(self.β),
             dx * sin(self.α) + dy * sin(self.β) * cos(self.α)])
 
-    @profile(stdout=open('profile/render.txt', 'w'), filename='profile/render.pstats')
+    @profile(stdout=profileRenderTxt, filename='profile/render.pstats')
     def renderMethod(self):
         self.startRender()
 

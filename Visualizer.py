@@ -66,7 +66,7 @@ if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 from ImgUtils import NPCanvas
-from profilehooks import profile
+#from profilehooks import profile
 
 
 class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
