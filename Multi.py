@@ -382,9 +382,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def tgGrab(self):
         a = self.players[self.selchar]
-        a['grab'] = not a['grab']
-        if a['grab']:
-            a['grabSphere'] = -1
+        if a['grab'] > 0:
+            a['grab'] = -time.time()
+            return
+
+        a['grab'] = time.time()
+        a['grabSphere'] = -1
 
     # ==== Temple interactivity ====
     def lightTest(self):
@@ -948,7 +951,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'throwAnim':False, 'animFired':False,
              'poseThrow':0, 'poseIdle':0,
              'vh':0,
-             'grab':False}
+             'grab':0}
 
         self.NPLAYERS += 1
         self.players.append(a)

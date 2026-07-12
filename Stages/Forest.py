@@ -321,11 +321,23 @@ def frameUpdate(self):
         self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4
 
 def frameUpdateAfter(self):
+    grabTrans = 0.15
 
     a = self.players[self.selchar]
-    if not a['grab']: return
+    if a['grab'] == 0: return
 
     armU = a['b1'].children[0].children[0]
+
+    if a['grab'] < 0:
+        grabTime = time.time() + a['grab']
+        if grabTime < grabTrans:
+            i = a['rig'].interpTree(a['grabPose'], armU.exportPose(), grabTime/grabTrans)
+            armU.importPose(i)
+            self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
+        return
+
+    currPose = armU.exportPose()
+
     armU.rotate((0,0,0))
     armU.children[0].rotate((0,0,0))
 
@@ -338,10 +350,17 @@ def frameUpdateAfter(self):
     targPos = shoulder + d
 
     handLen = 0.7 if a['id'] == 1 else 0.1
-    doArmIK(a['b1'].children[0].children[0],
-            targPos, handLen)
+    doArmIK(armU, targPos, handLen)
     hand = armU.children[0].children[0]
     hand.rotate((-pi/6,0,0))
+
+
+    a['grabPose'] = armU.exportPose()
+
+    grabTime = time.time() - a['grab']
+    if grabTime < grabTrans:
+        i = a['rig'].interpTree(currPose, a['grabPose'], grabTime/grabTrans)
+        armU.importPose(i)
 
     self.updateRig(a["rig"], a["ctexn"], a["id"], a["obj"])
 
