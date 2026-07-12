@@ -950,7 +950,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'throwAnim':False, 'animFired':False,
              'poseThrow':0, 'poseIdle':0,
              'vh':0,
-             'grab':0}
+             'grab':0, 'grabSphere':-1}
 
         self.NPLAYERS += 1
         self.players.append(a)
@@ -2261,8 +2261,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.testAnim(a, interp)
 
         if a['fCam'] and a['id'] not in self.aiNums:
-            if a['id'] == self.selchar:
-                a['vh'] = self.vv[1]
             torso = a['b1'].children[0]
             head = a['b1'].children[0].children[2]
             ang = head.angles
@@ -2597,6 +2595,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             p['b1'].offset[:3] += self.VRpos - self.oldVRpos
             p['cheight'] += self.VRpos[1] - self.oldVRpos[1]
             p['vr'] = p['cheight']
+
+        p['vh'] = self.vv[1]
 
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
         for a in self.players:

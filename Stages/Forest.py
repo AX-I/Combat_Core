@@ -321,9 +321,13 @@ def frameUpdate(self):
         self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4
 
 def frameUpdateAfter(self):
+    for pn in self.actPlayers:
+        updateGrab(self, pn)
+
+def updateGrab(self, pn):
     grabTrans = 0.15
 
-    a = self.players[self.selchar]
+    a = self.players[pn]
     if a['grab'] == 0: return
 
     armU = a['b1'].children[0].children[0]
@@ -345,7 +349,7 @@ def frameUpdateAfter(self):
 
     head = a['b1'].children[0].children[2]
     hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
-    d = np.array([cos(a["cr"]), self.vv[1], sin(a["cr"])])
+    d = np.array([cos(a["cr"]), a['vh'], sin(a["cr"])])
     shoulder = armU.TM[3,:3]
     targPos = shoulder + d
 
