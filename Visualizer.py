@@ -167,7 +167,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             self.d.bind("<KeyRelease-w>", self.zeroV)
             self.d.bind("<KeyRelease-s>", self.zeroV)
         
-        self.d.bind("q", self.tgMouseCap)
         self.d.bind("<F1>", self.tgCtrl)
         self.d.bind("<F2>", self.screenshot)
         self.d.bind("<F3>", self.tgUI)
@@ -248,7 +247,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.root.config(background="#000")
         self.root.bind("<Escape>", self.escapeMouse)
         self.root.bind("0", self.escapeMouse)
-        self.root.bind("`", self.escapeMouse)
+        self.root.bind("`", self.tgMouseCap)
 
         if PLATFORM == "darwin": # Fn+F11 shows desktop
             self.root.bind("<F10>", self.tgFullScreen)
