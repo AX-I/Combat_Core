@@ -281,6 +281,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         with open(PATH+'Keybinds.txt') as fk:
             for line in fk:
                 if not (row := line.strip()): continue
+                if row.startswith('#'): continue
                 k, func = row.split(' ')
                 self.bindKey(k, getattr(self, func))
 
