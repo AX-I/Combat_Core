@@ -1605,6 +1605,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             'fireColor': a['fireColor'],
             "gg": a["gestNum"], "gi": a["gestId"],
             "jp": a["jump"],
+            'grab': a['grab'],
             #"hf": a["isHit"]
         }
         if self.isClient:
@@ -1764,10 +1765,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if 'vrC' in a:
                     self.players[pM]['vrC'] = a['vrC']
 
+            self.players[pM]['grab'] = a['grab']
+
             #if "hf" in a:
             #    self.players[int(pn)]["isHit"] = a["hf"]
         if "sp" in b:
             for x in range(len(b["sp"])):
+                if self.players[self.selchar]['grabSphere'] == x: continue
                 self.srbs[x].pos = np.array(b["sp"][x]["pos"])
                 self.srbs[x].v = np.array(b["sp"][x]["vel"])
                 self.srbs[x].disabled = b["sp"][x]["dis"]
