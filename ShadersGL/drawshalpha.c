@@ -5,6 +5,10 @@
 
 #define SBIAS 0.0
 
+uniform float width;
+uniform float height;
+uniform sampler2D ssao;
+
 in vec3 v_pos;
 //in vec3 v_color;
 #include UBO_PRI_LIGHT
@@ -91,6 +95,9 @@ void main() {
 
     shadow = clamp(shadow, 0, 1);
 
+  vec2 tc = gl_FragCoord.xy;
+  float ao = 1 - texture(ssao, tc/vec2(width, height)).r * 0.5;
+
 	vec3 norm = normalize(v_norm * tz);
 
   vec3 tangent;
@@ -128,17 +135,17 @@ void main() {
 
 
 	for (int i = 1; i < lenD; i++) {
-	    light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i];
+	    light += max(0., dot(norm, DDir[i]) + 0.5) * 0.66 * DInt[i] * ao;
 	}
 
 	for (int i = 0; i < lenP; i++) {
       vec3 pl = v_pos * tz - PPos[i];
       if (dot(norm, pl) > 0.0) {
-	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i];
+	    light += dot(norm, normalize(pl)) / (1.0 + length(pl)*length(pl)) * PInt[i] * ao;
       }
     }
 
-    light += vertLight;
+    light += vertLight * ao;
 
     light += highColor;
 
