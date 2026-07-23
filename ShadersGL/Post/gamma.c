@@ -62,9 +62,9 @@ void main() {
   vec3 color;
   #ifdef CHROM
     vec2 coord = tc - center;
-    color.r = texture(tex1, (coord*0.996 + center)*wh).r;
+    color.r = texture(tex1, (coord*0.997 + center)*wh).r;
     color.g = texture(tex1, (coord + center)*wh).g;
-    color.b = texture(tex1, (coord*1.003 + center)*wh).b;
+    color.b = texture(tex1, (coord*1.00225 + center)*wh).b;
   #else
     color = texture(tex1, tc*wh).rgb;
   #endif
