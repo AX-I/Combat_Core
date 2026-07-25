@@ -855,26 +855,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         elif key == "ZV": sa["moving"] = 0
         elif key == "ZH": sa["cv"] = 0
 
-    def stepPose(self, p, vobj, st=1):
-        p["poset"] += p["pstep"] * st
-        if (p["poset"] > 1):
-            if p["posen"] == (len(self.poses) - 2):
-                p["pstep"] = -p["pstep"]
-                p["poset"] = 1 - p["poset"] + int(p["poset"])
-            else:
-                p["posen"] += 1
-                p["poset"] -= int(p["poset"])
-        elif (p["poset"] < 0):
-            if p["posen"] == 0:
-                p["pstep"] = -p["pstep"]
-                p["poset"] = -p["poset"] + int(p["poset"])
-            else:
-                p["posen"] -= 1
-                p["poset"] += 1 - int(p["poset"])
-
-        p["rig"].interpPose(self.poses[p["posen"]], self.poses[p["posen"]+1],
-                            p["poset"])
-
     def rotateLight(self, rl=None):
         if rl is None: a = self.directionalLights[0]["dir"][1] + 0.05
         else: a = rl
@@ -927,16 +907,12 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         pv = Phys.RigidBody(64, [0.,0,0], forces=[(0,0,0)], noforces=False)
         pv.addCollider(Phys.CircleCollider(0.5, (0,-0.5,0), rb=pv))
         pv.addCollider(Phys.CircleCollider(0.5, (0,0.51,0), rb=pv))
-        pv.colliders[0].prop = "player"
-        pv.colliders[1].prop = "player"
-        pv.colliders[0].hc = 0
-        pv.colliders[1].hc = 0
-        pv.colliders[0].num = len(self.players)
-        pv.colliders[1].num = len(self.players)
-        pv.colliders[0].isHit = lambda x: self.test(x)
-        pv.colliders[1].isHit = lambda x: self.test(x)
-        pv.colliders[0].onExplode = lambda x: self.explode(x)
-        pv.colliders[1].onExplode = lambda x: self.explode(x)
+        for coll in pv.colliders:
+            coll.prop = "player"
+            coll.hc = 0
+            coll.num = len(self.players)
+            coll.isHit = lambda x: self.test(x)
+            coll.onExplode = lambda x: self.explode(x)
 
         a = {"posen":0, "poset":0, "pstep":6,
              "moving":False, "movingOld":False, "cr":0, "cv":0,
@@ -2414,22 +2390,23 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             fxobj.timeStart = CURRTIME
 
         for fxobj in self.impulseFX:
-            if fxobj.timeStart > 0:
-                objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
+            if fxobj.timeStart <= 0: continue
 
-                ctime = CURRTIME - fxobj.timeStart
-                life = 0.3
+            objArgs = (fxobj.cStart, fxobj.cEnd, fxobj.texNum)
 
-                self.matShaders[fxobj.texNum]['add'] = 0.5 - 0.5*sqrt(ctime/life)
-                cscale = 0.1 + sqrt(ctime/life)
-                self.draw.scale(fxobj.prevCoord, cscale / fxobj.scale, *objArgs)
-                fxobj.scale = cscale
-                if ctime > life:
-                    self.draw.translate(-fxobj.prevCoord, *objArgs)
-                    self.draw.rotate(np.transpose(fxobj.prevRot), *objArgs)
-                    fxobj.prevCoord[:] = 0
-                    fxobj.prevRot[:] = np.identity(3)
-                    fxobj.timeStart = -1
+            ctime = CURRTIME - fxobj.timeStart
+            life = 0.3
+
+            self.matShaders[fxobj.texNum]['add'] = 0.5 - 0.5*sqrt(ctime/life)
+            cscale = 0.1 + sqrt(ctime/life)
+            self.draw.scale(fxobj.prevCoord, cscale / fxobj.scale, *objArgs)
+            fxobj.scale = cscale
+            if ctime > life:
+                self.draw.translate(-fxobj.prevCoord, *objArgs)
+                self.draw.rotate(np.transpose(fxobj.prevRot), *objArgs)
+                fxobj.prevCoord[:] = 0
+                fxobj.prevRot[:] = np.identity(3)
+                fxobj.timeStart = -1
 
 
         for a in self.players:
@@ -2578,7 +2555,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 i['ps'].step()
                 for a in self.players:
                     if a["id"] not in actPlayers: continue
-                    if np.sum(np.abs(i["pos"] - a["b1"].offset[:3])) < 2:
+                    if Phys.eucDist(i["pos"], a["b1"].offset[:3]) < 2:
                         a["Energy"] += 0.2
                         a["Energy"] = min(1, a["Energy"])
                         self.resetPickup()
@@ -2689,12 +2666,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         self.draw.highlight([1.,0,0], i)
 
         self.frameProfile('Postprocess', end=True)
-
-##        if self.stage == 4:
-##            test = 0.6 + 0.3 * sin(time.time() / 13) + 0.1 * sin(time.time() / 5)
-##            d = self.directionalLights[0]
-##            d['i'] = np.array([1.8,1.6,0.9]) * test
-##            self.draw.setPrimaryLight(d['i'], np.array([viewVec(*d["dir"])]))
 
 
     def debugOverlay(self):
