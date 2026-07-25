@@ -194,9 +194,9 @@ def testTempleTrans(self):
         t = time.time() - self.transStart
     except:
         t = -1
-        for p in self.actPlayers:
+        for p in self.activePlayers:
             if self.isClient: break
-            pos = self.players[p]['b1'].offset[:3]
+            pos = p['b1'].offset[:3]
             if Phys.eucDist(pos, (-14.5, 2.4, 20)) < 1:
                 self.lightTest()
                 t = 0
@@ -295,8 +295,7 @@ def testTempleTrans(self):
         tempObjs = tempObjs * (1 - np.array(self.testRM()))
         self.shadowMap(0, tempObjs, bias=0.5)
 
-    for p in self.actPlayers:
-        a = self.players[p]
+    for a in self.activePlayers:
         dist = Phys.eucDist(a['b1'].offset[:3], (-14.5, 2, 20))
         if t > (dist/40) and 'poseFlash' in a \
            and a['poseFlash'] <= self.flashKF[-1][0]:
@@ -321,7 +320,7 @@ def frameUpdate(self):
         self.matShaders[self.fogMTL]['args']['fogAmbDistFac'] = 4
 
 def frameUpdateAfter(self):
-    for pn in self.actPlayers:
+    for pn in self.activeIds:
         updateGrab(self, pn)
 
 def updateGrab(self, pn):

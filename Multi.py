@@ -201,8 +201,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.frameFired = False
         self.frameFiredOld = False
 
-        self.activePlayers = {}
-        self.actPlayers = {}
+        self.activePlayers = []
+        self.activeUnames = {}
+        self.activeIds = {}
+
         self.lastTimes = {}
 
         self.expNum = 0
@@ -329,8 +331,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.STAGECONFIG.setupStage(self)
         self.frameNum = 0
         self.rotateLight()
-        for i in self.actPlayers:
-            try: del self.players[i]['isHit']
+        for p in self.activePlayers:
+            try: del p['isHit']
             except KeyError: pass
         print('Reloaded stage config hard')
 
@@ -402,8 +404,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             PATH+'../Sound/NoiseFlash.flac', self.volmFX * 1.1, False)})
 
         self.flashKF = Anim.loadAnim(PATH+'../Poses/FlashTest.ava', timeScale=1.2)
-        for p in self.actPlayers:
-            self.players[p]['poseFlash'] = self.flashKF[0][0]
+        for p in self.activePlayers:
+            p['poseFlash'] = self.flashKF[0][0]
 
         for v in self.vtNames:
             if 'Sandstone' in v:
@@ -665,11 +667,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 uvInfo = json.loads(''.join(uvInfo[3:]))
                 self.eyeUV = {int(n):uvInfo[n] for n in uvInfo}
         else:
-            if self.testTargNum != len(self.actPlayers):
+            if self.testTargNum != len(self.activeIds):
                 regenTargs = True
 
         if regenTargs:
-            activeIds = list(self.actPlayers)
+            activeIds = list(self.activeIds)
             self.testTargNum = len(activeIds)
             pm = np.random.permutation(activeIds)
             targs = [None for _ in range(self.NPLAYERS)]
@@ -1601,8 +1603,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
     def sendState(self):
         dat = {}
-        for i in self.actPlayers:
-            a = self.players[i]
+        for a in self.activePlayers:
             dat[a["id"]] = self.serializePlayerState(a)
             if 'vr' in a:
                 dat[a['id']]['vr'] = float(a['cheight'])
@@ -1615,7 +1616,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                "vel":np.round(self.srbs[i].v, 3).tolist(),
                "dis":self.srbs[i].disabled}
               for i in range(len(self.spheres))]
-        act = dict(self.activePlayers)
+        act = dict(self.activeUnames)
         act[self.uname] = self.selchar
 
         exp = [{"on":x["active"], "pos":np.round(x["pos"], 3).tolist(),
@@ -1675,7 +1676,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         k = b["players"]
         if self.isClient:
             try:
-                self.activePlayers = b["act"]
+                self.activeUnames = b["act"]
             except KeyError:
                 print("Username conflict!")
                 return
@@ -1690,7 +1691,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 if self.lastTimes[a[0]] == int(b["time"]):
                     return
 
-            self.activePlayers[a[0]] = list(k.keys())[0]
+            self.activeUnames[a[0]] = list(k.keys())[0]
             self.lastTimes[a[0]] = int(b["time"])
 
         for pn in k:
@@ -1860,7 +1861,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                    ("DRAW", (128, 192, 255, 255))]
 
         alive = 0
-        for pn in self.actPlayers:
+        for pn in self.activeIds:
             alive += self.getHealth(pn) > 0
 
         if alive <= 1:
@@ -1905,7 +1906,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if (not self.VRMode) or (self.frameNum & 1):
                 g.changePos(a["b1"].offset[:3])
                 g.step()
-        elif tn not in self.actPlayers:
+        elif tn not in self.activeIds:
             a["pv"].pos[:] = -10.
             a['pv'].disable()
         else:
@@ -2287,23 +2288,24 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         sc = self.selchar
 
         rm = [x <= self.players[-1]["obj"].texNum for x in range(len(self.vtNames))]
-        actPlayers = {self.selchar}
+        activeIds = {self.selchar}
 
-        for pn in self.activePlayers:
-            plNum = int(self.activePlayers[pn])
-            actPlayers.add(plNum)
+        for pn in self.activeUnames:
+            plNum = int(self.activeUnames[pn])
+            activeIds.add(plNum)
 
             for x in self.players[plNum]["ctexn"]:
                 rm[x] = False
 
-        self.actPlayers = actPlayers
+        self.activeIds = activeIds
+        self.activePlayers = [self.players[i] for i in activeIds]
 
         for x in self.players[self.selchar]["ctexn"]:
             rm[x] = False
 
         ic = self.isClient
 
-        if len(actPlayers) > 1:
+        if len(activeIds) > 1:
             if not self.gameStarted and self.stage < 4:
                 snd = self.ENVTRACKS
                 self.si.put({"Play":(
@@ -2317,7 +2319,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.renderMask = self.testRM(rm)
         if SHOWALL:
             self.renderMask = [False for x in range(len(self.vtNames))]
-            actPlayers = list(range(len(self.players)))
+            activeIds = list(range(len(self.players)))
 
 
         if self.frameNum == 0:
@@ -2409,9 +2411,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 fxobj.timeStart = -1
 
 
-        for a in self.players:
-            if a['id'] not in self.actPlayers:
-                continue
+        for a in self.activePlayers:
             if a['jump'] > 0:
                 a["b1"].offset[:3] = a["pv"].pos + np.array([0,0.5,0]) \
                                      + a['animOffset'] - np.array([0,a['legIKoffset'],0])
@@ -2488,8 +2488,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             e = self.exploders[i]
             if not e["active"]: continue
 
-            for a in self.players:
-                if a["id"] not in actPlayers: continue
+            for a in self.activePlayers:
                 if sum((a["b1"].offset[:3] - e["pos"]) ** 2) < (e["scale"] ** 2 / 4):
                     a["pv"].colliders[0].hc += self.expPow / max(4, e["scale"]) * (self.frameTime * 20)
                     a["isHit"] = self.frameNum
@@ -2553,8 +2552,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             if i["pos"] is not None:
                 self.pointLights.append({"i":(0,4.,0), "pos":i["pos"]})
                 i['ps'].step()
-                for a in self.players:
-                    if a["id"] not in actPlayers: continue
+                for a in self.activePlayers:
                     if Phys.eucDist(i["pos"], a["b1"].offset[:3]) < 2:
                         a["Energy"] += 0.2
                         a["Energy"] = min(1, a["Energy"])
@@ -2580,9 +2578,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         p['vh'] = self.vv[1]
 
         if "nameTag" in self.uInfo: del self.uInfo["nameTag"]
-        for a in self.players:
-            if a["id"] not in actPlayers: continue
-
+        for a in self.activePlayers:
             self.playerMove(a)
 
         self.frameProfile('PlayerMove')
@@ -2614,8 +2610,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             self.pos -= sp['animOffset']
 
         if self.camAvg:
-            self.pos = np.average([p['b1'].offset[:3] for p in self.players
-                                   if p['id'] in self.actPlayers], axis=0)
+            self.pos = np.average(
+                [p['b1'].offset[:3] for p in self.activePlayers], axis=0)
             self.pos += self.players[sc]['cheight'] * 0.66
 
         if self.cam1P:
@@ -2643,9 +2639,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 self.pos += -0.45*self.vVvert() -0.3*self.vVhorz()
                 self.pos[1] -= a['legIKoffset']
 
-            playerIndex = {int(v):k for k, v in self.activePlayers.items()}
-            for a in self.players:
-                if a["id"] not in actPlayers: continue
+            playerIndex = {int(v):k for k, v in self.activeUnames.items()}
+            for a in self.activePlayers:
                 tn = a["id"]
                 if tn == sc: continue
                 if raySphereIntersect(self.pos, self.vv, a["b1"].offset[:3], 0.5):
