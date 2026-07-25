@@ -157,7 +157,7 @@ class AIManager:
         for x in nums:
             n = "CPU " + str(x)
             a = AIAgent(x, n)
-            self.activePlayers[n] = x
+            self.activeUnames[n] = x
             self.players[x]["fCam"] = True
 
             self.agents[x] = a
@@ -177,7 +177,7 @@ class AIManager:
 
         # Behaviors: follow, navigate, retreat, etc
         # Strafe to avoid shots
-        playerIndex = {int(v):k for k, v in self.activePlayers.items()}
+        playerIndex = {int(v):k for k, v in self.activeUnames.items()}
 
         while not self.qO.empty():
             r = self.qO.get_nowait()
@@ -196,7 +196,7 @@ class AIManager:
         closestDistTarget = 1000
         closestTarget = None
 
-        for p in self.actPlayers:
+        for p in self.activeIds:
             if (p == pn) or ("deathTime" in self.players[p]): continue
 
             d = np.sum((a["b1"].offset - self.players[p]["b1"].offset)**2)

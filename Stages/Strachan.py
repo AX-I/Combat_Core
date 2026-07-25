@@ -313,8 +313,8 @@ def testPlatforms(self):
     self.matShaders[self.ringTest.texNum].update(args={'emPow': 2 + 2 * sin(t*2)})
 
 ##    if not self.lightsToggled:
-##        for p in self.actPlayers:
-##            if Phys.eucDist(self.players[p]['b1'].offset[:3],
+##        for p in self.activePlayers:
+##            if Phys.eucDist(p['b1'].offset[:3],
 ##                            self.stagePlatforms[-1] + np.array([0,2,0])) < 1:
 ##                toggleLights(self)
 
@@ -385,9 +385,9 @@ def frameUpdate(self):
 
 
     buttonPressed = False
-    for p in self.actPlayers:
+    for p in self.activePlayers:
         if self.isClient: break
-        pos = self.players[p]['b1'].offset[:3]
+        pos = p['b1'].offset[:3]
         if Phys.eucDist(pos, (10, 1, 42)) < 0.8:
             movePillars(self, 0)
             buttonPressed = 1
