@@ -199,7 +199,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self._imShape = None
 
 
-
     def openImageCover(self, fn, blur=0):
         """opens filename and scales it to cover (self.W, self.H)"""
         i = Image.open(fn).convert('RGBA')
@@ -506,12 +505,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         return
 
 
-
-##        self.extras = Button(self, text="Credits", fg="#000", bg="#ddd",
-##                               command=self.showExtras, font=g)
-##        self.extras.grid(row=4, column=0, sticky=N+S+E+W, pady=(15,0))
-
-
     def handleKey(self, e=None):
         if self.MENUSCREEN != 'MAIN':
             return
@@ -556,17 +549,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             joinHandleMouse(self, None, True)
         elif self.MENUSCREEN == 'CHAR':
             charHandleMouse(self, None, True)
-
-
-    def showExtras(self):
-        try: self.credInfo.destroy()
-        except (AttributeError, TclError): pass
-        self.credInfo = Toplevel()
-        self.credInfo.title("Credits")
-        try: self.credInfo.iconbitmap(PATH+"lib/Combat.ico")
-        except FileNotFoundError: pass
-        ct = "Win a game in each of the 4 stages\nto unlock the credits."
-        Label(self.credInfo, text=ct, font=f, padx=12, pady=12).pack()
 
 
     def getIP(self):
@@ -620,8 +602,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
     def notConnected(self, config=None):
         if config == 'join':
             pass
-##            self.jg['bg'] = '#fcc'
-##            self.root.after(300, self.tgJV)
 
         self.hostname["bg"] = "#fcc"
         self.sh = True
@@ -630,11 +610,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
     def tgSV(self):
         self.notConnectedTG = 1 - self.notConnectedTG
-##        hb = "#f4fff4" if self.sh else "#fcc"
-##        self.hostname["bg"] = hb
-##        self.sh = not self.sh
-    def tgJV(self):
-        self.jg['bg'] = '#bfd'
 
     def removeMain(self, checkUser=True):
         p = OpsConv.getSettings(False)
@@ -662,30 +637,16 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.rotSensitivity = p["Mouse"] / 20000
         OpsConv.writeSettings(p)
 
-##        self.logo.grid_remove()
-##        self.newG.grid_remove()
-##        self.curG.grid_remove()
-##        self.uname.grid_remove()
-##        self.hostname.grid_remove()
-##        self.ahfr.grid_remove()
-##        self.gset.grid_remove()
-##        self.extras.grid_remove()
-##        self.runMod.grid_remove()
-##        self.mkServer.grid_remove()
 
         return True
 
     def charMenu(self):
-        #self.title["text"] = "Select character"
-        #self.back.grid_remove()
         self.MENUSCREEN = 'CHAR'
 
         gd = self.gameConfig[1]
 
         if self.gameConfig[-1]:
             pass
-##            self.jg.grid_remove()
-##            self.avls.grid_remove()
         else:
             self.gameList = {gd:[]}
 
@@ -696,28 +657,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
                           "Ahri",  "Stormtrooper", "Vader"]
 
         self.stb = []
-        cmds = [lambda: self.selChar(0), lambda: self.selChar(1),
-                lambda: self.selChar(2), lambda: self.selChar(3),
-                lambda: self.selChar(4), lambda: self.selChar(5),
-                lambda: self.selChar(6), lambda: self.selChar(7),
-                lambda: self.selChar(8), lambda: self.selChar(9)]
 
         for i in range(len(self.charNames)):
             self.stb.append(Button(self, text=self.charNames[i],
-                                   fg="#008", bg="#bdf",
-                                   command=cmds[i], font=g))
-
-##            self.stb[-1].grid(row=2 + i//3, column=i%3, sticky=N+S+E+W,
-##                              ipadx=6, ipady=6)
-
-##        self.columnconfigure(0, uniform="x")
-##        self.columnconfigure(1, uniform="x")
-##        self.columnconfigure(2, uniform="x")
-
-        if not self.gameConfig[4]:
-            self.addAI = Button(self, text="Add AI", bg="#f94",
-                                command=self.tgAI, font=g)
-##            self.addAI.grid(row=5, column=0, sticky=N+S+E+W, ipadx=6, ipady=6)
+                                   fg="#008", bg="#bdf", font=g))
 
         self.aiNums = []
         self.chooseAI = False
@@ -725,22 +668,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         for i in range(len(self.charNames)):
             if str(i) in self.gameList[gd]:
                 self.stb[i]["state"] = "disabled"
-                self.stb[i]["bg"] = "#ddd"
-                if self.gameList[gd][str(i)].startswith("CPU "):
-                    self.stb[i]["bg"] = "#ec8"
 
     def tgAI(self):
         self.chooseAI = True
-        for x in self.stb:
-            x["fg"] = "#e62"
-        self.addAI["command"] = self.exitAI
-        self.addAI["text"] = "Cancel"
     def exitAI(self):
         self.chooseAI = False
-        for x in self.stb:
-            x["fg"] = "#008"
-        self.addAI["command"] = self.tgAI
-        self.addAI["text"] = "Add AI"
 
     def selChar(self, i):
         host = self.gameConfig[2]
@@ -751,28 +683,16 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             gd = requests.post(host + "/SelChar", data=p, **TO)
             if gd.status_code == 403:
                 self.stb[i]["state"] = "disabled"
-                self.stb[i]["bg"] = "#ddd"
-                if gd.text == "CPU":
-                    self.stb[i]["bg"] = "#ec8"
                 return
         except: raise
 
         if self.chooseAI:
             self.aiNums.append(i)
             self.stb[i]["state"] = "disabled"
-            self.stb[i]["bg"] = "#ec8"
-            self.stb[i]["fg"] = "#444"
             self.exitAI()
             return
 
-        #self.title.grid_remove()
-        if not self.gameConfig[4]:
-            self.addAI.grid_remove()
-        for x in self.stb: x.grid_remove()
         self.configure(bg='#111')
-        self.columnconfigure(0, uniform=0)
-        self.columnconfigure(1, uniform=1)
-        self.columnconfigure(2, uniform=2)
 
         self.MENUSCREEN = ''
         self.d.delete(self.finalRender)
@@ -815,9 +735,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.MENUSCREEN = 'STAGE'
         stageSelectSetup(self)
 
-    def setGD(self, e):
-        try: self.gd = self.avls.get(self.avls.curselection())
-        except TclError: pass
 
     def goJoin(self):
         if not self.removeMain(): return
@@ -835,7 +752,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         ag = ag.text.split('\n')[:-1]
         ag = [x.split('+') for x in ag] # IP, stage, username
 
-        #self.title["text"] = "Join Game"
         self.MENUSCREEN = 'JOIN'
 
         self.avls = Listbox(self, width=20, height=10, font=h)
@@ -847,12 +763,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             et += "/ " + d[-1]
             self.avls.insert(END, et)
 
-        self.columnconfigure(1, weight=1, uniform="c")
 
     def goBack(self, e):
         self.MENUSCREEN = 'MAIN'
         return
-
 
 
     def joinGame(self):
