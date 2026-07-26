@@ -382,7 +382,7 @@ def frameUpdateAfter(self):
 
     for i in range(2*len(self.players)):
         p = self.players[i//2]
-        if p['id'] not in self.actPlayers: continue
+        if p['id'] not in self.activeIds: continue
         if p['id'] == 5: continue
 
         s = self.skis[i]
