@@ -597,17 +597,15 @@ class ThreeDBackend:
                 self.evtQ.get(True, 0.2)
         except: pass
 
-        print("Closing processes", end="")
+        print("Closing processes")
         self.P.close()
         self.evtQ.close()
         time.sleep(0.2)
         self.P.join_thread()
         self.evtQ.join_thread()
-        while mp.active_children():
-            print(mp.active_children())
-            print(".", end=""); time.sleep(0.5)
-        self.frontend.join()
-        print("\nClosed frontend")
+        print(mp.active_children())
+        self.frontend.terminate()
+        print("Closed frontend")
 
     def changeTitle(self, t):
         self.P.put(("title", str(t)))
