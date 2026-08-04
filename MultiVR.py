@@ -168,38 +168,7 @@ def run():
         app = CombatVR()
         app.doMB = False
         if app.proceed:
-            print("Starting")
-            app.start()
-            print("Running")
-            app.runBackend()
-            fps = app.frameNum/app.totTime
-            print("Average fps:", fps)
-            if hasattr(app, "WIN"):
-                state = 0
-                try:
-                    with open(PATH+"lib/Stat.txt") as f:
-                        state = int(f.read())
-                except: pass
-                with open(PATH+"lib/Stat.txt", "w") as f:
-                    state = state | (1 << app.stage)
-                    f.write(str(state))
-            print("Closing network")
-            app.qi.put(None)
-            while not app.qo.empty():
-                try: app.qo.get(True, 0.2)
-                except: pass
-            app.qi.close()
-            app.qo.close()
-            app.qi.join_thread()
-            app.qo.join_thread()
-            app.server.terminate()
-            app.server.join()
-            try: app.navProcess.terminate()
-            except: pass
-            try:
-                with open(PATH+"lib/Stat.txt") as f: pass
-            except FileNotFoundError:
-                with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
+            Multi.runApp(app)
         print("Closing sound")
         app.si.put({"Fade":{'Time':0, 'Tracks':{'*'}}}, True, 0.1)
         time.sleep(2.1)

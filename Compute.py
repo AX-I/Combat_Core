@@ -85,13 +85,9 @@ class ThreeDBackend:
                  scale=600, fovx=None,
                  downSample=1, record=None):
 
-        pipe = rec = mp.Queue(1)
-
+        self.P = mp.Queue(1)
         self.evtQ = mp.Queue(64)
-        self.infQ = mp.Queue(16)
 
-        self.P = pipe
-        self.recP = rec
         self.handles = {}
         self.full = 0
         self.empty = 0
@@ -157,7 +153,7 @@ class ThreeDBackend:
 
         self.batchKB = None
 
-        bargs = (self.recP, self.evtQ, self.infQ,
+        bargs = (self.P, self.evtQ,
                  self.W, self.H, self.mouseSensitivity,
                  self.downSample)
         self.frontend = mp.Process(target=VS.runGUI, args=bargs, name="UI")

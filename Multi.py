@@ -25,7 +25,6 @@ os.environ['OMP_NUM_THREADS'] = '1'
 
 from tkinter import *
 from math import sin, cos, sqrt, pi, atan2, asin, acos
-import numpy
 import numpy.random as nr
 import random
 import time
@@ -178,7 +177,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                           "H8.ogg", '', '']
 
         self.α = 4.1; self.β = 0.1
-        self.pos = numpy.array([35.8,  3.4, 31.3])
+        self.pos = np.array([35.8,  3.4, 31.3])
 
         self.ambLight = 0.08
 
@@ -867,7 +866,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         sc = self.shadowCams[0]
         sc["dir"] = self.directionalLights[0]["dir"]
-        sc["pos"] = -40 * viewVec(*sc["dir"]) + numpy.array([20, 5, 20])
+        sc["pos"] = -40 * viewVec(*sc["dir"]) + np.array([20, 5, 20])
         self.updateShadowCam(0, updateShaders=True)
         sc["bias"] = (0.18 * abs(cos(ti)) + 0.12) * 2560 / self.shRes
 
@@ -1035,7 +1034,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             normal='Z2H')
         self.addPlayer(self.vertObjects[-1])
 
-        self.addPlayerModel("L3/L3.obj")
+        self.addPlayerModel("L3/L3Correct.obj")
         t1 = self.vertObjects[-1]
         t2 = self.vertObjects[-2]
         extractByUV(t1, t2, 0.5,0.75,0,0.25)
