@@ -18,7 +18,7 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-from tkinter import *
+from tkinter import Frame, Tk, Canvas, N,E,S,W, TclError
 import numpy as np
 import time
 
@@ -70,14 +70,13 @@ from ImgUtils import NPCanvas
 
 
 class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
-    def __init__(self, pipe, eq, infQ,
+    def __init__(self, pipe, evtQ,
                  width, height,
                  mouseSensitivity=20,
                  downSample=1):
 
         self.P = pipe
-        self.evtQ = eq
-        self.infQ = infQ
+        self.evtQ = evtQ
 
         root = Tk()
         super().__init__(root)
@@ -103,9 +102,6 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.fs = False
 
         self.dirs = [False, False, False, False]
-        
-        self.timfps = np.zeros(6)
-        self.numfps = 0
 
         self._textImg = Image.new("RGB", (1,1))
         self.textSize = ImageDraw.Draw(self._textImg)
@@ -193,19 +189,19 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
     def runGame(self, *args):
         self.evtQ.put({"Run":args})
 
-        #self.title.grid_remove()
-        #self.createCoreWidgets()
-        
-        self.mtext = self.d.create_text((self.W2, self.H2 - 50),
-                                        text="Loading...", fill="#FFF",
-                                        font=("Times", 12))
-        self.stext = self.d.create_text((self.W2, self.H2 + 50),
-                                        text=self.loc[args[0]], fill="#FBF",
-                                        font=("Times", 12))
-        
-        self.gtext = self.d.create_text((self.W2, self.H2 + 80),
-                                        text=args[1], fill="#BFF",
-                                        font=("Times", 10))
+        self.mtext = self.d.create_text(
+            (self.W2, self.H2 - 50),
+            text="Loading...", fill="#FFF",
+            font=("Times", 12))
+        self.stext = self.d.create_text(
+            (self.W2, self.H2 + 50),
+            text=self.loc[args[0]], fill="#FBF",
+            font=("Times", 12))
+
+        self.gtext = self.d.create_text(
+            (self.W2, self.H2 + 80),
+            text=args[1], fill="#BFF",
+            font=("Times", 10))
         
         bbox = (self.W2-30, self.H2-30, self.W2+30, self.H2+30)
         self.mbg = self.d.create_oval(bbox, fill="#444")

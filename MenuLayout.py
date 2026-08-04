@@ -591,7 +591,7 @@ def joinLayout(self):
                (self.W2, self.H2), 'alpha',
                effect='roll', effectArg=20*sTime*resScale)
 
-    for i in range(self.avls.size()):
+    for i in range(len(self.avls)):
         yc = int(self.H * (0.33 + 0.66*i/5))
         xc = self.W//4
         texty = yc - self.H2 - 3 * resScale
@@ -599,7 +599,7 @@ def joinLayout(self):
         self.blend(frame, self.menuEntry,
                    (xc, yc), 'alpha')
 
-        self.drawText(frame, self.avls.get(i), yellowFG, self.cFont,
+        self.drawText(frame, self.avls[i], yellowFG, self.cFont,
                       (texty, xc + 50 * resScale - self.W2), blur=1,
                       bFill=yellowBG)
 
@@ -644,7 +644,7 @@ def joinHandleMouse(self, frame, click=False):
     w = self.menuEntry.shape[1]
 
     buttonCenters = []
-    for i in range(self.avls.size()):
+    for i in range(len(self.avls)):
         yc = int(self.H * (0.33 + 0.66*i/5))
         xc = self.W//4
         buttonCenters.append((yc, xc))
@@ -663,7 +663,7 @@ def joinHandleMouse(self, frame, click=False):
                 if i == len(buttonCenters) - 1:
                     self.goBack(0)
                 else:
-                    self.gd = self.avls.get(i)
+                    self.gd = self.avls[i]
                     self.joinGame()
 
                 break

@@ -49,7 +49,7 @@ import multiprocessing as mp
 import numpy as np
 from math import sin
 
-from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageFont, ImageFilter
 
 USE_CL = False
 USE_GL = True
@@ -152,7 +152,6 @@ elif PLATFORM == "win32":
     _TIMESBD = "timesbd.ttf"
     _COURIERBD = "courbd.ttf"
 
-e = ("Times", 18)
 f = ("Times", 15)
 g = ("Times", 12)
 h = ("Courier", 10)
@@ -523,22 +522,23 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.__setattr__(display, entry.get())
         else:
             # pass
-            print('Key', e.char)
+            print('Unsupported key', e.char)
 
     def handleBackspace(self, e=None):
-        if self.MENUSCREEN == 'MAIN':
+        if self.MENUSCREEN != 'MAIN':
+            return
 
-            if self.textEntry == 'User':
-                entry = self.uname
-                display = 'unameDisplay'
-            elif self.textEntry == 'Serv':
-                entry = self.hostname
-                display = 'servDisplay'
-            
-            u = entry.get()[:-1]
-            entry.delete(0,999)
-            entry.insert(0,u)
-            self.__setattr__(display, u)
+        if self.textEntry == 'User':
+            entry = self.uname
+            display = 'unameDisplay'
+        elif self.textEntry == 'Serv':
+            entry = self.hostname
+            display = 'servDisplay'
+
+        u = entry.get()[:-1]
+        entry.delete(0,999)
+        entry.insert(0,u)
+        self.__setattr__(display, u)
 
     def handleClick(self, e=None):
         if self.MENUSCREEN == 'MAIN':
@@ -564,15 +564,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         try: self.servwin.destroy()
         except (AttributeError, TclError): pass
-        if showWin:
-            self.servwin = Toplevel()
-            self.servwin.title("Combat Server")
-            try: self.servwin.iconbitmap(PATH+"lib/Combat.ico")
-            except FileNotFoundError: pass
-
-            st = "A server is now hosting on {}:{}".format(addr[0], addr[1])
-            st += "\nIt should stop when the main window is closed."
-            Label(self.servwin, text=st, font=g, padx=8, pady=8).pack()
 
         import NetServer
         self.selfServe = mp.Process(target=NetServer.run, args=(addr,))
@@ -650,11 +641,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         else:
             self.gameList = {gd:[]}
 
-        self.NSPECIAL = 1
-        self.charNames = ["Autumn",
-                          "Samus", "Zelda BotW",   "Link BotW",
-                          "Louis", "Zelda TP",     "Link TP",
-                          "Ahri",  "Stormtrooper", "Vader"]
+        with open('../Models/CharNames.json') as fi:
+            charData = json.load(fi)
+        self.NSPECIAL = charData['NSPECIAL']
+        self.charNames = charData['charNames']
 
         self.stb = []
 
@@ -754,14 +744,13 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.MENUSCREEN = 'JOIN'
 
-        self.avls = Listbox(self, width=20, height=10, font=h)
-        self.avls.bind("<<ListboxSelect>>", self.setGD)
+        self.avls = []
         for d in ag:
             stage = ' '.join(d[1:-1])
             et = d[0] + " " * (20 - len(d[0]))
             et += "(" + stage + ")" + " " * 2*(12-len(stage))
             et += "/ " + d[-1]
-            self.avls.insert(END, et)
+            self.avls.append(et)
 
 
     def goBack(self, e):
@@ -966,7 +955,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         except TclError: pass
 
     def switchBackend(self, e=None):
-        return
         for _ in range(self.devls.size()):
             self.devls.delete(0)
 
