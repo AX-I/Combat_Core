@@ -69,6 +69,29 @@ class CombatVR(Multi.CombatApp):
         self.VRMode = True
         self.VRpos = np.array([0,0,0])
 
+    def submitVR(self):
+        if self.GL:
+            try: _ = self.VRtex
+            except:
+                print('Setup VR')
+                import openvr
+                self.VRtex = openvr.Texture_t()
+                self.VRtex.handle = int(self.draw.FB_GL)
+                self.VRtex.eType = openvr.TextureType_OpenGL
+                self.VRtex.eColorSpace = openvr.ColorSpace_Gamma
+
+            self.cmp.submit(openvr.Eye_Left, self.VRtex)
+            self.cmp.submit(openvr.Eye_Right, self.VRtex)
+        else:
+            rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
+            ibuf = ctypes.create_string_buffer(rgba.tobytes())
+
+            b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
+            self.ov.showOverlay(b)
+            b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
+            self.ov.hideOverlay(b2)
+            self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
+
     def frameUpdateVR(self):
         if self.frameNum == 0:
             self.players[self.selchar]["fCam"] = True

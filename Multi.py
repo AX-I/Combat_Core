@@ -54,8 +54,9 @@ import OpsConv
 import AI
 import Anim
 
-from VertObjects import VertRing, extractByUV
-from ParticleSystem import AttractParticleSystem
+from Cubemap import CubeMap
+from VertObjects import VertSphere, VertModel, VertPlane, VertRing, extractByUV
+from ParticleSystem import AttractParticleSystem, ContinuousParticleSystem
 
 from IK import doFullLegIK, doArmIK
 
@@ -1432,6 +1433,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def onStart(self):
         self.gameStarted = False
         self.tempPos = np.array(self.pos)
+
+        self.renderProperties['stage'] = self.stage
 
         if self.stage == 4:
             self.si.put({'Play':(
