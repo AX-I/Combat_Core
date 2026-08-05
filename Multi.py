@@ -488,7 +488,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         a['moving'] = False
         a['animTrans'] = -1
         self.stepPoseLoop(
-            a, a['obj'], self.restKF, self.frameTime*0.4,
+            a, self.restKF, self.frameTime*0.4,
             loop=False, timer='restAnim')
 
         self.setYoffsetTest(a)
@@ -2047,7 +2047,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 a['animOffset'] = off
             else:
                 self.stepPoseLoop(
-                    a, a["obj"], self.keyFrames,
+                    a, self.keyFrames,
                     df*self.frameTime * self.poseDt*a["moving"],
                     isFlat=True)
 
@@ -2098,7 +2098,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if a['throwAnim']:
             self.stepPoseLoop(
-                a, a['obj'], self.throwKF, self.frameTime*2.2,
+                a, self.throwKF, self.frameTime*2.2,
                 loop=False, bone=a['b1'].children[0],
                 timer='poseThrow')
             if not a['animFired'] and a['poseThrow'] > self.throwKF[5][0]:
@@ -2138,7 +2138,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             breathRate *= self.breathRate[a['id']]
 
             self.stepPoseLoop(
-                a, a['obj'], self.idlingTest,
+                a, self.idlingTest,
                 self.frameTime * (breathRate + 0.6)/2,
                 loop=True, timer='poseIdle',
                 offsetMult=breathRate * 0.9,
