@@ -213,14 +213,14 @@ def setupStage(self):
             VertModel, [0,0,0],
             filename=mpath + 'Ski.obj', cache=False,
             instanced=True,
-            mip=2, useShaders={'spec': 0.4},
+            mip=2, useShaders={'spec': 0.4, 'shadowDynamic':1},
             scale=0.6, rot=(0,-pi/2,0))
         self.skis.append(self.vertObjects[-1])
         self.addVertObject(
             VertModel, [0,0,0],
             filename=mpath + 'Pole.obj', cache=False,
             instanced=True,
-            useShaders={'spec': 0.4},
+            useShaders={'spec': 0.4, 'shadowDynamic':1},
             scale=1.2, rot=(0,pi/2,0))
         self.poles.append(self.vertObjects[-1])
         ts = 1

@@ -125,6 +125,8 @@ class ThreeDBackend:
         self.uInfo = None
 
         self.particleSystems = []
+        self.skyBox = None
+        self.skyTex = None
 
         self.W2 = int(self.W/2)
         self.H2 = int(self.H/2)
