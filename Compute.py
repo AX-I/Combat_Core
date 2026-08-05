@@ -22,23 +22,15 @@ import multiprocessing as mp
 from queue import Empty, Full
 thisprocess = mp.current_process().name
 
-from math import sin, cos, pi, ceil, atan2
+from math import sin, cos, pi, ceil, log2, atan2, sqrt
 import numpy as np
 import time
-from Utils import *
+from Utils import viewVec, fmtTime, TexLoadManager
 
 import Visualizer as VS
 
-from TexObjects import TexSkyBox
-from Cubemap import CubeMap
-from VertObjects import VertSphere, VertModel, VertTerrain, VertTerrain0, VertPlane, VertWater
-
-from ParticleSystem import ContinuousParticleSystem
 import sys, os
 from PIL import Image
-import json
-
-import ctypes
 
 os.system('color')
 
@@ -83,7 +75,7 @@ def getTexture(fn, cgamma=True, texMul=1, raw=False):
 class ThreeDBackend:
     def __init__(self, width, height,
                  scale=600, fovx=None,
-                 downSample=1, record=None):
+                 downSample=1):
 
         self.P = mp.Queue(1)
         self.evtQ = mp.Queue(64)
@@ -121,6 +113,7 @@ class ThreeDBackend:
         self.vaNames = {}
 
         self.matShaders = {}
+        self.renderProperties = {}
 
         self.uInfo = None
 
@@ -176,7 +169,7 @@ class ThreeDBackend:
         else:
             self.scale = scale
         self.fovX = np.arctan(self.W2 / (self.scale*self.H/2)) * 360/pi
-        self.cullAngle = self.scale / np.sqrt(self.scale**2 + self.W2**2 + self.H2**2) * 0.85
+        self.cullAngle = self.scale / sqrt(self.scale**2 + self.W2**2 + self.H2**2) * 0.85
         self.cullAngleX = self.W2 / self.scale + 2
         self.cullAngleY = self.H2 / self.scale + 2
         try:
@@ -295,7 +288,7 @@ class ThreeDBackend:
     def createObjects(self):
         pass
 
-    def makeObjects(self, v=0):
+    def makeObjects(self):
         print("Loading objects...")
         self.actWedges = 0
         for o in self.vertObjects:
@@ -323,7 +316,7 @@ class ThreeDBackend:
         thing = objClass(self, *args, **kwargs)
         thing.created()
         return thing
-    def addParticleSystem(self, ps, isCloud=False):
+    def addParticleSystem(self, ps):
         ps.setup()
         self.particleSystems.append(ps)
 
@@ -350,7 +343,7 @@ class ThreeDBackend:
             self.matShaders,
             mask=self.renderMask,
             shadowIds=s,
-            stage=self.stage)
+            **self.renderProperties)
 
         cc = []
         for ps in self.particleSystems:
@@ -388,28 +381,6 @@ class ThreeDBackend:
         return {'rgb':self.rgb, 'camData': (self.pos, self.vv),
                 'uInfo':self.uInfo}
 
-    def submitVR(self):
-        if self.GL:
-            try: _ = self.VRtex
-            except:
-                print('Setup VR')
-                import openvr
-                self.VRtex = openvr.Texture_t()
-                self.VRtex.handle = int(self.draw.FB_GL)
-                self.VRtex.eType = openvr.TextureType_OpenGL
-                self.VRtex.eColorSpace = openvr.ColorSpace_Gamma
-
-            self.cmp.submit(openvr.Eye_Left, self.VRtex)
-            self.cmp.submit(openvr.Eye_Right, self.VRtex)
-        else:
-            rgba = np.array(Image.fromarray(self.rgb.astype("uint8")).convert("RGBA"))
-            ibuf = ctypes.create_string_buffer(rgba.tobytes())
-
-            b = (self.vrBuf1, self.vrBuf2)[self.frameNum % 2]
-            self.ov.showOverlay(b)
-            b2 = (self.vrBuf1, self.vrBuf2)[(self.frameNum+1) % 2]
-            self.ov.hideOverlay(b2)
-            self.ov.setOverlayRaw(b2, ibuf, self.W, self.H, 4)
 
     def simpleShaderVert(self, mask=None, updateLights=True):
         if mask is None:
@@ -457,8 +428,6 @@ class ThreeDBackend:
     def shadowMap(self, i, castObjs=None, bias=0.2):
         if castObjs is None:
             castObjs = self.castObjs
-
-        sc = self.shadowCams[i]
 
         self.draw.clearShadowMap(i)
         self.draw.shadowMap(i, castObjs, self.matShaders, bias)
@@ -589,11 +558,11 @@ class ThreeDBackend:
 
         try:
             self.P.put(None, True, 0.5)
-        except: pass
+        except Full: pass
         try:
             while not self.evtQ.empty():
                 self.evtQ.get(True, 0.2)
-        except: pass
+        except Empty: pass
 
         print("Closing processes")
         self.P.close()
@@ -608,6 +577,9 @@ class ThreeDBackend:
     def changeTitle(self, t):
         self.P.put(("title", str(t)))
 
+    def customizeFrontend(self):
+        pass
+
     def startBatchKB(self):
         self.batchKB = []
     def endBatchKB(self):
@@ -621,14 +593,17 @@ class ThreeDBackend:
             self.batchKB.append(k)
         self.handles[k] = f
 
+    def onStart(self):
+        pass
     def frameUpdate(self):
         pass
     def postProcess(self):
         pass
-    def onMove(self):
-        pass
     def facing(self):
         return (self.α, self.β)
+
+    def debugOverlay(self):
+        pass
 
     def fps(self):
         print("fps:", self.frameNum / self.totTime)
