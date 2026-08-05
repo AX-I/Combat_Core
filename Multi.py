@@ -23,7 +23,6 @@ import os
 # https://stackoverflow.com/questions/74661959
 os.environ['OMP_NUM_THREADS'] = '1'
 
-from tkinter import *
 from math import sin, cos, sqrt, pi, atan2, asin, acos
 import numpy.random as nr
 import random
@@ -66,11 +65,11 @@ SHOWALL = False
 GESTLEN = 0.6
 LOADALL = True
 
-def mkServer(pi, po, kwargs):
-    a = TCPServer(pi, po, isclient=False, **kwargs)
+def mkServer(qi, qo, kwargs):
+    a = TCPServer(qi, qo, isclient=False, **kwargs)
     a.run()
-def mkClient(pi, po, kwargs):
-    a = TCPServer(pi, po, isclient=True, **kwargs)
+def mkClient(qi, qo, kwargs):
+    a = TCPServer(qi, qo, isclient=True, **kwargs)
     a.run()
 
 def playSound(si):
@@ -193,6 +192,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.COSTS = {"blank":0.02, "orange":0.2, "red":0.1, "black":0.35}
 
         self.selchar = selChar
+
+        self.terrain = None
 
         self.uInfo = {}
 
@@ -673,7 +674,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             activeIds = list(self.activeIds)
             self.testTargNum = len(activeIds)
             pm = np.random.permutation(activeIds)
-            targs = [None for _ in range(self.NPLAYERS)]
+            targs = [None] * self.testTargNum
             for t in range(len(pm)):
                 targs[pm[t]] = activeIds[t]
                 if pm[t] == activeIds[t]:
@@ -912,8 +913,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             coll.prop = "player"
             coll.hc = 0
             coll.num = len(self.players)
-            coll.isHit = lambda x: self.test(x)
-            coll.onExplode = lambda x: self.explode(x)
+            coll.isHit = self.test
+            coll.onExplode = self.explode
 
         a = {"posen":0, "poset":0, "pstep":6,
              "moving":False, "movingOld":False, "cr":0, "cv":0,
@@ -921,7 +922,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              "pv":pv, "isHit":-100,
              "gesturing":False, "gestNum":None, "gestId":None,
              "jump":-1, "fCam": False,
-             "id":self.NPLAYERS, 'lastStep':0, 'legIKoffset':0,
+             "id":len(self.players), 'lastStep':0, 'legIKoffset':0,
              'animOffset':np.zeros(3), 'animTrans':-100,
              'frameFired':-100, 'fireColor':None, 'fireVH':0,
              'throwAnim':False, 'animFired':False,
@@ -929,7 +930,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
              'vh':0,
              'grab':0, 'grabSphere':-1}
 
-        self.NPLAYERS += 1
         self.players.append(a)
         self.w.addRB(pv)
         pv.disable()
@@ -971,8 +971,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.stage < 4:
             snd = self.ENVTRACKS
             self.si.put({'Preload':[PATH+'../Sound/' + snd[self.stage]]})
-
-        self.NPLAYERS = 0
 
         print("Loading textures")
 
@@ -1249,7 +1247,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     damage=3, hl=0,
                     blackHole=True))
             self.srbs[-1].disable()
-            self.srbs[-1].colliders[0].onHit = lambda x: self.explode(x)
+            self.srbs[-1].colliders[0].onHit = self.explode
 
             self.w.addRB(self.srbs[-1])
 
@@ -1525,13 +1523,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         if not self.isClient:
             self.setupAI(self.aiNums)
-            host = self.remoteServer
-            TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/1.x"}}
-            for x in self.aiNums:
-                p = {"gd":self.gameId, "pname":"CPU " + str(x), "char":x}
-                try:
-                    requests.post(host + "/SelChar", data=p, **TO)
-                except: pass
 
         self.draw.noisePos = np.zeros((3,), 'float32')
 
@@ -1567,9 +1558,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     for x in range(len(self.renderMask))]
             sobj[self.vtNames[PATH+"../Assets/Blank.png"]] = True
             sobj[self.vtNames[PATH+"../Assets/Red.png"]] = True
-            if self.stage == 2:
-                sobj[self.skis[0].texNum] = True
-                sobj[self.poles[0].texNum] = True
         return sobj
 
     def serializePlayerState(self, a):
@@ -2302,8 +2290,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         for x in self.players[self.selchar]["ctexn"]:
             rm[x] = False
 
-        ic = self.isClient
-
         if len(activeIds) > 1:
             if not self.gameStarted and self.stage < 4:
                 snd = self.ENVTRACKS
@@ -2370,6 +2356,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             idir = im[0]
             ipos = im[1]
 
+            fxobj = None
             for fxobj in self.impulseFX:
                 if fxobj.timeStart < 0:
                     break
@@ -2714,7 +2701,6 @@ def runApp(app):
     app.runBackend()
     if hasattr(app, 'statTime'):
         import datetime as dt
-        games = 1
         tim = time.time() - app.statTime
         stat = {}
         try:
