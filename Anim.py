@@ -98,7 +98,7 @@ class AnimManager:
         if p[timer] < keyFrames[0][0]:
             p[timer] += keyFrames[-1][0] - keyFrames[0][0]
 
-        if len(self.keyFrames) < 2: return
+        if len(keyFrames) < 2: return
         k = None
         for i in range(len(keyFrames)):
             if p[timer] < keyFrames[i][0]:
