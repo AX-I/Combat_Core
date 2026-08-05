@@ -88,7 +88,7 @@ class AnimManager:
         if a > pi: a -= 2*pi
         return a
 
-    def stepPoseLoop(self, p, vobj, keyFrames, st=1,
+    def stepPoseLoop(self, p, keyFrames, st=1,
                      loop=True, bone=None, timer='poset',
                      offsetMult=1, isFlat=False):
         p[timer] += p['pstep'] * st
