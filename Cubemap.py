@@ -20,11 +20,8 @@
 
 # Cubemap for Visualizer
 
-from math import sqrt, sin, cos, pi
 import numpy
-from PIL import Image, ImageTk
-from tkinter import PhotoImage
-import json
+from PIL import Image
 
 class CubeMap:
     def __init__(self, tex, setup=1, delraw=True):
