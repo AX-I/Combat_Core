@@ -1624,7 +1624,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         if self.frameFired: adat["ff"] = self.frameFired
 
         try: adat['trans'] = self.transStart
-        except: pass
+        except AttributeError: pass
 
         adat['STAGEFLAGS'] = self.stageFlags
 
@@ -1657,12 +1657,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             try:
                 self._recvState(a)
             except KeyError:
-                raise #print("Game has already finished!")
+                print("Game has already finished!")
+                raise
 
     def _recvState(self, a):
         if len(a[1]) == 0: return
         try: b = json.loads(a[1])
-        except:
+        except json.decoder.JSONDecodeError:
             print(a[1])
             raise
         k = b["players"]
@@ -2413,7 +2414,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                 except AttributeError:
                     pass
             try: del a['pv'].colDir
-            except: pass
+            except AttributeError: pass
 
         self.frameProfile('Physics')
 
@@ -2549,13 +2550,11 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                         a["Energy"] = min(1, a["Energy"])
                         self.resetPickup()
                         break
-            if i['t'] < 0:
-                try:
-                    i['ps'].opacity *= 0.9
-                    if self.frameNum + i['t'] > 40:
-                        i['ps'].reset()
-                        i['t'] = 0
-                except: pass
+            if i['t'] < 0 and i.get('ps'):
+                i['ps'].opacity *= 0.9
+                if self.frameNum + i['t'] > 40:
+                    i['ps'].reset()
+                    i['t'] = 0
 
         self.frameProfile('Pickup')
 
@@ -2711,7 +2710,7 @@ def runApp(app):
         try:
             with open(PATH+"lib/Stat.json") as f:
                 stat = json.load(f)
-        except: pass
+        except FileNotFoundError: pass
         m = dt.date.today().strftime('%Y-%U')
         if m not in stat: stat[m] = {'games':0, 'time':0}
         stat[m]['games'] += 1
@@ -2725,7 +2724,7 @@ def runApp(app):
         try:
             with open(PATH+"lib/Stat.txt") as f:
                 state = int(f.read())
-        except: pass
+        except FileNotFoundError: pass
         with open(PATH+"lib/Stat.txt", "w") as f:
             state = state | (1 << app.stage)
             f.write(str(state))
@@ -2743,7 +2742,7 @@ def runApp(app):
     app.server.terminate()
     app.server.join()
     try: app.navProcess.terminate()
-    except: pass
+    except AttributeError: pass
     if not os.path.exists(PATH+"lib/Stat.txt"):
         with open(PATH+"lib/Stat.txt", "w") as f: f.write("")
 
