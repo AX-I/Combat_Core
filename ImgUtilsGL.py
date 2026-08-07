@@ -6,12 +6,12 @@ import moderngl as mgl
 VS = open('PipeGL/trisetup_menu.c').read()
 FS = open('ShadersGL/menu.c').read()
 
-x = np.array([-1, -1, 1, 1, -1, 1])
-y = np.array([1, -1, 1, 1, -1, -1])
-z = np.ones(6)*-0.9999
-u = (x+1)/2
-v = (y+1)/2
-TRI = np.dstack([x,y,z,u,v])
+px = np.array([-1, -1, 1, 1, -1, 1])
+py = np.array([1, -1, 1, 1, -1, -1])
+pz = np.ones(6)*-0.9999
+pu = (px+1)/2
+pv = (py+1)/2
+TRI = np.dstack([px,py,pz,pu,pv])
 
 METHOD = {'alpha':1, 'add':2, 'screen':3, 'replace':4, 'hard light':5}
 EFFECT = {None:0, 'flip':1, 'crop':2, 'roll':3, 'rot':4, 'mult':5, 'fadey':6}
@@ -32,7 +32,7 @@ class GLObject:
     vbo: mgl.Buffer
     vao: mgl.VertexArray
 
-    def __init__(self, ctx, cq, name: str, x: np.array, shape: tuple = None):
+    def __init__(self, ctx, _cq, name: str, x: np.array, shape: tuple = None):
         x = (x/255).astype('float16')
 
         buf = ctx.texture(x.shape[1::-1], x.shape[2], x, dtype='f2')
@@ -72,6 +72,11 @@ class GLObject:
 class NPCanvas:
     ctx: mgl.Context
 
+    W: int
+    H: int
+    UItexts: dict
+    textSize: ImageDraw.Draw
+
     def imgText(self, dText: str, dFill: tuple, dFont,
                 blur=4, bFill=(0,0,0), method='box', blurWidth=6) -> np.array:
         """returns np array of text
@@ -82,7 +87,7 @@ class NPCanvas:
         s = self.textSize.textbbox((0,0), dText, font=dFont)[2:]
         a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
                       color=(*bFill,0))
-        for ix in range(blur):
+        for _ in range(blur):
             d = ImageDraw.Draw(a)
             d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont, align="center")
             if method == 'box':
@@ -106,7 +111,7 @@ class NPCanvas:
             b = self.imgText(dText, dFill, dFont, blur, bFill,
                              method, blurWidth)
 
-            self.UItexts[dText] = GLObject(self.ctx, self.cq, dText, b)
+            self.UItexts[dText] = GLObject(self.ctx, None, dText, b)
 
         source = self.UItexts[dText]
 

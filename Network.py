@@ -33,7 +33,7 @@ else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 class TCPServer:
     def __init__(self, pi, po, isclient, name, host="http://127.0.0.1",
-                 stage="", gameId=None):
+                 gameId=None):
         
         self.HOST = host
         
@@ -85,7 +85,7 @@ class TCPServer:
             except Empty: pass
 
             try:
-                st = time.perf_counter()
+                #st = time.perf_counter()
                 if self.isclient:
                     data = requests.post(self.HOST + "/GameDat", data=p, **self.TO)
                 else:

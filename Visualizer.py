@@ -261,7 +261,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         except pywintypes.error: pass
         return set(res)
     
-    def tgFullScreen(self, e=None):
+    def tgFullScreen(self, _=None):
         self.fs = not self.fs
         self.root.attributes("-fullscreen", self.fs)
 
@@ -299,12 +299,12 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             self.root.attributes('-topmost', False)
         
     
-    def tgUI(self, e=None):
+    def tgUI(self, _=None):
         self.drawUI = not self.drawUI
-    def tgCtrl(self, e=None):
+    def tgCtrl(self, _=None):
         self.drawControls = not self.drawControls
         
-    def customAction(self, a, e):
+    def customAction(self, a):
         if a not in self.frameKeys:
             try: self.evtQ.put_nowait(a)
             except Full: pass
@@ -316,7 +316,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             k = f'Control-{k}'
         if len(k) > 1:
             k = f'<{k}>'
-        self.customAction(k, None)
+        self.customAction(k)
 
     #@profile(stdout=open('profile/checkpipe.txt', 'w'), filename='profile/checkpipe.pstats')
     def checkPipe(self, cont=True):
@@ -335,14 +335,14 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
                     self.d.config(background=action[1])
                 elif action[0] == "key":
                     self.d.bind(action[1],
-                                lambda x: self.customAction(action[1], x))
+                                lambda x: self.customAction(action[1]))
                 elif action[0] == 'keyBatch':
                     for k in action[1]:
                         self.d.bind(k, self.customKeyPress)
                 elif action[0] == "screenshot":
                     self.screenshot()
             except Exception as e:
-                logError(e, "checkPipe")
+                logError(e)
                 cont = False
                 self.quit()
         if cont:
@@ -354,9 +354,9 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
     def setMouse(self, e):
         self.rx = e.x
         self.ry = e.y
-    def escapeMouse(self, e):
+    def escapeMouse(self, _):
         self.captureMouse = False
-    def tgMouseCap(self, e):
+    def tgMouseCap(self, _):
         self.captureMouse = not self.captureMouse
         
     def attractMouse(self):
@@ -375,39 +375,39 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.attractMouse()
         self.sendRot(dx, dy)
 
-    def moveU(self, e):
+    def moveU(self, _):
         if not self.dirs[0]:
             self.dirs[0] = True
             self.sendKey("u")
-    def moveD(self, e):
+    def moveD(self, _):
         if not self.dirs[1]:
             self.dirs[1] = True
             self.sendKey("d")
-    def moveR(self, e):
+    def moveR(self, _):
         if not self.dirs[2]:
             self.dirs[2] = True
             self.sendKey("r")
-    def moveL(self, e):
+    def moveL(self, _):
         if not self.dirs[3]:
             self.dirs[3] = True
             self.sendKey("l")
-    def zeroV(self, e):
+    def zeroV(self, _):
         if self.dirs[0] or self.dirs[1]:
             self.dirs[0] = False
             self.dirs[1] = False
             self.sendKey("ZV")
-    def zeroH(self, e):
+    def zeroH(self, _):
         if self.dirs[2] or self.dirs[3]:
             self.dirs[2] = False
             self.dirs[3] = False
             self.sendKey("ZH")
             
-    def moveU1(self, e): self.sendKey("u")
-    def moveD1(self, e): self.sendKey("d")
-    def moveR1(self, e): self.sendKey("r")
-    def moveL1(self, e): self.sendKey("l")
+    def moveU1(self, _): self.sendKey("u")
+    def moveD1(self, _): self.sendKey("d")
+    def moveR1(self, _): self.sendKey("r")
+    def moveL1(self, _): self.sendKey("l")
 
-    def screenshot(self, e=None):
+    def screenshot(self, _=None):
         if self.useDib == self.frameNum - 1:
             fr = np.frombuffer(self.cdib.tobytes(), 'uint8')
             fr = fr.reshape((self.H, self.W, 3))
@@ -467,7 +467,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
             if "End" in uInfo:
                 end = uInfo["End"]
                 
-                try: a = self.endTime
+                try: _ = self.endTime
                 except AttributeError: self.endTime = time.time()
                 f = min(2, max(time.time() - self.endTime - 4, 0)) / 2
                 
@@ -609,7 +609,7 @@ def runGUI(P, *args):
         app.finish()
         print('Menu spf: ' + str((time.time() - app.st) / app.frameNum))
     except Exception as e:
-        logError(e, "main")
+        logError(e)
         raise
     finally:
         print("UI closed")
@@ -618,7 +618,7 @@ def runGUI(P, *args):
         if hasattr(app, "SM"):
             app.SM.terminate()
 
-def logError(e, message):
+def logError(e):
     if __name__ == "__main__": raise e
     else:
         with open(PATH+"Error.txt", "w") as f:

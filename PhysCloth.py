@@ -99,7 +99,7 @@ class MassSprings:
 
     y = 1 / (self.dt*self.dt) * self.M.dot(self.Ucur + self.damp*(self.Ucur - self.Uprev)) + fext
 
-    for x in range(iters):
+    for _ in range(iters):
       d = Unext[self.Ei1] - Unext[self.Ei0]
       d *= (self.r / np.linalg.norm(d, axis=1))[:,None]
 

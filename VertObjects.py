@@ -834,7 +834,7 @@ class VertTerrain0:
         try:
             if self.scale.shape[0] == 3:
                 s = self.scale[1]
-        except:
+        except AttributeError:
             s = self.scale
         return h * s + self.coords[1]
         

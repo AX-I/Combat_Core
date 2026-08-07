@@ -545,7 +545,7 @@ def stageHandleMouse(self, frame, click=False):
 
             if click:
                 if i == len(buttonCenters) - 1:
-                    self.goBack(0)
+                    self.goBack()
                 else:
                     self.goStart(i)
 
@@ -661,7 +661,7 @@ def joinHandleMouse(self, frame, click=False):
 
             if click:
                 if i == len(buttonCenters) - 1:
-                    self.goBack(0)
+                    self.goBack()
                 else:
                     self.gd = self.avls[i]
                     self.joinGame()

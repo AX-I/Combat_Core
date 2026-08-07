@@ -134,7 +134,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.volmFX = volmFX
         self.aiNums = aiNums
 
-        p = {"name":name, "host":server, "stage":stage, "gameId":gameId}
+        p = {"name":name, "host":server, "gameId":gameId}
         if isClient:
             net = mp.Process(target=mkClient, args=(qi, qo, p), name="Network")
         else:
@@ -388,7 +388,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
     def lightTest(self):
         self.transStart = time.time()
         try: _ = self.changedMusic
-        except:
+        except AttributeError:
             self.changedMusic = 0
         self.changedShader = False
 
@@ -653,7 +653,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         regenTargs = False
 
         try: _ = self.testTargs
-        except:
+        except AttributeError:
             regenTargs = True
 
             with open(PATH+'../Models/EyeTracking.txt') as fuv:
@@ -1842,8 +1842,8 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             alive += self.getHealth(pn) > 0
 
         if alive <= 1:
-            try: f = self.endTime
-            except:
+            try: _ = self.endTime
+            except AttributeError:
                 self.endTime = time.time()
                 snd = self.ENVTRACKS
                 self.si.put({'Loop':{'Track':PATH+"../Sound/" + snd[self.stage],
@@ -2758,4 +2758,5 @@ def run():
 
 if __name__ == "__main__":
     mp.set_start_method('spawn')
+    app = None
     run()

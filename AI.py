@@ -548,21 +548,21 @@ class AIManager:
 if __name__ == "__main__":
     from PIL import Image
     a = Image.open("../Atrium/AtriumNavA.png")
-    b = np.array(a)[:,:,0] < 80
+    b = np.array(im)[:,:,0] < 80
     dt1 = time.perf_counter()
-    p = dijkstra([51, 48], [27, 12], b)
+    pt = dijkstra([51, 48], [27, 12], b)
     dt2 = time.perf_counter()
     print(dt2 - dt1, "secs")
 
-    d = p[0]
-    i = np.zeros((*b.shape, 3), "uint8")
-    i[d==-1] = (128, 0, 0)
-    d[d==-1] = 0
-    i[:,:,1] = (d * 255. / np.max(d)).astype("uint8")
-    Image.fromarray(i).show()
+    dmap = pt[0]
+    im = np.zeros((*b.shape, 3), "uint8")
+    im[dmap==-1] = (128, 0, 0)
+    dmap[dmap==-1] = 0
+    im[:,:,1] = (dmap * 255. / np.max(dmap)).astype("uint8")
+    Image.fromarray(im).show()
 
     g = [1, 5, 3, 8, 2, 0, 1]
     f = np.zeros((len(g),),"int")
-    for i in range(1000):
+    for _ in range(1000):
         f[sample(g)] += 1
     print(f)

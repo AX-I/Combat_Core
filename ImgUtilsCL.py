@@ -42,6 +42,11 @@ class NPCanvas:
     cq: cl.CommandQueue
     prog: cl.Program
 
+    W: int
+    H: int
+    UItexts: dict
+    textSize: ImageDraw.Draw
+
     def imgText(self, dText: str, dFill: tuple, dFont,
                 blur=4, bFill=(0,0,0), method='box', blurWidth=6) -> np.array:
         """returns np array of text
@@ -52,7 +57,7 @@ class NPCanvas:
         s = self.textSize.textsize(dText, font=dFont)
         a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
                       color=(*bFill,0))
-        for ix in range(blur):
+        for _ in range(blur):
             d = ImageDraw.Draw(a)
             d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont, align="center")
             if method == 'box':

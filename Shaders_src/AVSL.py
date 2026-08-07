@@ -60,8 +60,6 @@ def compile_AVSL(s, tiled):
         elif line[0] == "!": g = None
         elif g is not None: a[g] += line
 
-    c = "".join(s[cstart:])
-
     out = a["h"]
     shader = AVShader(tiled)
     shader.shader_args(a["a"])

@@ -310,7 +310,7 @@ class TerrainCollider(Collider):
 
 
 class RigidBody:
-    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=[],
+    def __init__(self, mass, xyz, vel=None, rotvel=None, forces=None,
                  drag=0, usegravity=True, elasticity=1, noforces=False):
         self.colliders = []
         self.wIndex = False
@@ -320,6 +320,8 @@ class RigidBody:
         self.rot = np.array([0, 0, 0])
         self.disabled = False
         self.noforces = noforces
+        if forces is None: forces = []
+
         if vel is None: self.v = np.zeros(D, dtype="float")
         else:           self.v = np.array(vel, dtype="float")
         
@@ -338,8 +340,9 @@ class RigidBody:
         collObj.rb = self
         self.colliders.append(collObj)
 
-    def update(self, dt, attractors=[]):
+    def update(self, dt, attractors=None):
         if self.disabled: return
+        if attractors is None: attractors = []
         n_forces = self.n_forces
         adt = 0
         if not self.noforces:
@@ -430,9 +433,9 @@ class World:
 
 if __name__ == "__main__":
     w = World()
-    a = RigidBody(1, [1, 1, 1], usegravity=False, drag=0.001, vel=[0, 0, 1])
-    w.addRB(a)
-    b = RigidBody(1, [1, 2, 1], usegravity=False, drag=0.001, vel=[0, 0.5, 0.5])
-    w.addRB(b)
+    rb1 = RigidBody(1, [1, 1, 1], usegravity=False, drag=0.001, vel=[0, 0, 1])
+    w.addRB(rb1)
+    rb2 = RigidBody(1, [1, 2, 1], usegravity=False, drag=0.001, vel=[0, 0.5, 0.5])
+    w.addRB(rb2)
     w.start()
     w.stepWorld()
