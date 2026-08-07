@@ -72,7 +72,6 @@ def getContext():
         return getContext_CL()
 
 def getContext_CL():
-    import os
     try:
         with open(PATH + "Settings.txt") as f:
             for line in f:
