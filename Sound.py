@@ -28,7 +28,6 @@ import pyogg
 import threading, queue
 from functools import cache
 
-import time
 from queue import Empty
 from math import sqrt
 
@@ -338,7 +337,6 @@ class SoundManager:
         return attn * pan
 
 if __name__ == "__main__":
-    import queue
     q = queue.Queue(8)
     q.put({"Play":["../Sound/New_rv1.ogg", (0.7, 0.7), False]})
     q.put({"Play":["../Sound/Pickup.wav", (0.2, 0.8), True]})

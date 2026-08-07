@@ -57,7 +57,7 @@ class Rig:
 
     def interpPose(self, p0, p1, t):
         self.importPose(self.interpTree(p0, p1, t), updateRoot=False)
-    def interpTree(self, p0, p1, t, r=0):
+    def interpTree(self, p0, p1, t):
         a0 = np.array(p0["angle"]) % (2*pi)
         a1 = np.array(p1["angle"]) % (2*pi)
         for n in range(3):
@@ -74,7 +74,7 @@ class Rig:
             return {"angle":ang}
         p = []
         for i in range(min(len(p0["children"]), len(p1['children']))):
-            p.append(self.interpTree(p0["children"][i], p1["children"][i], t, r=1))
+            p.append(self.interpTree(p0["children"][i], p1["children"][i], t))
         return {"angle":ang, "children":p}
 
     def importPoseFlat(self, p, updateRoot=True):
