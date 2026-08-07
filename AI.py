@@ -250,8 +250,6 @@ class AIManager:
             agent.navTarget = self.players[closestTarget]
             agent.targetInterest = 4
 
-        diff = (a["b1"].offset - np.array((*a['animOffset'], 0))) - agent.lastPos
-
         if not agent.isStuck:
             agent.stuck = 0
 
@@ -376,7 +374,6 @@ class AIManager:
         """Straight line towards target"""
         agent = self.agents[pn]
         a = self.players[pn]
-        diff = a["b1"].offset - agent.lastPos
 
         if not sightLine(agent.navTarget["b1"].offset[:3], a["b1"].offset[:3],
                          self.atriumNav):
@@ -550,7 +547,6 @@ class AIManager:
 
 if __name__ == "__main__":
     from PIL import Image
-    import time
     a = Image.open("../Atrium/AtriumNavA.png")
     b = np.array(a)[:,:,0] < 80
     dt1 = time.perf_counter()
