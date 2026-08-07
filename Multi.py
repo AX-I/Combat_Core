@@ -181,6 +181,10 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         self.α = 4.1; self.β = 0.1
         self.pos = np.array([35.8,  3.4, 31.3])
 
+        self.VRpos = np.array([0,0,0])
+        self.oldVRpos = self.VRpos
+        self.VRHandpos = self.VRpos
+
         self.ambLight = 0.08
 
         self.players = []
@@ -1322,7 +1326,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
             "size":sr, "scale":160*sr/2048})
 
         print(f'Textures in {time.time() - self.loadStart:.2f}')
-        self.makeObjects(1)
+        self.makeObjects()
 
         self.si.put({"Fade":{'Time':0, 'Tracks':{
             PATH + "../Sound/Noise.flac",
@@ -1787,7 +1791,6 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
         return 1-dmg
 
     def plantPickup(self, pos, t=None):
-        return
         i = self.pickups[0]
         if t is not None:
             if i["t"] == t: return
@@ -2190,17 +2193,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
             if a['id'] == self.selchar and self.cam1P \
                and self.VRMode and self.frameNum > 1:
-                head = a['b1'].children[0].children[2]
-                hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
-                hpos -= a['b1'].offset[:3]
-                test = self.VRHandPos - self.VRpos + hpos
-                a['vrC'] = np.round(test, 3).tolist()
-
-                # For debug
-                ts = self.testSphere
-                diff = a['b1'].offset[:3] + test - ts.coords
-                self.draw.translate(diff, ts.cStart, ts.cEnd, ts.texNum)
-                ts.coords += diff
+                self.updateVRHand(a)
 
             if 'vrC' in a:
                 test = np.array(a['vrC'])

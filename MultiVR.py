@@ -184,6 +184,20 @@ class CombatVR(Multi.CombatApp):
                 if (i.ulButtonPressed > 1000) and (x*x + y*y == 0):
                     self.gesture(self.selchar, 3)
 
+    def updateVRHand(self, a):
+        head = a['b1'].children[0].children[2]
+        hpos = (np.array([0.15,0.18,0,1]) @ head.TM)[:3]
+        hpos -= a['b1'].offset[:3]
+        test = self.VRHandPos - self.VRpos + hpos
+        a['vrC'] = np.round(test, 3).tolist()
+
+        # For debug
+        ts = self.testSphere
+        diff = a['b1'].offset[:3] + test - ts.coords
+        self.draw.translate(diff, ts.cStart, ts.cEnd, ts.texNum)
+        ts.coords += diff
+
+
 def run():
     global app
     
