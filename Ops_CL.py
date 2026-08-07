@@ -43,7 +43,6 @@ TILE_SIZE = 16
 BLOCK_SIZE = TILE_BUF
 
 def makeProgram(f, path="Shaders/"):
-    global ctx
     t = open(PATH + path + f).read().replace("BLOCK_SIZE", str(BLOCK_SIZE))
     return cl.Program(ctx, t).build()
 
@@ -496,8 +495,7 @@ class CLDraw:
             shader['mip'] = 2
 
     def drawAll(self, shaders,
-                mask=None, shadowIds=[0,1],
-                stage=None):
+                mask=None, **kwargs):
 
         # Shaders are alpha shadow mip refl sky ortho cull etc.
 
