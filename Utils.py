@@ -96,7 +96,7 @@ def createMips(ar):
     """d -> debug / display images"""
     a = np.array(ar).astype("int")
     m = [a]
-    for i in range(int(log2(ar.shape[0]))):
+    for _ in range(int(log2(ar.shape[0]))):
         a = createMip(a)
         m.append(a)
     m.reverse()
@@ -135,7 +135,7 @@ class TexLoadManager:
         self.njobs = 0
         self.qi = mp.Queue()
         self.qo = mp.Queue()
-        for i in range(self.P):
+        for _ in range(self.P):
             p = mp.Process(target=_loader, args=(self.qi,self.qo,func))
             p.start()
             self.proc.append(p)
@@ -146,7 +146,7 @@ class TexLoadManager:
         return self.njobs - 1
 
     def collectTex(self, texlist):
-        for i in range(self.njobs):
+        for _ in range(self.njobs):
             r = self.qo.get()
             texlist[r[0]] = r[1]
 

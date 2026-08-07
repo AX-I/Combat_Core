@@ -32,8 +32,8 @@ PATH = OpsConv.PATH
 OpsConv.genInfo()
 ctx = OpsConv.getContext()
 
-d = ctx.devices[0]
-print("Using", d.name)
+dev = ctx.devices[0]
+print("Using", dev.name)
 cq = cl.CommandQueue(ctx)
 mf = cl.mem_flags
 
@@ -122,7 +122,7 @@ class DummyVBO:
 class CLDraw:
     def __init__(self, w, h, size_sky=1, max_uv=64, max_particles=1,
                  **kwargs):
-        self.device = d
+        self.device = dev
 
         w = w//TILE_SIZE * TILE_SIZE
         h = h//TILE_SIZE * TILE_SIZE

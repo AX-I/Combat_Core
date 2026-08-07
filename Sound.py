@@ -343,5 +343,5 @@ if __name__ == "__main__":
     q.put({"Play":["../Sound/FireA.wav", (0.4, 0.2), True]})
     q.put({"Play":["../Sound/FireD.wav", (0.7, 0.2), True]})
     q.put({"Fade":{'Time':150, 'Tracks':'*'}})
-    a = SoundManager(q)
-    a.run(2, 22050, 2)
+    sm = SoundManager(q)
+    sm.run(2, 22050, 2)

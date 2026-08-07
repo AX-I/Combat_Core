@@ -3,6 +3,9 @@ from PIL import Image, ImageDraw, ImageFilter
 
 
 class NPCanvas:
+    W: int
+    H: int
+
     def __init__(self, W, H):
         self.UItexts = {}
         self._textImg = Image.new("RGB", (1,1))
@@ -20,7 +23,7 @@ class NPCanvas:
         s = self.textSize.textbbox((0,0), dText, font=dFont)[2:]
         a = Image.new("RGBA", (2*(s[0]//2)+pad, 2*(s[1]//2)+pad),
                       color=(*bFill,0))
-        for ix in range(blur):
+        for _ in range(blur):
             d = ImageDraw.Draw(a)
             d.text((pad//2,pad//2), dText, fill=(*bFill,255), font=dFont, align="center")
             if method == 'box':

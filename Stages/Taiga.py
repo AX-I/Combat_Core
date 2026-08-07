@@ -97,7 +97,7 @@ def setupStage(self):
         for j in range(-40, 60, 13):
             c = np.array((i, 0, j), dtype="float")
             c += nr.rand(3) * 18
-            for k in range(random.randint(3, 9)):
+            for _ in range(random.randint(3, 9)):
                 grassClump(self, c, options2)
 
     # Tree to cover fake shadow

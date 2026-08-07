@@ -151,7 +151,7 @@ elif PLATFORM == "win32":
     _TIMESBD = "timesbd.ttf"
     _COURIERBD = "courbd.ttf"
 
-f = ("Times", 15)
+ff = ("Times", 15)
 g = ("Times", 12)
 h = ("Courier", 10)
 TO = {"timeout":1, "headers":{"User-Agent":"AXICombat/src"}}
@@ -370,8 +370,8 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
 
         blueBG = [80,160,240,30]
-        greenBG = [80,240,80,30]
-        yellowBG = (255,130,70,30.)
+        #greenBG = [80,240,80,30]
+        #yellowBG = (255,130,70,30.)
         f = np.ones((int(33*resScale), 96, 4)) * np.array([[blueBG]])
         f[:,:,3] *= np.sin(np.arange(96).reshape((1,96)) / 96. * 3.14)**2
         self.entryHL = self.makeCL('User', f)
@@ -526,7 +526,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             # pass
             print('Unsupported key', e.char)
 
-    def handleBackspace(self, e=None):
+    def handleBackspace(self, _=None):
         if self.MENUSCREEN != 'MAIN':
             return
 
@@ -542,7 +542,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         entry.insert(0,u)
         self.__setattr__(display, u)
 
-    def handleClick(self, e=None):
+    def handleClick(self, _=None):
         if self.MENUSCREEN == 'MAIN':
             mainHandleMouse(self, None, True)
         elif self.MENUSCREEN == 'STAGE':
@@ -559,7 +559,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         try: return socket.gethostbyname(socket.gethostname())
         except: return ''
 
-    def mkServ(self, showWin=True, ip=""):
+    def mkServ(self, ip=""):
         if ip == "":
             ip = self.getIP()
         addr = (ip, 2980)
@@ -718,7 +718,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         if not self.removeMain(): return
 
         if self.localIP is None:
-            self.localIP = self.mkServ(False)
+            self.localIP = self.mkServ()
 
 
         self.MENUSCREEN = 'STAGE'
@@ -751,7 +751,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             self.avls.append(et)
 
 
-    def goBack(self, e):
+    def goBack(self):
         self.MENUSCREEN = 'MAIN'
         return
 
@@ -795,7 +795,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         try: self.prefwin.iconbitmap(PATH+"lib/Combat.ico")
         except FileNotFoundError: pass
 
-        Label(self.prefwin, text="AXI Combat Settings", font=f, pady=8).pack()
+        Label(self.prefwin, text="AXI Combat Settings", font=ff, pady=8).pack()
 
         Frame(self.prefwin, height=2, bd=2, bg="#000").pack(fill=X, pady=4)
 
@@ -851,7 +851,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.actFS = Checkbutton(self.genFr, font=g, text="Active Fullscreen")
         self.doAFS = IntVar(); self.actFS["variable"] = self.doAFS
-        self.actFS.pack();
+        self.actFS.pack()
         if a["AutoRes"]: self.actFS.select()
 
         self.msFrame = Frame(self.genFr); self.msFrame.pack()
@@ -886,7 +886,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.fshadow = Checkbutton(self.genFr2, font=g, text="Dynamic shadows")
         self.doFSH = IntVar(); self.fshadow["variable"] = self.doFSH
-        self.fshadow.pack();
+        self.fshadow.pack()
         if a["FS"]: self.fshadow.select()
         self.sFrame = Frame(self.genFr2); self.sFrame.pack()
         Label(self.sFrame, text="Shadow resolution:", font=g).pack(side=LEFT)
@@ -895,12 +895,12 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.fvertl = Checkbutton(self.genFr2, font=g, text="Dynamic lighting")
         self.doFV = IntVar(); self.fvertl["variable"] = self.doFV
-        self.fvertl.pack();
+        self.fvertl.pack()
         if a["FV"]: self.fvertl.select()
 
         self.fbloom = Checkbutton(self.genFr2, font=g, text="Bloom")
         self.doBL = IntVar(); self.fbloom["variable"] = self.doBL
-        self.fbloom.pack();
+        self.fbloom.pack()
         if a["BL"]: self.fbloom.select()
 
         Label(self.genFr2, font=g, anchor=W, justify=LEFT,
@@ -923,7 +923,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 
         self.fVR = Checkbutton(self.genFr2, font=g, text="VR Mode")
         self.doVR = IntVar(); self.fVR["variable"] = self.doVR
-        self.fVR.pack();
+        self.fVR.pack()
 ##        if a["VR"]: self.fVR.select()
         self.fVR["state"] = DISABLED
 
@@ -935,10 +935,10 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         self.apply["command"] = self.applyPrefs
         self.apply.pack(pady=4)
 
-    def showSSR(self, e=None):
+    def showSSR(self, _=None):
         s = "Off Low Medium High".split(" ")
         self.ssrB["text"] = s[self.ssrA.get()]
-    def showRTVL(self, e=None):
+    def showRTVL(self, _=None):
         s = "Off Low Medium High".split(" ")
         self.rtvB["text"] = s[self.rtvA.get()]
     def showVol(self, e=None):
@@ -948,11 +948,11 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
     def showVol2(self, e=None):
         self.volD["text"] = str(self.volC.get())
 
-    def setCL(self, e):
+    def setCL(self, _):
         try: self.lSet["CL"] = self.availdevs[self.devls.get(self.devls.curselection())]
         except TclError: pass
 
-    def switchBackend(self, e=None):
+    def switchBackend(self, _):
         for _ in range(self.devls.size()):
             self.devls.delete(0)
 
@@ -1044,6 +1044,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
 if __name__ == "__main__":
     OpsConv.genInfo()
 
-    f = CombatMenu()
-    f.startMenu()
-    f.mainloop()
+    menu = CombatMenu()
+    menu.startMenu()
+    menu.mainloop()

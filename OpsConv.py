@@ -28,9 +28,9 @@ if getattr(sys, "frozen", False): PATH = os.path.dirname(sys.executable) + "/"
 else: PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 ctx = moderngl.create_standalone_context()
-a = [ctx.info["GL_VENDOR"]]
-b = [[ctx.info["GL_RENDERER"]]]
-GL_INFO = (a, b)
+va = [ctx.info["GL_VENDOR"]]
+vb = [[ctx.info["GL_RENDERER"]]]
+GL_INFO = (va, vb)
 
 
 def genInfo(write=True):
@@ -104,7 +104,7 @@ def getContext_GL():
                 major_version=3, minor_version=3,
                 forward_compatible=True,
                 depth_size=24, double_buffer=True)
-        w = pyglet.window.Window(width=8, height=8, caption='GL Window',
+        _ = pyglet.window.Window(width=8, height=8, caption='GL Window',
                                  visible=False, config=cfg)
         ctx = moderngl.create_context()
     else:

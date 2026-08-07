@@ -18,9 +18,9 @@ UBO_FMT = {}
 with open('PipeGL/UBO_FMT.c') as fu:
     for line in fu:
         if line[0] == '#':
-            UBO_FMT[u := line[1:].strip()] = ''
+            UBO_FMT[uf := line[1:].strip()] = ''
         else:
-            UBO_FMT[u] += line
+            UBO_FMT[uf] += line
 
 def makeProgram(f, path="ShadersGL/"):
     t = open(PATH + path + f).read()
