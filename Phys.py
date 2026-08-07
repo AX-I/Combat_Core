@@ -23,7 +23,7 @@ import math
 from Utils import rotMat
 
 D = 3
-G = 9.8
+G = -9.81
 
 def eucDist(a, b):
     c = (a[0] - b[0]) ** 2 + \

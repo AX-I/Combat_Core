@@ -615,7 +615,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         p["jump"] = self.frameNum
         p["pv"].v[1] = 6.0 * 1.1
-        p['pv'].forces[0,1] = -9.81
+        p['pv'].forces[0,1] = Phys.G
 
         jfn = '../Sound/New/2H_Sharp_Swing_{}.wav'.format(random.randint(1, 4))
         self.si.put({"Play":(
@@ -2020,7 +2020,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
                     if (navheight - ih) > maxStep:
                         # fell off terrain
                         a['jump'] = self.frameNum
-                        a['pv'].forces[0,1] = -9.81
+                        a['pv'].forces[0,1] = Phys.G
                         a['pv'].v[1] = 0.0
 
                 if a["jump"] <= 0:
