@@ -33,12 +33,10 @@ import os, sys
 PLATFORM = sys.platform
 if PLATFORM == "darwin":
     from tkmacosx import Button
-    import base64, io
     #import _sysconfigdatam_darwin_darwin # for freezing
 
 if PLATFORM == "win32":
     import win32gui
-    from PIL.ImageWin import Dib, HWND
 
 import requests
 import random
@@ -47,7 +45,8 @@ import time
 import socket
 import multiprocessing as mp
 import numpy as np
-from math import sin
+
+from queue import Full
 
 from PIL import Image, ImageFont, ImageFilter
 
@@ -163,7 +162,7 @@ MSCALE = -0.04
 from MenuLayout import (
     mainMenuLayout, mainHandleMouse, mainMenuSetup,
     stageSelectLayout, stageSelectSetup, stageHandleMouse,
-    joinSetup, joinLayout, joinHandleMouse,
+    joinLayout, joinHandleMouse,
     charLayout, charHandleMouse,
     smallScale
 )
@@ -205,6 +204,9 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         if blur: i = i.filter(ImageFilter.BoxBlur(blur/fac))
         self._imShape = (int(i.size[0] * fac), int(i.size[1] * fac))
         return i
+
+    def createCoreWidgets(self):
+        raise NotImplementedError
 
     def startMenu(self):
         self.grid(sticky=N+E+S+W)
@@ -562,9 +564,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
             ip = self.getIP()
         addr = (ip, 2980)
 
-        try: self.servwin.destroy()
-        except (AttributeError, TclError): pass
-
         import NetServer
         self.selfServe = mp.Process(target=NetServer.run, args=(addr,))
         self.selfServe.start()
@@ -732,7 +731,6 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
         host = self.hostname.get()
         if "//" not in host: host = "http://" + host
 
-        uname = self.uname.get()
         try:
             ag = requests.get(host, **TO)
         except:
@@ -946,7 +944,7 @@ class CombatMenu(Frame, ImgUtils.NPCanvas):
     def showVol(self, e=None):
         self.volB["text"] = str(self.volA.get())
         try: self.evtQ.put_nowait({"Vol":np.repeat(self.volA.get(), 2)})
-        except: pass
+        except Full: pass
     def showVol2(self, e=None):
         self.volD["text"] = str(self.volC.get())
 
