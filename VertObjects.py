@@ -18,7 +18,7 @@
 # along with AXI Combat. If not, see <https://www.gnu.org/licenses/>.
 # ======== ========
 
-from math import sin, cos, pi
+from math import pi
 import numpy
 import numpy as np
 import time
@@ -149,6 +149,9 @@ class VertObject:
             self.rotate(kwargs["rot"])
 
         self.invertNorms = "invertNorms" in kwargs
+
+    def create(self):
+        raise NotImplementedError
 
     def created(self):
         # cStart, cEnd: location in #vertices; if instanced, in #instances
@@ -382,7 +385,6 @@ class VertRing(VertObject):
         self.estWedges = n*2
 
     def create(self):
-        pos = numpy.array(self.coords)
         n = self.n
         r = np.arange(n) / n * 2*3.1416
         rx = np.cos(r)
@@ -578,8 +580,7 @@ class VertModel(VertObject):
     def create(self):        
         filename = self.filename
         self.hasTex = True
-        
-        global modelList
+
         if filename in modelList:
             if self.mtlTex in modelList[filename]:
                 tmod = modelList[filename][self.mtlTex]
@@ -744,7 +745,7 @@ class VertModel(VertObject):
     def transformAll(self, origin=False, early=False):
         if self.nextMtl is not None:
             self.nextMtl.transformAll(origin, early)
-        self.transform(origin, early)
+        self.transform(origin)
 
     def getTexNums(self, r=None):
         if r is None:

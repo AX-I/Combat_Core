@@ -20,12 +20,9 @@
 
 # Textured Objects for AXI Visualizer
 
-from math import sin, cos, pi
-import numpy
 import numpy as np
 from PIL import Image
 from Utils import rotMat
-import json
 import zlib
 
 def imreadHDR(f):
@@ -67,13 +64,13 @@ class TexSkyBox:
             ti = i #cv2.resize(i, (m, m*6))
             avg = np.average(ti)
             ti *= 1/avg * 256 * hdrScale
-            ta = numpy.array(ti)[:,:,::-1]
+            ta = np.array(ti)[:,:,::-1]
         else:
             ti = Image.open(tex).convert("RGB")
-            ta = numpy.array(ti).astype("float")
+            ta = np.array(ti).astype("float")
             ta *= 32*1.5
 
-        numpy.clip(ta, None, 256*256-1, out=ta)
+        np.clip(ta, None, 256*256-1, out=ta)
 
         self.viewer.skyTex = ta.astype("uint16")
         
@@ -104,16 +101,16 @@ class TexSkyBox:
                 b = j/(N-1) - 0.5
                 c = (a, b, 0.5)
                 self.pts.append(c)
-        self.pts = numpy.array(self.pts)
+        self.pts = np.array(self.pts)
         
         t1 = self.pts[:,[2,1,0]]
         t2 = self.pts[:,[1,2,0]]
-        r1 = numpy.array((1, -1, -1))
-        r2 = numpy.array((1, -1, 1))
-        r3 = numpy.array((1, 1, -1))
-        r4 = numpy.array((-1, -1, 1))
-        self.pts = numpy.array([r2*self.pts, r1*t1, -1*self.pts, r4*t1,
-                                r3*t2, -1*t2]).reshape((bb, N, N, 3))
+        r1 = np.array((1, -1, -1))
+        r2 = np.array((1, -1, 1))
+        r3 = np.array((1, 1, -1))
+        r4 = np.array((-1, -1, 1))
+        self.pts = np.array([r2*self.pts, r1*t1, -1*self.pts, r4*t1,
+                             r3*t2, -1*t2]).reshape((bb, N, N, 3))
 
         self.pts = self.pts.reshape((-1,3))
         self.pts = self.pts @ self.rotMat
@@ -123,23 +120,23 @@ class TexSkyBox:
         for x in range(bb):
             for j in range(N-1):
                 for i in range(N-1):
-                    wc = numpy.array([self.pts[x][i][j],
-                                      self.pts[x][i+1][j],
-                                      self.pts[x][i][j+1]])
-                    cc = numpy.array([((x + i/M)    , j/M),
-                                      ((x + (i+1)/M), j/M),
-                                      ((x + i/M)    , (j+1)/M)])
+                    wc = np.array([self.pts[x][i][j],
+                                   self.pts[x][i+1][j],
+                                   self.pts[x][i][j+1]])
+                    cc = np.array([((x + i/M)    , j/M),
+                                   ((x + (i+1)/M), j/M),
+                                   ((x + i/M)    , (j+1)/M)])
                     self.appendWedge(wc, cc)
                 
-                    w2 = numpy.array([self.pts[x][i+1][j+1],
-                                      self.pts[x][i][j+1],
-                                      self.pts[x][i+1][j]])
-                    c2 = numpy.array([((x + (i+1)/M), (j+1)/M),
-                                      ((x + i/M)    , (j+1)/M),
-                                      ((x + (i+1)/M), j/M)])
+                    w2 = np.array([self.pts[x][i+1][j+1],
+                                   self.pts[x][i][j+1],
+                                   self.pts[x][i+1][j]])
+                    c2 = np.array([((x + (i+1)/M), (j+1)/M),
+                                   ((x + i/M)    , (j+1)/M),
+                                   ((x + (i+1)/M), j/M)])
                     self.appendWedge(w2, c2)
         
-        self.wedgePoints = numpy.array(self.wedgePoints) @ self.rotMat
+        self.wedgePoints = np.array(self.wedgePoints) @ self.rotMat
 
         tn = self.texNum
         self.viewer.vertpoints[tn] = [self.wedgePoints * 4000]
