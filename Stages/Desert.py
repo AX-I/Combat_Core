@@ -62,7 +62,7 @@ def setupStage(self):
     self.t2 = Phys.TerrainCollider(
         [-10,0,-10], self.terrain.size[0],
         self.terrain.heights, 0.375)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":np.array([1.8,1.2,0.4])*1.5})

@@ -4,7 +4,7 @@ import numpy as np
 from math import pi
 from OpsConv import PATH
 
-from VertObjects import VertTerrain, VertTerrain0, VertModel
+from VertObjects import VertTerrain0, VertModel
 from TexObjects import TexSkyBox
 from PIL import Image
 
@@ -47,7 +47,7 @@ def setupStage(self):
     self.t2 = Phys.TerrainCollider(
         navOrigin, self.terrain.size[0],
         self.terrain.heights, navScale)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     self.directionalLights.append({"dir":[pi*2/3, 2.1], "i":[1.8,1.2,0.4]})

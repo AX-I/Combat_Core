@@ -4,9 +4,8 @@ import numpy as np
 from math import pi, sin
 from OpsConv import PATH
 
-from VertObjects import VertTerrain0, VertModel, VertSphere, VertPlane, VertRing
+from VertObjects import VertTerrain0, VertModel, VertSphere, VertPlane
 from TexObjects import TexSkyBox
-from PIL import Image
 import time
 from ParticleSystem import CentripetalParticleSystem
 
@@ -179,7 +178,7 @@ def setupStage(self):
     self.t2 = Phys.TerrainCollider(
         coords, self.terrain.size[0],
         self.terrain.heights, tscale)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     self.atriumNav = {"map":None, "scale":0, "origin":np.zeros(3)}

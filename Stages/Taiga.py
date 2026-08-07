@@ -59,7 +59,7 @@ def setupStage(self):
 
     self.t2 = Phys.TerrainCollider([-50,0,-50], self.terrain.size[0],
                                    tmpHeights, 0.6)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     nr.seed(1); random.seed(1)

@@ -6,7 +6,6 @@ from OpsConv import PATH
 
 from VertObjects import VertWater0, VertTerrain0, VertModel, VertPlane
 from TexObjects import TexSkyBox
-from PIL import Image
 import time
 
 import Anim
@@ -52,7 +51,7 @@ def setupStage(self):
     self.t2 = Phys.TerrainCollider(
         coords, self.terrain.size[0],
         self.terrain.heights, tscale)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     self.addVertObject(
