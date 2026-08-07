@@ -193,7 +193,7 @@ class ContinuousParticleSystem(ParticleSystem):
         self.pe = (self.pl > 0) & (self.pl < self.L)
 
     def changeDir(self, newDir):
-        self.dv = viewVec(newDir) * self.vel
+        self.dv = viewVec(*newDir) * self.vel
         self.Rpv[self.pl < 0] = (0.5 - nr.randn(np.sum(self.pl < 0), 3)) * self.randVel + self.dv
     def changePos(self, newpos):
         self.Rpc[self.pl < 0] += newpos - self.pos
