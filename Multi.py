@@ -24,15 +24,16 @@ import os
 os.environ['OMP_NUM_THREADS'] = '1'
 
 from math import sin, cos, sqrt, pi, atan2, asin, acos
+import numpy as np
 import numpy.random as nr
 import random
 import time
-from Utils import displayFPS, writeAVShaderDefines
+from Utils import viewVec, displayFPS, writeAVShaderDefines
 
 nr.seed(int((time.time() * 1000) % 1000))
 random.seed(int((time.time() * 1000) % 1000))
 
-from Compute import *
+from Compute import ThreeDBackend
 import multiprocessing as mp
 import sys
 PLATFORM = sys.platform
@@ -48,7 +49,8 @@ import Phys
 from Sound import SoundManager
 
 from Network import TCPServer
-import queue
+
+from queue import Empty, Full
 
 import OpsConv
 import AI
@@ -1628,7 +1630,7 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
-        except queue.Full: pass
+        except Full: pass
 
     def sendPlayer(self):
         dat = {}
@@ -1644,13 +1646,13 @@ class CombatApp(ThreeDBackend, AI.AIManager, Anim.AnimManager):
 
         try:
             self.qi.put_nowait(bytes(json.dumps(adat), "ascii"))
-        except queue.Full: pass
+        except Full: pass
 
     def recvState(self):
         while not self.qo.empty():
             try:
                 a = self.qo.get_nowait()
-            except queue.Empty: continue
+            except Empty: continue
 
             try:
                 self._recvState(a)
@@ -2733,7 +2735,7 @@ def runApp(app):
     app.qi.put(None)
     while not app.qo.empty():
         try: app.qo.get(True, 0.2)
-        except: pass
+        except Empty: pass
     app.qi.close()
     app.qo.close()
     app.qi.join_thread()
