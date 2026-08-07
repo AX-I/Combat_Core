@@ -51,12 +51,12 @@ def setupStage(self):
     hs = 0.586
     ho = np.array([0.3,0,0.3])
 
-    self.atriumNav = {"map":hm, "scale":0.586, "origin":ho}
+    self.atriumNav = {"map":hm, "scale":hs, "origin":ho}
 
     self.t2 = Phys.TerrainCollider(
         [0,-0.6,0], self.terrain.size[0],
         self.terrain.heights, 0.293)
-    self.t2.onHit = lambda x: self.explode(x)
+    self.t2.onHit = self.explode
     self.w.addCollider(self.t2)
 
     DIR0I = np.array([2.0,1.77,1.33]) * 1.5
