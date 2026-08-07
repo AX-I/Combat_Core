@@ -3,14 +3,10 @@
 import numpy as np
 import time
 from Utils import viewMat
-import json
-import time
 
 import moderngl
 
 from OpenGL.GL import glGenTextures
-
-import sys, os
 
 import OpsConv
 PATH = OpsConv.PATH
@@ -268,8 +264,6 @@ class CLDraw:
                 break
 
     def setupPost(self):
-        w, h = self.outW, self.outH
-
         self.post_prog = ctx.program(vertex_shader=trisetup2d, fragment_shader=gamma)
         self.post_vao = ctx.vertex_array(self.post_prog, self.post_vbo, 'in_vert')
         self.post_prog['tex1'] = 0
@@ -1103,7 +1097,7 @@ class CLDraw:
         self.DRAWZ[i] = (vao, draw)
 
 
-    def drawAll(self, shaders, mask=None, shadowIds=[0,1], **kwargs):
+    def drawAll(self, shaders, mask=None, **kwargs):
         self.started_post = False
 
         self.ubo_vMatPos.write(self.vMatPos.tobytes())
