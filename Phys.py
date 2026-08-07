@@ -308,15 +308,6 @@ class TerrainCollider(Collider):
 
         return (self.colNorm, obj.rb.pos - self.colNorm * obj.r)
 
-def boundingBox(obj):
-    if obj.t == "Rect":
-        print("Why?")
-        return BoxCollider(obj.pos, obj.dim)
-    if obj.t == "Circle":
-        return BoxCollider(obj.pos - obj.r, np.repeat(obj.r * 2, D))
-    if obj.t == "Terrain":
-        return BoxCollider(obj.pos + np.array([0, min(obj.h), 0]),
-                                 [*obj.dim.tolist(), max(obj.h) - min(obj,h)])
 
 class RigidBody:
     def __init__(self, mass, xyz, vel=None, rotvel=None, forces=[],

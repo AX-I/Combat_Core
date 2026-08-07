@@ -111,7 +111,6 @@ class MassSprings:
     if collider:
       assert collider.t == 'Circle'
       EPSILON = 0.01
-      buffer = 0.5
       R = Unext - collider.pos[None,:]
       d = np.sqrt(np.einsum('ij, ij->i', R, R))
       cond = d < collider.dim
