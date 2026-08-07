@@ -22,9 +22,7 @@
 
 import requests
 from requests.exceptions import Timeout, ReadTimeout, ConnectionError
-import threading
 import time
-import random
 import json
 from queue import Empty, Full
 from urllib.parse import unquote
@@ -103,5 +101,5 @@ class TCPServer:
         
         while not self.pi.empty():
             try: self.pi.get(True, 0.2)
-            except: pass
+            except Empty: pass
         
