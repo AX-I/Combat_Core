@@ -39,7 +39,7 @@ if PLATFORM == "win32":
     import win32con
     import pywintypes
     import win32gui
-    from PIL.ImageWin import Dib, HWND
+    from PIL.ImageWin import Dib
     from ctypes import windll, byref, c_int, sizeof
 
     import OpsConv
@@ -49,7 +49,7 @@ if PLATFORM == "win32":
 from Utils import _ARIAL, _ARIALBD
 
 if PLATFORM == "linux":
-    from Xlib import X, display
+    from Xlib import display
     import Xlib.threaded
     xd = display.Display(); xs = xd.screen(); xroot = xs.root
     def mouseMover(x, y):
@@ -108,10 +108,9 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         self.UItexts = {}
         self.drawUI = True
         self.drawControls = True
-        try:
-            f = open(PATH+"lib/Stat.txt")
+
+        if os.path.exists(PATH+"lib/Stat.txt"):
             self.drawControls = False
-        except: pass
         
         self.activeFS = True
         
@@ -259,7 +258,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
                 m = win32api.EnumDisplaySettings(None, i)
                 res.append((m.PelsWidth, m.PelsHeight))
                 i += 1
-        except: pass
+        except pywintypes.error: pass
         return set(res)
     
     def tgFullScreen(self, e=None):
@@ -308,7 +307,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
     def customAction(self, a, e):
         if a not in self.frameKeys:
             try: self.evtQ.put_nowait(a)
-            except: pass
+            except Full: pass
             self.frameKeys[a] = 1
 
     def customKeyPress(self, e):
@@ -577,7 +576,7 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
         try:
             while not self.P.empty():
                 self.P.get(True, 0.5)
-        except: pass
+        except Empty: pass
         for t in self.threads: t.join()
         try: self.root.destroy()
         except TclError: pass
@@ -589,16 +588,15 @@ class ThreeDVisualizer(CombatMenu, Frame, NPCanvas):
 
 def writeRes(a):
     if os.path.exists(PATH+"Resolutions.txt"): return
-    try:
-        with open(PATH+"Resolutions.txt", "w") as f:
-            f.write("==== Active Fullscreen Resolutions ====\n")
-            f.write("AXI Combat can render at any resolution that is a multiple of 16 on both dimensions.\n")
-            f.write("These are the resolutions your monitor reports that it supports.\n")
-            f.write("The Active Fullscreen feature will probably work best with these.\n")
-            f.write("Some monitors might stretch the output image; in this case \
+
+    with open(PATH+"Resolutions.txt", "w") as f:
+        f.write("==== Active Fullscreen Resolutions ====\n")
+        f.write("AXI Combat can render at any resolution that is a multiple of 16 on both dimensions.\n")
+        f.write("These are the resolutions your monitor reports that it supports.\n")
+        f.write("The Active Fullscreen feature will probably work best with these.\n")
+        f.write("Some monitors might stretch the output image; in this case \
 you probably want to disable Active Fullscreen.\n")
-            f.write(str(sorted(a.getResolutions())))
-    except: pass
+        f.write(str(sorted(a.getResolutions())))
     
 def runGUI(P, *args):
     global app
@@ -627,4 +625,4 @@ def logError(e, message):
             f.write("\n" + traceback.format_exc())
 
 if __name__ == "__main__":
-    runGUI(None, None, None, 640, 400)
+    runGUI(None, None, 640, 400)
