@@ -23,7 +23,7 @@ __kernel void blurH(__global ushort3 *r2,
         for (int cx = ci; cx < wF; cx += stepW) {
           int y1 = min(wF*(hF-1)*4, wF*cy*4+1);
           int x1 = min(wF*2-1, cx*2+1);
-          float3 cr = convert_float3(r2[wF*cy*4 + cx*2]/4 + r2[y1 + cx*2]/4 + r2[wF*cy*4 + x1]/4 + r2[y1 + x1]/4);
+          float3 cr = convert_float3(r2[wF*cy*4 + cx*2]/(ushort)4 + r2[y1 + cx*2]/(ushort)4 + r2[wF*cy*4 + x1]/(ushort)4 + r2[y1 + x1]/(ushort)4);
           float lum = dot((float3)(0.3626f, 0.5152f, 0.1222f), cr);
           Ro[wF * cy + cx] = convert_ushort3(cr*lum/256/256);
         }
